@@ -1144,12 +1144,12 @@ if (DEV_MODE) {
 
 async function fetchBalance() {
   if (DEV_MODE) {
-    // В dev режиме показываем заглушку "DEV" чтобы было видно
     document.getElementById('balVal').textContent = balance + ' (DEV)';
     return;
   }
   try {
     const res = await fetch(`${API_BASE}/api/balance?init_data=${encodeURIComponent(initDataRaw)}`, {
+      headers: { 'ngrok-skip-browser-warning': '1' },
       signal: AbortSignal.timeout(5000)
     });
     const data = await res.json();
@@ -1167,13 +1167,15 @@ async function fetchBalance() {
 
 async function recordSpin(g, winnings, betAmt) {
   if (DEV_MODE) {
-    // Локальный баланс уже обновлён в spin() — просто возвращаем true
     return true;
   }
   try {
     const res = await fetch(`${API_BASE}/api/spin`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': '1'
+      },
       body: JSON.stringify({
         init_data: initDataRaw,
         bet: betAmt,
@@ -1194,7 +1196,6 @@ async function recordSpin(g, winnings, betAmt) {
     }
   } catch(e) {
     console.warn('Spin record failed:', e.message);
-    // Не блокируем игру при сетевой ошибке — логируем и продолжаем
   }
   return true;
 }
