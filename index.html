@@ -591,47 +591,58 @@ function selectBet(val) {
 async function spin() {
   if (spinning) return;
   if (balance < bet) {
-    showMessage('Niewystarczające żetony!', 'lose');
+    showMessage('Niewystarczające żetony! Kup więcej 👇', 'lose');
     if (tg) tg.HapticFeedback.notificationOccurred('error');
     return;
   }
 
   spinning = true;
-  balance -= bet;
-  updateBalance();
-
   const spinBtn = document.getElementById('spinBtn');
   spinBtn.disabled = true;
   spinBtn.classList.add('spinning');
   spinBtn.textContent = '⏳ Kręcę...';
-
-  // Hide previous result
   setMultText('', '');
 
   // Generate final symbols
   const finalSyms = [weightedRandom(), weightedRandom(), weightedRandom()];
 
-  // Animate each reel with delay
+  // Animate reels
   const promises = [0, 1, 2].map((i) => animateReel(i, finalSyms[i], i * 300));
   await Promise.all(promises);
 
   // Calculate result
   const result = calcResult(finalSyms);
   let winnings = 0;
+  if (result.type === 'three') winnings = bet * result.mult;
+  else if (result.type === 'pair') winnings = bet;
 
-  if (result.type === 'three') {
-    winnings = bet * result.mult;
+  // Send to API — API атомарно списывает и зачисляет, возвращает реальный баланс
+  const ok = await recordSpin(finalSyms, winnings, bet);
+
+  if (ok === false) {
+    // Баланс кончился пока крутили — возвращаем ставку локально
+    setMultText('❌ Błąd balansu!', 'lose');
+    spinBtn.disabled = false;
+    spinBtn.classList.remove('spinning');
+    spinBtn.textContent = '🎰 ZAKRĘĆ!';
+    spinning = false;
+    return;
+  }
+
+  // Если dev mode — обновляем локально
+  if (!initDataRaw) {
+    balance -= bet;
     balance += winnings;
     updateBalance();
+  }
+
+  if (result.type === 'three') {
     setMultText(`🎉 x${result.mult} — +${winnings} żet.`, 'win');
     highlightWinning(finalSyms, result.sym);
     if (tg) tg.HapticFeedback.notificationOccurred('success');
     showWinOverlay(winnings);
     confetti();
   } else if (result.type === 'pair') {
-    winnings = bet;
-    balance += winnings;
-    updateBalance();
     setMultText('✨ Para! Zwrot stawki.', 'push');
     if (tg) tg.HapticFeedback.impactOccurred('medium');
   } else {
@@ -639,11 +650,7 @@ async function spin() {
     if (tg) tg.HapticFeedback.notificationOccurred('error');
   }
 
-  // Add to history
   addHistory(finalSyms, winnings, bet);
-
-  // Send result to Telegram bot
-  sendToBot(finalSyms, winnings, bet);
 
   spinBtn.disabled = false;
   spinBtn.classList.remove('spinning');
@@ -785,24 +792,64 @@ function confetti() {
   }
 }
 
-// ==================== TELEGRAM INTEGRATION ====================
-function sendToBot(reels, winnings, bet) {
-  if (!tg) return;
-  const data = JSON.stringify({
-    action: 'spin_result',
-    user_id: userId,
-    reels: reels,
-    bet: bet,
-    winnings: winnings,
-    balance: balance
-  });
-  tg.sendData(data);
+// ==================== API INTEGRATION ====================
+// Замени на URL твоего сервера когда задеплоишь бота на VPS
+// Пока бот на локалке — используем ngrok или просто тестируем без API
+const API_BASE = window.SLOTS_API_URL || 'https://ТВОЙ_СЕРВЕР:8081';
+const initDataRaw = tg?.initData || '';
+
+async function fetchBalance() {
+  if (!initDataRaw) {
+    // Режим разработки — показываем тестовый баланс
+    console.log('Dev mode: no initData, using test balance');
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/balance?init_data=${encodeURIComponent(initDataRaw)}`);
+    const data = await res.json();
+    if (data.ok) {
+      balance = data.balance;
+      updateBalance();
+    }
+  } catch(e) {
+    console.warn('Balance fetch failed (dev mode?):', e.message);
+  }
+}
+
+async function recordSpin(reels, winnings, bet) {
+  if (!initDataRaw) return; // dev mode — не отправляем
+
+  try {
+    const res = await fetch(`${API_BASE}/api/spin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        init_data: initDataRaw,
+        bet,
+        winnings,
+        reels
+      })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      balance = data.balance;
+      updateBalance();
+    } else if (data.error === 'Insufficient balance') {
+      balance = data.balance;
+      updateBalance();
+      return false; // сигнал что баланса не хватило
+    }
+  } catch(e) {
+    console.warn('Spin record failed:', e.message);
+  }
+  return true;
 }
 
 // ==================== INIT ====================
 createStars();
 initReels();
 updateBalance();
+fetchBalance(); // загружаем реальный баланс из бота
 </script>
 </body>
 </html>
