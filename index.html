@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- ЗАМЕНИ НА СВОЙ ngrok/VPS URL когда задеплоишь бота: -->
+<meta name="api-base" content="https://overtenderly-solvolytic-ozie.ngrok-free.dev">
 <title>Lucky Slots</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -282,6 +284,78 @@ body {
 .pt-special { margin-top:6px; display:flex; gap:5px; }
 .pt-spec-item { flex:1; background:rgba(255,255,255,0.04); border-radius:8px; padding:6px; text-align:center; font-size:11px; }
 
+/* Buy Bonus */
+.buy-bonus-btn {
+  width:100%; padding:12px 14px;
+  border-radius:14px; border:2px solid rgba(255,77,166,0.35);
+  background:linear-gradient(135deg,rgba(255,77,166,0.1),rgba(155,0,255,0.1));
+  color:#fff; font-family:'Fredoka One',sans-serif; font-size:15px;
+  cursor:pointer; transition:all 0.2s;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.buy-bonus-btn:hover:not(:disabled) {
+  background:linear-gradient(135deg,rgba(255,77,166,0.22),rgba(155,0,255,0.22));
+  border-color:var(--scatter); transform:translateY(-1px);
+  box-shadow:0 4px 20px rgba(255,77,166,0.3);
+}
+.buy-bonus-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.bb-left { display:flex; align-items:center; gap:8px; }
+.bb-title { font-size:15px; }
+.bb-desc  { font-size:11px; color:rgba(255,255,255,0.45); font-family:'Nunito',sans-serif; margin-top:1px; }
+.bb-price { font-size:17px; color:var(--scatter); white-space:nowrap; }
+
+.bb-modal {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.78); z-index:80;
+  align-items:center; justify-content:center;
+}
+.bb-modal.show { display:flex; animation:fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.bb-box {
+  background:linear-gradient(160deg,#1a0040,#0d001f);
+  border:2px solid rgba(255,77,166,0.4); border-radius:24px;
+  padding:24px 20px; width:90%; max-width:340px;
+  animation:popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.bb-box-title {
+  font-family:'Fredoka One',sans-serif; font-size:22px; text-align:center;
+  background:linear-gradient(135deg,var(--scatter),#9b00ff);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  margin-bottom:4px;
+}
+.bb-box-sub { text-align:center; font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:16px; }
+.bb-info {
+  background:rgba(255,255,255,0.05); border-radius:14px;
+  padding:14px; margin-bottom:16px; text-align:center;
+}
+.bb-fs-num { font-family:'Fredoka One',sans-serif; font-size:36px; color:var(--scatter); text-shadow:0 0 16px var(--scatter); }
+.bb-cost   { font-size:14px; color:rgba(255,255,255,0.55); margin-top:4px; }
+.bb-cost span { color:var(--gold); font-weight:700; }
+.bb-btns { display:flex; gap:10px; }
+.bb-cancel {
+  flex:1; padding:11px; border-radius:12px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.6);
+  font-family:'Fredoka One',sans-serif; font-size:15px; cursor:pointer;
+}
+.bb-confirm {
+  flex:2; padding:11px; border-radius:12px; border:none;
+  background:linear-gradient(135deg,var(--scatter),#9b00ff);
+  color:#fff; font-family:'Fredoka One',sans-serif; font-size:15px; cursor:pointer;
+  box-shadow:0 4px 16px rgba(255,77,166,0.4); transition:all 0.2s;
+}
+.bb-confirm:hover { transform:translateY(-1px); }
+.bb-splash {
+  position:fixed; inset:0; pointer-events:none; z-index:90;
+  background:radial-gradient(ellipse at center,rgba(255,77,166,0.5),transparent 70%);
+  animation:bbSplash 1.2s ease forwards;
+}
+@keyframes bbSplash {
+  0%   { opacity:0; transform:scale(0.4); }
+  25%  { opacity:1; transform:scale(1); }
+  100% { opacity:0; transform:scale(1.3); }
+}
+
 /* Win overlay */
 .win-overlay {
   position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
@@ -396,6 +470,18 @@ body {
     </button>
   </div>
 
+  <!-- Buy Bonus -->
+  <button class="buy-bonus-btn" id="buyBonusBtn" onclick="openBuyBonus()">
+    <div class="bb-left">
+      <span style="font-size:22px">🎁</span>
+      <div>
+        <div class="bb-title">Buy Bonus</div>
+        <div class="bb-desc">10 Free Spinów natychmiast!</div>
+      </div>
+    </div>
+    <div class="bb-price" id="bbPrice">500 🪙</div>
+  </button>
+
   <!-- History -->
   <div class="history-wrap">
     <div class="history-title">Ostatnie spiny</div>
@@ -456,12 +542,29 @@ body {
   </div>
 </div>
 
+<!-- Buy Bonus Modal -->
+<div class="bb-modal" id="bbModal">
+  <div class="bb-box">
+    <div class="bb-box-title">🎁 Buy Bonus</div>
+    <div class="bb-box-sub">Kup Free Spiny bez czekania na Scattery</div>
+    <div class="bb-info">
+      <div class="bb-fs-num">10 Free Spinów</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px">Scatter działa normalnie podczas FS</div>
+      <div class="bb-cost" style="margin-top:10px">Koszt: <span id="bbModalPrice">500</span> 🪙</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px">Twój balans: <span id="bbModalBalance">—</span> 🪙</div>
+    </div>
+    <div class="bb-btns">
+      <button class="bb-cancel" onclick="closeBuyBonus()">Anuluj</button>
+      <button class="bb-confirm" id="bbConfirmBtn" onclick="confirmBuyBonus()">🎰 Kup teraz!</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ==================== TELEGRAM ====================
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor('#0d001f'); tg.setBackgroundColor('#0d001f'); }
 const initDataRaw = tg?.initData || '';
-const API_BASE = window.SLOTS_API_URL || 'https://ТВОЙ_СЕРВЕР:8081';
 
 // ==================== GAME CONFIG ====================
 // Scatter pays: выплата за N+ одинаковых символов на поле (любая позиция)
@@ -469,21 +572,39 @@ const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
 const WILD = '🌟';
 const SCATTER = '💥';
 
-// Символьные ленты (reelstrips) — математически просчитанные для RTP ~90%, средняя волатильность
-// Каждый барабан имеет свой strip. Позиция выбирается случайно, берём 5 подряд.
+// Символьные ленты — Scatter встречается 1 раз на 80 позиций (было 1/40 — слишком часто)
+// Wild — 1 раз на 50. Это даёт математически корректный RTP ~90%
 const REELSTRIPS = [
-  // Барабан 1
-  ['🍒','🍋','🍒','🍊','🍇','🍒','🍋','🍫','🍒','🍊','🌟','🍒','🍋','🍇','🍒','🍊','🍭','🍒','🍋','🍒','💎','🍒','🍊','🍋','🍒','🍇','🍒','🍊','🍋','💥','🍒','🍊','🍋','🍒','🍇','🍒','🍬','🍋','🍒','🍊'],
+  // Барабан 1 (80 позиций)
+  ['🍒','🍋','🍒','🍊','🍇','🍒','🍋','🍫','🍒','🍊','🍒','🍋','🍒','🍇','🍒','🍊','🍭','🍒','🍋','🍒',
+   '🍒','🍋','🍊','🍒','🍇','🍒','🍊','🍋','🍒','🍇','🍒','🍊','🍋','🍒','🍫','🍒','🍋','🍒','🍊','🍒',
+   '🌟','🍒','🍋','🍇','🍒','🍊','🍭','🍒','🍋','🍒','🍊','🍋','🍒','🍇','🍒','🍊','🍋','🍒','🍫','🍒',
+   '🍒','🍋','🍊','🍒','🍇','🍒','🍊','🍋','🍒','🍬','🍒','🍋','🍒','🍊','🍒','🍇','🍒','🍊','💥','🍒'],
   // Барабан 2
-  ['🍋','🍒','🍊','🍒','🍋','🍇','🍒','🍊','🍋','🍒','🍭','🍋','🍒','🍊','🍋','🌟','🍒','🍋','🍊','🍒','🍫','🍋','🍒','🍊','🍋','🍒','💥','🍋','🍒','🍊','🍋','🍒','🍇','🍋','🍒','🍊','🍋','🍒','🍬','🍋'],
+  ['🍋','🍒','🍊','🍒','🍋','🍇','🍒','🍊','🍋','🍒','🍋','🍒','🍊','🍋','🍒','🍇','🍋','🍒','🍊','🍋',
+   '🍒','🍫','🍋','🍒','🍊','🍋','🍒','🍇','🍋','🍒','🍊','🍋','🍒','🍭','🍋','🍒','🍊','🍋','🍒','🍋',
+   '🌟','🍋','🍒','🍊','🍋','🍒','🍇','🍋','🍒','🍊','🍋','🍒','🍋','🍒','🍊','🍋','🍇','🍒','🍊','🍋',
+   '🍒','🍬','🍋','🍒','🍊','🍋','🍒','🍇','🍋','🍒','🍊','🍋','🍒','🍋','🍒','🍊','🍋','💥','🍒','🍋'],
   // Барабан 3
-  ['🍊','🍒','🍋','🍊','🍒','🍋','🍊','🍇','🍊','🍒','🍋','🍊','🌟','🍒','🍊','🍋','🍒','🍊','🍭','🍊','🍒','🍋','🍊','🍒','💎','🍊','🍒','🍋','🍊','💥','🍒','🍊','🍋','🍒','🍊','🍇','🍊','🍬','🍒','🍊'],
+  ['🍊','🍒','🍋','🍊','🍒','🍋','🍊','🍇','🍊','🍒','🍋','🍊','🍒','🍋','🍊','🍇','🍊','🍒','🍭','🍊',
+   '🍒','🍋','🍊','🍒','🍊','🍋','🍒','🍊','🍇','🍒','🍊','🍋','🍒','🍊','🍫','🍊','🍒','🍋','🍊','🍒',
+   '🌟','🍊','🍒','🍋','🍊','🍒','🍇','🍊','🍒','🍋','🍊','🍒','🍋','🍊','🍒','🍇','🍊','🍒','🍊','🍋',
+   '🍒','🍊','🍇','🍒','🍋','🍊','🍒','💎','🍊','🍒','🍋','🍊','🍒','🍇','🍊','🍒','🍋','🍊','💥','🍒'],
   // Барабан 4
-  ['🍇','🍊','🍒','🍋','🍇','🍊','🍒','🍇','🍋','🍊','🍇','🍒','🍭','🍇','🍊','🍒','🍋','🍇','🌟','🍊','🍇','🍒','🍋','🍇','🍊','🍒','🍫','🍇','💥','🍊','🍇','🍒','🍋','🍇','🍊','🍒','🍇','🍬','🍊','🍇'],
+  ['🍇','🍊','🍒','🍋','🍇','🍊','🍒','🍇','🍋','🍊','🍇','🍒','🍋','🍇','🍊','🍒','🍇','🍊','🍒','🍋',
+   '🍇','🍒','🍊','🍋','🍇','🍒','🍇','🍊','🍋','🍒','🍇','🍊','🍒','🍋','🍇','🍊','🍭','🍇','🍒','🍋',
+   '🌟','🍇','🍊','🍒','🍋','🍇','🍒','🍊','🍇','🍋','🍒','🍇','🍊','🍒','🍋','🍇','🍫','🍊','🍒','🍇',
+   '🍋','🍒','🍇','🍊','🍒','🍋','🍇','🍒','🍊','🍇','🍋','🍒','🍇','🍬','🍊','🍒','🍋','🍇','💥','🍒'],
   // Барабан 5
-  ['🍭','🍇','🍊','🍒','🍋','🍭','🍒','🍊','🍭','🍋','🍇','🍭','🍒','🍊','🌟','🍭','🍒','🍋','🍭','🍊','🍇','🍭','🍒','🍫','🍭','🍊','🍋','🍭','💥','🍒','🍭','🍊','🍋','🍭','🍇','🍒','🍭','🍬','🍊','🍭'],
+  ['🍭','🍇','🍊','🍒','🍋','🍭','🍒','🍊','🍋','🍇','🍭','🍒','🍊','🍭','🍋','🍇','🍭','🍒','🍊','🍭',
+   '🍋','🍒','🍭','🍊','🍇','🍭','🍒','🍋','🍭','🍊','🍒','🍭','🍇','🍋','🍭','🍒','🍊','🍭','🍋','🍒',
+   '🌟','🍭','🍒','🍊','🍋','🍭','🍇','🍒','🍭','🍊','🍋','🍭','🍒','🍫','🍭','🍊','🍋','🍭','🍒','🍇',
+   '🍭','🍊','🍋','🍭','🍒','🍇','🍭','🍊','🍋','🍭','🍒','🍊','🍭','🍋','🍇','🍭','🍒','🍊','💥','🍭'],
   // Барабан 6
-  ['🍬','🍭','🍇','🍊','🍒','🍋','🍬','🍊','🍒','🍬','🍋','🍇','🍬','🌟','🍒','🍬','🍊','🍋','🍬','🍒','🍭','🍬','💎','🍒','🍬','🍊','🍋','🍬','💥','🍒','🍬','🍊','🍫','🍬','🍒','🍋','🍬','🍇','🍒','🍬'],
+  ['🍬','🍭','🍇','🍊','🍒','🍋','🍬','🍊','🍒','🍬','🍋','🍇','🍬','🍒','🍊','🍬','🍋','🍒','🍬','🍭',
+   '🍊','🍬','🍒','🍋','🍬','🍇','🍒','🍬','🍊','🍋','🍬','🍒','🍭','🍬','🍊','🍋','🍬','🍒','🍇','🍬',
+   '🌟','🍬','🍒','🍊','🍋','🍬','🍇','🍒','🍬','🍊','🍋','🍬','🍒','🍭','🍬','🍊','🍋','🍬','🍫','🍒',
+   '🍬','🍊','🍋','🍬','🍒','🍇','🍬','💎','🍒','🍬','🍊','🍋','🍬','🍒','🍇','🍬','🍊','🍒','💥','🍬'],
 ];
 
 // Таблица выплат: символ → { minCount: multiplier }
@@ -577,7 +698,13 @@ async function renderGrid(symbols, winCells = [], wildMults = {}, animate = fals
 function showScatterPopup(count, freeSpinsAwarded) {
   const el = document.createElement('div');
   el.className = 'scatter-count-badge';
-  el.innerHTML = `💥 ${count} Scattery!<br><span style="font-size:18px">${freeSpinsAwarded > 0 ? `+${freeSpinsAwarded} Free Spinów!` : '+3 dodatkowe!'}</span>`;
+  if (count === 0) {
+    el.innerHTML = `🎁 Buy Bonus!<br><span style="font-size:18px">+${freeSpinsAwarded} Free Spinów!</span>`;
+  } else if (freeSpinsAwarded > 0) {
+    el.innerHTML = `💥 ${count} Scattery!<br><span style="font-size:18px">+${freeSpinsAwarded} Free Spinów!</span>`;
+  } else {
+    el.innerHTML = `💥 Scatter!<br><span style="font-size:18px">+${count * 3} dodatkowych spinów!</span>`;
+  }
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2100);
   if (tg) tg.HapticFeedback.notificationOccurred('success');
@@ -676,22 +803,17 @@ function calculateWin(g, bet, isFreeSpinMode = false) {
     }
   }
 
-  // Scatter логика
+  // Scatter логика — ТОЛЬКО в базовой игре, на фриспинах scatter не даёт доп.спины
   let newFreeSpins = 0;
-  let scatterBonus = 0; // доп. спины во время фриспинов
+  let scatterBonus = 0;
 
-  if (isFreeSpinMode) {
-    // На фриспинах: каждый Scatter = +3 спина
-    if (scatters.length >= 1) {
-      scatterBonus = scatters.length * 3;
-      winCells.push(...scatters);
-    }
-  } else {
-    // В обычной игре: 3=5FS, 4=10FS, 5+=15FS
-    if (scatters.length >= 5)      { newFreeSpins = 15; winCells.push(...scatters); }
+  if (!isFreeSpinMode) {
+    if (scatters.length >= 5)       { newFreeSpins = 15; winCells.push(...scatters); }
     else if (scatters.length === 4) { newFreeSpins = 10; winCells.push(...scatters); }
     else if (scatters.length === 3) { newFreeSpins = 5;  winCells.push(...scatters); }
+    // 1-2 scatter — просто подсвечиваем, ничего не даём
   }
+  // На фриспинах scatter вообще ничего не триггерит — иначе бесконечный цикл
 
   const winnings = Math.round(totalMult * bet);
 
@@ -872,13 +994,73 @@ async function spin() {
 }
 
 // ==================== UI ====================
+const BB_MULTIPLIER = 100; // Buy Bonus = 100x ставки (как Sweet Bonanza)
+
 function selectBet(val) {
   bet = val;
   document.querySelectorAll('.bet-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.bet) === val));
+  updateBBPrice();
+}
+
+function updateBBPrice() {
+  const price = bet * BB_MULTIPLIER;
+  document.getElementById('bbPrice').textContent = `${price} 🪙`;
+  const btn = document.getElementById('buyBonusBtn');
+  btn.disabled = spinning || freeSpins > 0 || balance < price;
 }
 
 function updateBalance() {
   document.getElementById('balVal').textContent = balance;
+  updateBBPrice();
+}
+
+// ==================== BUY BONUS ====================
+function openBuyBonus() {
+  if (spinning || freeSpins > 0) return;
+  const price = bet * BB_MULTIPLIER;
+  document.getElementById('bbModalPrice').textContent = price;
+  document.getElementById('bbModalBalance').textContent = balance;
+  const confirmBtn = document.getElementById('bbConfirmBtn');
+  confirmBtn.disabled = balance < price;
+  confirmBtn.textContent = balance < price ? '❌ Za mało żetonów' : '🎰 Kup teraz!';
+  document.getElementById('bbModal').classList.add('show');
+  if (tg) tg.HapticFeedback.impactOccurred('medium');
+}
+
+function closeBuyBonus() {
+  document.getElementById('bbModal').classList.remove('show');
+}
+
+async function confirmBuyBonus() {
+  const price = bet * BB_MULTIPLIER;
+  if (balance < price) return;
+
+  closeBuyBonus();
+
+  balance -= price;
+  updateBalance();
+
+  // Splash эффект
+  const splash = document.createElement('div');
+  splash.className = 'bb-splash';
+  document.body.appendChild(splash);
+  setTimeout(() => splash.remove(), 1300);
+
+  // Добавляем фриспины
+  freeSpins += 10;
+  updateFsBanner();
+
+  if (tg) tg.HapticFeedback.notificationOccurred('success');
+
+  // Показываем popup
+  showScatterPopup(0, 10);
+  await sleep(1800);
+
+  // Записываем в API (ставка = цена бонуса, выигрыш = 0 пока)
+  await recordSpin([], 0, price);
+
+  // Запускаем фриспины
+  spin();
 }
 
 function updateFsBanner() {
@@ -943,27 +1125,77 @@ function confetti(big=false) {
 }
 
 // ==================== API ====================
-async function fetchBalance() {
-  if (!initDataRaw) return;
-  try {
-    const res = await fetch(`${API_BASE}/api/balance?init_data=${encodeURIComponent(initDataRaw)}`);
-    const data = await res.json();
-    if (data.ok) { balance = data.balance; updateBalance(); }
-  } catch(e) { console.warn('Balance fetch:', e.message); }
+// API_BASE читается из мета-тега — так легко менять без редактирования кода
+const API_BASE = document.querySelector('meta[name="api-base"]')?.content || '';
+const DEV_MODE = !API_BASE || !initDataRaw;
+
+if (DEV_MODE) {
+  console.warn(
+    '%c[Lucky Bonanza] DEV MODE\n' +
+    'Баланс не синхронизируется с ботом.\n' +
+    'Чтобы подключить бота:\n' +
+    '1. pip install pyngrok\n' +
+    '2. ngrok http 8081\n' +
+    '3. Скопируй https://xxxx.ngrok-free.app в мета-тег api-base в index.html\n' +
+    '4. Перезагрузи GitHub Pages',
+    'color:orange;font-size:13px'
+  );
 }
 
-async function recordSpin(grid, winnings, betAmt) {
-  if (!initDataRaw) return true;
+async function fetchBalance() {
+  if (DEV_MODE) {
+    // В dev режиме показываем заглушку "DEV" чтобы было видно
+    document.getElementById('balVal').textContent = balance + ' (DEV)';
+    return;
+  }
   try {
-    const res = await fetch(`${API_BASE}/api/spin`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ init_data:initDataRaw, bet:betAmt, winnings, reels:grid.flat() })
+    const res = await fetch(`${API_BASE}/api/balance?init_data=${encodeURIComponent(initDataRaw)}`, {
+      signal: AbortSignal.timeout(5000)
     });
     const data = await res.json();
-    if (data.ok) { balance = data.balance; updateBalance(); }
-    else if (data.error === 'Insufficient balance') { balance = data.balance; updateBalance(); return false; }
-  } catch(e) { console.warn('Spin record:', e.message); }
+    if (data.ok) {
+      balance = data.balance;
+      updateBalance();
+    } else {
+      console.error('Balance error:', data.error);
+    }
+  } catch(e) {
+    console.warn('Balance fetch failed:', e.message);
+    showResult('⚠️ Brak połączenia z serwerem', 'lose');
+  }
+}
+
+async function recordSpin(g, winnings, betAmt) {
+  if (DEV_MODE) {
+    // Локальный баланс уже обновлён в spin() — просто возвращаем true
+    return true;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/spin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        init_data: initDataRaw,
+        bet: betAmt,
+        winnings: winnings,
+        reels: Array.isArray(g) && g.length && Array.isArray(g[0]) ? g.flat() : g
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await res.json();
+    if (data.ok) {
+      balance = data.balance;
+      updateBalance();
+      return true;
+    } else if (data.error === 'Insufficient balance') {
+      balance = data.balance;
+      updateBalance();
+      return false;
+    }
+  } catch(e) {
+    console.warn('Spin record failed:', e.message);
+    // Не блокируем игру при сетевой ошибке — логируем и продолжаем
+  }
   return true;
 }
 
