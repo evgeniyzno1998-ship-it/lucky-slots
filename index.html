@@ -102,6 +102,23 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
   </div>
 </div>
 <script>
+const TRANSLATIONS = {
+    pl: { zakrec: "ZAKRĘĆ", deposit: "DEPOZYT", buyBonus: "BUY BONUS", history: "OSTATNIE SPINY", alert: "Brak żetonów!" },
+    ua: { zakrec: "КРУТИТИ", deposit: "ДЕПОЗИТ", buyBonus: "КУПИТИ БОНУС", history: "ОСТАННІ СПІНИ", alert: "Немає жетонів!" },
+    ru: { zakrec: "КРУТИТЬ", deposit: "ДЕПОЗИТ", buyBonus: "КУПИТЬ БОНУС", history: "ПОСЛЕДНИЕ СПИНЫ", alert: "Нет жетонов!" },
+    en: { zakrec: "SPIN", deposit: "DEPOSIT", buyBonus: "BUY BONUS", history: "LAST SPINS", alert: "No coins!" }
+};
+
+// Читаем язык из URL
+const USER_LANG = urlParams.get('lang') || 'en';
+const T = TRANSLATIONS[USER_LANG] || TRANSLATIONS['en'];
+
+// Функция для перевода страницы
+function applyLanguage() {
+    document.getElementById('spinBtnText').innerText = (balance < bet) ? T.deposit : T.zakrec;
+    document.querySelector('.history-title').innerText = T.history;
+    document.querySelector('.bb-title').innerText = T.buyBonus;
+    // И так далее для всех текстов
 const tg = window.Telegram.WebApp;
 const urlParams = new URLSearchParams(window.location.search);
 const API_URL = urlParams.get('api') || document.querySelector('meta[name="api-base"]').content;
