@@ -1,99 +1,62 @@
-import logging, sqlite3, asyncio, time, os, sys, aiohttp, json, urllib.parse
-from collections import defaultdict
-from typing import Callable, Any, Awaitable
-from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, types, F, BaseMiddleware
+import logging, sqlite3, asyncio, os, json, urllib.parse
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, TelegramObject, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 
-# ==================== НАСТРОЙКИ ====================
-load_dotenv()
+# Настройки
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
-CRYPTO_TOKEN = os.getenv("CRYPTO_TOKEN")
+# ВАЖНО: Укажи тут свой реальный публичный адрес Railway (https://xxx.up.railway.app)
+PUBLIC_API_URL = "https://lucky-slots-production.up.railway.app"
 API_PORT = int(os.getenv("PORT", 8081))
-CRYPTOBOT_API = "https://pay.crypt.bot/api"
 
-if not BOT_TOKEN or not ADMIN_ID or not CRYPTO_TOKEN:
-    sys.exit("ERROR: Проверьте переменные окружения!")
-
-# ==================== ЛОКАЛИЗАЦИЯ ====================
+# Локализация
 LANGUAGES = {'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'}
-
 BOT_TEXTS = {
     'pl': {
-        'welcome': 'Witaj w Lucky Slots! 🎰\nWybierz opcję poniżej:',
-        'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'stats': '💰 Moje żetony', 'ref': '👥 Poleć znajomego', 'settings': '⚙️ Język',
-        'balance_text': 'Twój balans: {c} żetonów', 'dep_notif': 'Brak żetonów! Wybierz пакет 👇', 'lang_ok': '✅ Język zmieniony!', 
-        'token': 'żetonów', 'ref_text': '🔗 Twój link: https://t.me/{b}?start=ref{u}\n👥 Poleceni: {cnt}', 'buy_menu': '💳 *Wybierz pakiet:*'
+        'welcome': 'Witaj w Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'set': '⚙️ Język', 'bal': '💰 Баланс', 'ref': '👥 Poleć znajomego',
+        'balance_text': 'Twój balans: {c} żetonów', 'dep_notif': 'Brak żetonów! Wybierz pakiet:', 'lang_ok': '✅ Język zmieniony!', 'token': 'żetonów',
+        'ref_text': '🔗 Twoja link (kliknij, aby skopiować):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Poleceni: {cnt}'
     },
     'ua': {
-        'welcome': 'Вітаємо у Lucky Slots! 🎰\nОберіть дію:',
-        'play': '🎰 Грати зараз', 'buy': '💳 Купити жетони', 'stats': '💰 Мій баланс', 'ref': '👥 Запросити друга', 'settings': '⚙️ Мова',
-        'balance_text': 'Ваш баланс: {c} жетонів', 'dep_notif': 'Немає жетонів! Оберіть пакет 👇', 'lang_ok': '✅ Мову змінено!', 
-        'token': 'жетонів', 'ref_text': '🔗 Посилання: https://t.me/{b}?start=ref{u}\n👥 Запрошено: {cnt}', 'buy_menu': '💳 *Оберіть пакет:*'
+        'welcome': 'Вітаємо у Lucky Slots! 🎰', 'play': '🎰 Грати зараз', 'buy': '💳 Купити жетони', 'set': '⚙️ Мова', 'bal': '💰 Баланс', 'ref': '👥 Запросити друга',
+        'balance_text': 'Ваш баланс: {c} жетонів', 'dep_notif': 'Немає жетонів! Оберіть пакет:', 'lang_ok': '✅ Мову змінено!', 'token': 'жетонів',
+        'ref_text': '🔗 Ваше посилання (натисніть, щоб скопіювати):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Запрошено: {cnt}'
     },
     'ru': {
-        'welcome': 'Добро пожаловать в Lucky Slots! 🎰\nВыберите действие:',
-        'play': '🎰 Играть сейчас', 'buy': '💳 Купить жетоны', 'stats': '💰 Мой баланс', 'ref': '👥 Рефералы', 'settings': '⚙️ Язык',
-        'balance_text': 'Ваш баланс: {c} жетонов', 'dep_notif': 'Нет жетонов! Выберите пакет 👇', 'lang_ok': '✅ Язык изменен!', 
-        'token': 'жетонов', 'ref_text': '🔗 Ссылка: https://t.me/{b}?start=ref{u}\n👥 Рефералов: {cnt}', 'buy_menu': '💳 *Выберите пакет:*'
+        'welcome': 'Добро пожаловать в Lucky Slots! 🎰', 'play': '🎰 Играть сейчас', 'buy': '💳 Купить жетоны', 'set': '⚙️ Язык', 'bal': '💰 Баланс', 'ref': '👥 Рефералы',
+        'balance_text': 'Ваш баланс: {c} жетонов', 'dep_notif': 'Нет жетонов! Выберите пакет:', 'lang_ok': '✅ Язык изменен!', 'token': 'жетонов',
+        'ref_text': '🔗 Ваша ссылка (нажми, чтобы скопировать):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Рефералов: {cnt}'
     },
     'en': {
-        'welcome': 'Welcome to Lucky Slots! 🎰\nChoose an option:',
-        'play': '🎰 Play Now', 'buy': '💳 Buy Coins', 'stats': '💰 My Balance', 'ref': '👥 Referrals', 'settings': '⚙️ Language',
-        'balance_text': 'Your balance: {c} coins', 'dep_notif': 'No coins! Choose a package 👇', 'lang_ok': '✅ Language changed!', 
-        'token': 'coins', 'ref_text': '🔗 Your link: https://t.me/{b}?start=ref{u}\n👥 Referrals: {cnt}', 'buy_menu': '💳 *Choose a package:*'
+        'welcome': 'Welcome to Lucky Slots! 🎰', 'play': '🎰 Play Now', 'buy': '💳 Buy Coins', 'set': '⚙️ Language', 'bal': '💰 Balance', 'ref': '👥 Referrals',
+        'balance_text': 'Your balance: {c} coins', 'dep_notif': 'No coins! Choose a package:', 'lang_ok': '✅ Language changed!', 'token': 'coins',
+        'ref_text': '🔗 Your link (tap to copy):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Referrals: {cnt}'
     }
 }
 
-# ==================== БАЗА ДАННЫХ ====================
+# БД функции
 def init_db():
     with sqlite3.connect('users.db') as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, phone TEXT,
-            referred_by INTEGER, referrals_count INTEGER DEFAULT 0, coins INTEGER DEFAULT 0,
-            joined_date TEXT, language TEXT DEFAULT 'pl')''')
+        conn.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, referrals_count INTEGER DEFAULT 0, coins INTEGER DEFAULT 0, language TEXT DEFAULT 'pl')")
         try: conn.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'pl'")
         except: pass
-        conn.execute('''CREATE TABLE IF NOT EXISTS invoices (
-            invoice_id TEXT PRIMARY KEY, user_id INTEGER, pack_key TEXT, coins INTEGER,
-            amount REAL, status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))''')
 
-def get_user_lang(user_id):
+def get_user_data(user_id):
     with sqlite3.connect('users.db') as conn:
-        res = conn.execute("SELECT language FROM users WHERE user_id = ?", (user_id,)).fetchone()
-        return res[0] if res else 'pl'
+        return conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone() or ('pl', 0, 0)
 
-def get_user_stats(user_id):
-    with sqlite3.connect('users.db') as conn:
-        return conn.execute("SELECT referrals_count, coins FROM users WHERE user_id = ?", (user_id,)).fetchone() or (0, 0)
-
-# ==================== КЛАВИАТУРЫ ====================
 def main_menu(user_id, bot_name):
-    lang = get_user_lang(user_id)
+    lang, _, _ = get_user_data(user_id)
     t = BOT_TEXTS[lang]
-    api_url = f"https://lucky-slots-production.up.railway.app"
-    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api={api_url}&bot={bot_name}&lang={lang}"
-    
+    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api={PUBLIC_API_URL}&bot={bot_name}&lang={lang}"
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=t['play'], web_app=WebAppInfo(url=webapp_url))],
-        [KeyboardButton(text=t['buy']), KeyboardButton(text=t['stats'])],
-        [KeyboardButton(text=t['ref']), KeyboardButton(text=t['settings'])]
+        [KeyboardButton(text=t['buy']), KeyboardButton(text=t['bal'])],
+        [KeyboardButton(text=t['ref']), KeyboardButton(text=t['set'])]
     ], resize_keyboard=True)
 
-def packages_keyboard(lang):
-    t_name = BOT_TEXTS[lang]['token']
-    builder = InlineKeyboardBuilder()
-    pkgs = {"pack_50": (50, 0.50), "pack_100": (100, 0.90), "pack_500": (500, 4.00)}
-    for k, v in pkgs.items():
-        builder.button(text=f"{v[0]} {t_name} — {v[1]} USDT", callback_data=f"buy_{k}")
-    return builder.adjust(1).as_markup()
-
-# ==================== ХЕНДЛЕРЫ ====================
-logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
@@ -104,43 +67,24 @@ async def cmd_start(message: Message):
     ref_id = int(args[1].replace("ref", "")) if len(args) > 1 and args[1].startswith("ref") else None
     
     with sqlite3.connect('users.db') as conn:
-        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name, joined_date, referred_by) VALUES (?, ?, ?, datetime('now'), ?)",
-                     (user_id, message.from_user.username, message.from_user.first_name, ref_id))
+        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name, language) VALUES (?, ?, ?, 'pl')", (user_id, message.from_user.username, message.from_user.first_name))
+        if ref_id and ref_id != user_id:
+            conn.execute("UPDATE users SET referrals_count = referrals_count + 1, coins = coins + 10 WHERE user_id = ?", (ref_id,))
     
     bot_info = await bot.get_me()
-    lang = get_user_lang(user_id)
-
+    lang, _, _ = get_user_data(user_id)
+    
     if len(args) > 1 and args[1] == "deposit":
-        await message.answer(BOT_TEXTS[lang]['dep_notif'], reply_markup=packages_keyboard(lang))
+        await message.answer(BOT_TEXTS[lang]['dep_notif']) # Здесь можно добавить кнопки оплаты
         return
 
     await message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(user_id, bot_info.username))
 
-# Фильтры кнопок (работают на всех языках)
-@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['buy'] for l in BOT_TEXTS))
-async def buy_handler(message: Message):
-    lang = get_user_lang(message.from_user.id)
-    await message.answer(BOT_TEXTS[lang]['buy_menu'], reply_markup=packages_keyboard(lang), parse_mode="Markdown")
-
-@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['stats'] for l in BOT_TEXTS))
-async def stats_handler(message: Message):
-    lang = get_user_lang(message.from_user.id)
-    _, coins = get_user_stats(message.from_user.id)
-    await message.answer(BOT_TEXTS[lang]['balance_text'].format(c=coins))
-
-@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['ref'] for l in BOT_TEXTS))
-async def ref_handler(message: Message):
-    lang = get_user_lang(message.from_user.id)
-    bot_info = await bot.get_me()
-    cnt, _ = get_user_stats(message.from_user.id)
-    await message.answer(BOT_TEXTS[lang]['ref_text'].format(b=bot_info.username, u=message.from_user.id, cnt=cnt))
-
-@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['settings'] for l in BOT_TEXTS))
-async def settings_handler(message: Message):
+@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['set'] for l in BOT_TEXTS))
+async def cmd_lang(message: Message):
     builder = InlineKeyboardBuilder()
-    for code, name in LANGUAGES.items():
-        builder.button(text=name, callback_data=f"sl_{code}")
-    await message.answer("Choose language / Wybierz język:", reply_markup=builder.adjust(2).as_markup())
+    for code, name in LANGUAGES.items(): builder.button(text=name, callback_data=f"sl_{code}")
+    await message.answer("Select language:", reply_markup=builder.adjust(2).as_markup())
 
 @dp.callback_query(F.data.startswith("sl_"))
 async def set_lang(call: CallbackQuery):
@@ -151,13 +95,24 @@ async def set_lang(call: CallbackQuery):
     await call.message.edit_text(BOT_TEXTS[lang]['lang_ok'])
     await call.message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(call.from_user.id, bot_info.username))
 
-# ==================== API ДЛЯ MINI APP ====================
+@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['bal'] for l in BOT_TEXTS))
+async def cmd_bal(message: Message):
+    lang, coins, _ = get_user_data(message.from_user.id)
+    await message.answer(BOT_TEXTS[lang]['balance_text'].format(c=coins))
+
+@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['ref'] for l in BOT_TEXTS))
+async def cmd_ref(message: Message):
+    lang, _, refs = get_user_data(message.from_user.id)
+    bot_info = await bot.get_me()
+    await message.answer(BOT_TEXTS[lang]['ref_text'].format(b=bot_info.username, u=message.from_user.id, cnt=refs), parse_mode="MarkdownV2")
+
+# ==================== API ДЛЯ ИГРЫ ====================
 async def api_get_balance(request: web.Request) -> web.Response:
     try:
         init_data = request.rel_url.query.get("init_data", "")
         parsed = dict(urllib.parse.parse_qsl(init_data))
         user_id = json.loads(parsed.get("user", "{}")).get("id")
-        _, coins = get_user_stats(user_id)
+        _, coins, _ = get_user_data(user_id)
         return web.json_response({"ok": True, "balance": coins}, headers={"Access-Control-Allow-Origin": "*"})
     except: return web.json_response({"ok": False}, status=400)
 
@@ -179,16 +134,13 @@ async def start_api_server():
     app = web.Application()
     app.router.add_get("/api/balance", api_get_balance)
     app.router.add_post("/api/spin", api_spin)
-    app.router.add_options("/{tail:.*}", lambda r: web.Response(headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"}))
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
 
-# ==================== ЗАПУСК ====================
 async def main():
     init_db()
     asyncio.create_task(start_api_server())
-    print(f"🚀 Бот запущен на порту {API_PORT}")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
