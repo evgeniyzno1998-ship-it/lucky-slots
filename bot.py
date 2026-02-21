@@ -336,7 +336,7 @@ def main_menu():
             [KeyboardButton(text="🎰 Graj teraz")],
             [KeyboardButton(
                 text="🎰 Lucky Slots",
-                web_app=types.WebAppInfo(url="https://evgeniyzno1998-ship-it.github.io/lucky-slots/")
+                web_app=types.WebAppInfo(url="https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app")
             )],
             [KeyboardButton(text="🎁 Bonusy")],
             [KeyboardButton(text="👥 Poleć znajomego"), KeyboardButton(text="💰 Moje żetony")],
@@ -1117,3 +1117,4 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
