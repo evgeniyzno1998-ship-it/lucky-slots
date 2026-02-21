@@ -331,12 +331,15 @@ async def check_invoice(invoice_id: str) -> str | None:
 # ==================== КЛАВИАТУРЫ ====================
 
 def main_menu():
+    # Формируем URL с параметрами: адрес API и имя бота для ссылок
+    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={@testplcas_bot}"
+    
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🎰 Graj teraz")],
             [KeyboardButton(
                 text="🎰 Lucky Slots",
-                web_app=types.WebAppInfo(url="https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={BOT_USERNAME}")
+                web_app=types.WebAppInfo(url=webapp_url)
             )],
             [KeyboardButton(text="🎁 Bonusy")],
             [KeyboardButton(text="👥 Poleć znajomego"), KeyboardButton(text="💰 Moje żetony")],
@@ -397,37 +400,31 @@ async def cmd_start(message: Message):
 
     referrer_id = None
     args = message.text.split()
+    
+    # ПРОВЕРКА: Если юзер пришел по ссылке ?start=deposit
+    if len(args) > 1 and args[1] == "deposit":
+        create_user(user_id, username, first_name) # На всякий случай создаем, если новый
+        await buy_coins_menu(message) # Сразу открываем меню покупки
+        return
+
+    # Логика рефералов (твоя старая)
     if len(args) > 1 and args[1].startswith("ref"):
         try:
             referrer_id = int(args[1].replace("ref", ""))
-            if referrer_id == user_id:
-                referrer_id = None
-        except ValueError:
-            pass
-
-     args = message.text.split()
-    # ПРОВЕРКА НА ПЕРЕХОД ИЗ ИГРЫ
-    if len(args) > 1 and args[1] == "deposit":
-        await buy_coins_menu(message) # Сразу вызываем меню покупки
-        return
+            if referrer_id == user_id: referrer_id = None
+        except ValueError: pass
 
     existing_user = get_user(user_id)
-
     if not existing_user:
         create_user(user_id, username, first_name, referrer_id)
         if referrer_id:
-            referrer = get_user(referrer_id)
-            if referrer:
-                add_referral(referrer_id, user_id)
-                try:
-                    await bot.send_message(referrer_id, "🎉 Ktoś dołączył po Twoim linku! Masz +10 Żetonów Casino!")
-                except Exception:
-                    pass
+            add_referral(referrer_id, user_id)
+            try: await bot.send_message(referrer_id, "🎉 Ktoś dołączył po Twoim linku! +10 Żetonów!")
+            except: pass
     else:
         update_user_login(user_id, username, first_name)
 
     user = get_user(user_id)
-
     if user and user[3]:
         await message.answer(texts.WELCOME, reply_markup=main_menu(), parse_mode="Markdown")
     else:
@@ -1123,6 +1120,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
