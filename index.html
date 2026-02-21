@@ -22,7 +22,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 .spin-btn { width:100px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One'; cursor:pointer; }
 .spin-btn.deposit { background:linear-gradient(135deg,#00e676,#00a352); }
 .buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
-.history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; }
+.history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; min-height:60px; }
 .h-item { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
 .paytable { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; background:rgba(255,255,255,0.03); padding:10px; border-radius:16px; }
 .pt-item { text-align:center; font-size:8px; background:rgba(255,255,255,0.05); padding:5px; border-radius:8px; }
@@ -63,10 +63,10 @@ const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Brak żetonów!", spinHist: "Spin" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Немає жетонів!", spinHist: "Спін" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Нет жетонов!", spinHist: "Спин" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "No coins!", spinHist: "Spin" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", sHist: "Spin" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", sHist: "Спін" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", sHist: "Спин" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", sHist: "Spin" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
@@ -91,7 +91,7 @@ async function fetchBalance() {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
         if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) { console.error("Balance fetch error"); }
+    } catch(e) { setTimeout(fetchBalance, 2000); }
 }
 
 function handleMainAction() {
@@ -141,18 +141,18 @@ async function spin() {
     spinning = false; document.getElementById('spinBtn').disabled = false;
 }
 
-function openBuyBonus() {
-    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
-    tg.showAlert("Coming soon!");
-}
-
 function addHistory(win) {
     const list = document.getElementById('histList');
     const div = document.createElement('div');
     div.className = 'h-item';
-    div.innerHTML = `<span>🎰 ${T.spinHist}</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
+    div.innerHTML = `<span>🎰 ${T.sHist}</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
     list.prepend(div);
     if (list.children.length > 5) list.lastChild.remove();
+}
+
+function openBuyBonus() {
+    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
+    tg.showAlert("Coming soon!");
 }
 
 function init() {
