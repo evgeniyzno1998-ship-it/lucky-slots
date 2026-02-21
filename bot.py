@@ -405,6 +405,12 @@ async def cmd_start(message: Message):
         except ValueError:
             pass
 
+     args = message.text.split()
+    # ПРОВЕРКА НА ПЕРЕХОД ИЗ ИГРЫ
+    if len(args) > 1 and args[1] == "deposit":
+        await buy_coins_menu(message) # Сразу вызываем меню покупки
+        return
+
     existing_user = get_user(user_id)
 
     if not existing_user:
@@ -1117,4 +1123,5 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
