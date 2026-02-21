@@ -32,7 +32,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box">🪙 <span id="balVal">0</span></div>
+    <div class="balance-box">🪙 <span id="balVal">...</span></div>
   </div>
   <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
@@ -58,12 +58,13 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 <script>
 const tg = window.Telegram.WebApp;
 const urlParams = new URLSearchParams(window.location.search);
-const API_URL = urlParams.get('api');
-const BOT_NAME = urlParams.get('bot');
+// Берем API из ссылки, если пусто - берем дефолт
+const API_URL = urlParams.get('api') || "https://lucky-slots-production.up.railway.app";
+const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak выигрыша", noMoney: "Doładuj konto!" },
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!" },
     ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!" },
     ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!" },
     en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!" }
@@ -90,8 +91,14 @@ async function fetchBalance() {
     try {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
-        if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) {}
+        if (d.ok) { 
+            balance = d.balance; 
+            updateUI(); 
+        }
+    } catch(e) {
+        console.error("API error, retrying...");
+        setTimeout(fetchBalance, 2000); // Повтор через 2 сек если ошибка
+    }
 }
 
 function handleMainAction() {
@@ -113,15 +120,13 @@ async function spin() {
     if (spinning) return;
     spinning = true; document.getElementById('spinBtn').disabled = true;
     const grid = []; for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
-    
     let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
-    let win = 0;
-    for(let s in counts) {
+    let win = 0; for(let s in counts) { 
         if(counts[s] >= 20) win += bet * 20;
-        else if(counts[s] >= 12) win += bet * 5;
-        else if(counts[s] >= 8) win += bet * 1.5;
+        else if(counts[s] >= 12) win += bet * 5; 
+        else if(counts[s] >= 8) win += bet * 1.5; 
     }
-
+    
     try {
         const r = await fetch(`${API_URL}/api/spin`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -143,11 +148,6 @@ async function spin() {
     spinning = false; document.getElementById('spinBtn').disabled = false;
 }
 
-function openBuyBonus() {
-    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
-    // Логика покупки бонуса...
-}
-
 function addHistory(win) {
     const list = document.getElementById('histList');
     const div = document.createElement('div');
@@ -155,6 +155,11 @@ function addHistory(win) {
     div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
     list.prepend(div);
     if (list.children.length > 5) list.lastChild.remove();
+}
+
+function openBuyBonus() {
+    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
+    tg.showAlert("Coming soon!");
 }
 
 function init() {
