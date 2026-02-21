@@ -8,7 +8,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
 :root { --bg1: #0d001f; --gold: #ffd700; --pink: #ff4da6; --win: #00e676; }
-body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; margin:0; padding:0; }
+body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; margin:0; padding:0; overflow-x: hidden; }
 .wrap { max-width:440px; margin:0 auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
 .header { display:flex; justify-content:space-between; align-items:center; }
 .logo { font-family:'Fredoka One'; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
@@ -43,19 +43,15 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
       <button class="bet-btn" onclick="selectBet(25)">25</button>
       <button class="bet-btn" onclick="selectBet(50)">50</button>
     </div>
-    <button class="spin-btn" id="spinBtn" onclick="handleMainAction()">
-      <span id="spinBtnText">ZAKRĘĆ</span>
-    </button>
+    <button class="spin-btn" id="spinBtn" onclick="handleMainAction()"><span id="spinBtnText">...</span></button>
   </div>
   <button class="buy-bonus-btn" onclick="openBuyBonus()">
     <div style="text-align:left"><div id="bbTitle" style="font-family:'Fredoka One';">BUY BONUS</div><div id="bbDesc" style="font-size:10px; opacity:0.6;">10 free spins</div></div>
     <div id="bbPrice" style="font-family:'Fredoka One'; color:var(--pink);">500 🪙</div>
   </button>
-  <div class="history-wrap">
-    <div id="histTitle" style="font-size:10px; opacity:0.4; margin-bottom:5px;">OSTATNIE SPINY</div>
-    <div id="histList"></div>
-  </div>
-  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:5px;">TABELA WYPŁAT</div>
+  <div id="histTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">OSTATNIE SPINY</div>
+  <div class="history-wrap" id="histList"></div>
+  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁAT</div>
   <div class="paytable" id="pt"></div>
 </div>
 
@@ -67,10 +63,10 @@ const BOT_NAME = urlParams.get('bot');
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Brak żetonów!", spinHist: "Spin" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Немає жетонів!", spinHist: "Спін" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Нет жетонов!", spinHist: "Спин" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "No coins!", spinHist: "Spin" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak выигрыша", noMoney: "Doładuj konto!" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
@@ -117,13 +113,15 @@ async function spin() {
     if (spinning) return;
     spinning = true; document.getElementById('spinBtn').disabled = true;
     const grid = []; for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
-    let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
-    let win = 0; for(let s in counts) { 
-        if(counts[s] >= 20) win += bet * 20;
-        else if(counts[s] >= 12) win += bet * 5; 
-        else if(counts[s] >= 8) win += bet * 1.5; 
-    }
     
+    let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
+    let win = 0;
+    for(let s in counts) {
+        if(counts[s] >= 20) win += bet * 20;
+        else if(counts[s] >= 12) win += bet * 5;
+        else if(counts[s] >= 8) win += bet * 1.5;
+    }
+
     try {
         const r = await fetch(`${API_URL}/api/spin`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -146,21 +144,15 @@ async function spin() {
 }
 
 function openBuyBonus() {
-    const price = bet * 100;
-    if (balance < price) {
-        tg.showAlert(T.noMoney);
-        return;
-    }
-    // Здесь должна быть логика открытия модалки (modal.show), если она есть.
-    // Если ты хочешь сразу покупать:
-    // confirmBuyBonus();
+    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
+    // Логика покупки бонуса...
 }
 
 function addHistory(win) {
     const list = document.getElementById('histList');
     const div = document.createElement('div');
     div.className = 'h-item';
-    div.innerHTML = `<span>🎰 ${T.spinHist}</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
+    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
     list.prepend(div);
     if (list.children.length > 5) list.lastChild.remove();
 }
@@ -182,7 +174,7 @@ function init() {
     document.getElementById('bbDesc').innerText = T.bbDesc;
     document.getElementById('histTitle').innerText = T.hist;
     document.getElementById('ptTitle').innerText = T.pt;
-    updateUI(); // 0:19 - Сразу ставим правильную кнопку
+    updateUI();
     fetchBalance();
 }
 init();
