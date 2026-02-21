@@ -7,30 +7,30 @@ from aiohttp import web
 
 # Настройки
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-# ВАЖНО: Укажи тут свой реальный публичный адрес Railway (https://xxx.up.railway.app)
-PUBLIC_API_URL = "https://lucky-slots-production.up.railway.app"
 API_PORT = int(os.getenv("PORT", 8081))
+# Railway дает домен автоматически, используем его
+PUBLIC_API_URL = f"https://{os.getenv('RAILWAY_STATIC_URL', 'lucky-slots-production.up.railway.app')}"
 
-# Локализация
+# ==================== ЛОКАЛИЗАЦИЯ (ИСПРАВЛЕНО) ====================
 LANGUAGES = {'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'}
 BOT_TEXTS = {
     'pl': {
-        'welcome': 'Witaj w Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'set': '⚙️ Język', 'bal': '💰 Баланс', 'ref': '👥 Poleć znajomego',
+        'welcome': 'Witaj w Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'set': '⚙️ Język', 'bal': '💰 Moje żetony', 'ref': '👥 Poleć znajomego',
         'balance_text': 'Twój balans: {c} żetonów', 'dep_notif': 'Brak żetonów! Wybierz pakiet:', 'lang_ok': '✅ Język zmieniony!', 'token': 'żetonów',
         'ref_text': '🔗 Twoja link (kliknij, aby skopiować):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Poleceni: {cnt}'
     },
     'ua': {
-        'welcome': 'Вітаємо у Lucky Slots! 🎰', 'play': '🎰 Грати зараз', 'buy': '💳 Купити жетони', 'set': '⚙️ Мова', 'bal': '💰 Баланс', 'ref': '👥 Запросити друга',
+        'welcome': 'Вітаємо у Lucky Slots! 🎰', 'play': '🎰 Грати зараз', 'buy': '💳 Купити жетони', 'set': '⚙️ Мова', 'bal': '💰 Мій баланс', 'ref': '👥 Запросити друга',
         'balance_text': 'Ваш баланс: {c} жетонів', 'dep_notif': 'Немає жетонів! Оберіть пакет:', 'lang_ok': '✅ Мову змінено!', 'token': 'жетонів',
         'ref_text': '🔗 Ваше посилання (натисніть, щоб скопіювати):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Запрошено: {cnt}'
     },
     'ru': {
-        'welcome': 'Добро пожаловать в Lucky Slots! 🎰', 'play': '🎰 Играть сейчас', 'buy': '💳 Купить жетоны', 'set': '⚙️ Язык', 'bal': '💰 Баланс', 'ref': '👥 Рефералы',
+        'welcome': 'Добро пожаловать в Lucky Slots! 🎰', 'play': '🎰 Играть сейчас', 'buy': '💳 Купить жетоны', 'set': '⚙️ Язык', 'bal': '💰 Мой баланс', 'ref': '👥 Рефералы',
         'balance_text': 'Ваш баланс: {c} жетонов', 'dep_notif': 'Нет жетонов! Выберите пакет:', 'lang_ok': '✅ Язык изменен!', 'token': 'жетонов',
         'ref_text': '🔗 Ваша ссылка (нажми, чтобы скопировать):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Рефералов: {cnt}'
     },
     'en': {
-        'welcome': 'Welcome to Lucky Slots! 🎰', 'play': '🎰 Play Now', 'buy': '💳 Buy Coins', 'set': '⚙️ Language', 'bal': '💰 Balance', 'ref': '👥 Referrals',
+        'welcome': 'Welcome to Lucky Slots! 🎰', 'play': '🎰 Play Now', 'buy': '💳 Buy Coins', 'set': '⚙️ Language', 'bal': '💰 My Balance', 'ref': '👥 Referrals',
         'balance_text': 'Your balance: {c} coins', 'dep_notif': 'No coins! Choose a package:', 'lang_ok': '✅ Language changed!', 'token': 'coins',
         'ref_text': '🔗 Your link (tap to copy):\n`https://t.me/{b}?start=ref{u}`\n\n👥 Referrals: {cnt}'
     }
@@ -45,7 +45,8 @@ def init_db():
 
 def get_user_data(user_id):
     with sqlite3.connect('users.db') as conn:
-        return conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone() or ('pl', 0, 0)
+        res = conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        return res if res else ('pl', 0, 0)
 
 def main_menu(user_id, bot_name):
     lang, _, _ = get_user_data(user_id)
@@ -73,11 +74,9 @@ async def cmd_start(message: Message):
     
     bot_info = await bot.get_me()
     lang, _, _ = get_user_data(user_id)
-    
     if len(args) > 1 and args[1] == "deposit":
-        await message.answer(BOT_TEXTS[lang]['dep_notif']) # Здесь можно добавить кнопки оплаты
+        await message.answer(BOT_TEXTS[lang]['dep_notif'])
         return
-
     await message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(user_id, bot_info.username))
 
 @dp.message(lambda m: any(m.text == BOT_TEXTS[l]['set'] for l in BOT_TEXTS))
@@ -104,9 +103,11 @@ async def cmd_bal(message: Message):
 async def cmd_ref(message: Message):
     lang, _, refs = get_user_data(message.from_user.id)
     bot_info = await bot.get_me()
-    await message.answer(BOT_TEXTS[lang]['ref_text'].format(b=bot_info.username, u=message.from_user.id, cnt=refs), parse_mode="MarkdownV2")
+    # Экранируем точки для MarkdownV2
+    safe_bot = bot_info.username.replace('.', '\\.')
+    await message.answer(BOT_TEXTS[lang]['ref_text'].format(b=safe_bot, u=message.from_user.id, cnt=refs), parse_mode="MarkdownV2")
 
-# ==================== API ДЛЯ ИГРЫ ====================
+# ==================== API ====================
 async def api_get_balance(request: web.Request) -> web.Response:
     try:
         init_data = request.rel_url.query.get("init_data", "")
@@ -134,6 +135,7 @@ async def start_api_server():
     app = web.Application()
     app.router.add_get("/api/balance", api_get_balance)
     app.router.add_post("/api/spin", api_spin)
+    app.router.add_options("/{tail:.*}", lambda r: web.Response(headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"}))
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
