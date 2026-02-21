@@ -139,7 +139,7 @@ BOT_USERNAME: str | None = None
 
 # ==================== БАЗА ДАННЫХ ====================
 
-def init_db():
+ddef init_db():
     with sqlite3.connect('users.db') as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -151,11 +151,16 @@ def init_db():
                 referrals_count INTEGER DEFAULT 0,
                 coins INTEGER DEFAULT 0,
                 joined_date TEXT,
-                last_click TEXT
-                language TEXT DEFAULT 'en'
+                last_click TEXT,
+                language TEXT DEFAULT 'pl'
             )
         ''')
-        # Таблица для хранения инвойсов (ожидающих оплату)
+        # Авто-миграция: добавляем колонку language, если её еще нет в старой базе
+        try:
+            conn.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'pl'")
+        except:
+            pass
+            
         conn.execute('''
             CREATE TABLE IF NOT EXISTS invoices (
                 invoice_id TEXT PRIMARY KEY,
@@ -404,6 +409,7 @@ async def cmd_start(message: Message):
 
     referrer_id = None
     args = message.text.split()
+    await message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(user_id), parse_mode="Markdown")
     
     # ПРОВЕРКА: Если юзер пришел по ссылке ?start=deposit
     if len(args) > 1 and args[1] == "deposit":
@@ -1121,7 +1127,25 @@ async def start_api_server():
     site = web.TCPSite(runner, "0.0.0.0", API_PORT)
     await site.start()
     logger.info(f"API server started on port {API_PORT}")
+    
+# Обработка кнопки "Язык" из главного меню
+@dp.message(lambda m: any(m.text == BOT_TEXTS[l]['settings'] for l in BOT_TEXTS))
+async def show_language_choice(message: Message):
+    builder = InlineKeyboardBuilder()
+    for code, name in LANGUAGES.items():
+        builder.button(text=name, callback_data=f"setlang_{code}")
+    builder.adjust(2)
+    await message.answer("Select language / Wybierz język:", reply_markup=builder.as_markup())
 
+# Обработка нажатия на инлайн-кнопку выбора языка
+@dp.callback_query(lambda c: c.data.startswith("setlang_"))
+async def set_language(call: CallbackQuery):
+    new_lang = call.data.split("_")[1]
+    with sqlite3.connect('users.db') as conn:
+        conn.execute("UPDATE users SET language = ? WHERE user_id = ?", (new_lang, call.from_user.id))
+    
+    await call.message.answer(f"✅ Language changed!", reply_markup=main_menu(call.from_user.id))
+    await call.answer()
 # ==================== ЗАПУСК ====================
 
 async def main():
@@ -1141,6 +1165,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
