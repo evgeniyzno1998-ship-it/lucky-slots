@@ -1211,27 +1211,3 @@ fetchBalance();
 </script>
 </body>
 </html>
-const tg = window.Telegram.WebApp;
-
-// 1. Автоматически узнаем адрес API из ссылки, которую мы настроили в Шаге 2
-const urlParams = new URLSearchParams(window.location.search);
-const API_URL = urlParams.get('api'); 
-
-async function getBalance() {
-    if (!API_URL) return; // Если адреса нет, ничего не делаем
-
-    // 2. Спрашиваем у бота баланс конкретного пользователя
-    const response = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
-    const data = await response.json();
-
-    if (data.ok) {
-        console.log("Мой баланс:", data.balance);
-        
-        // 3. ТУТ ВАЖНО: замени 'balance-count' на ID элемента в твоей игре, 
-        // в котором написаны цифры баланса.
-        const balanceElement = document.getElementById('balance-count');
-        if (balanceElement) {
-            balanceElement.innerText = data.balance;
-        }
-    }
-}
