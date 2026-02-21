@@ -198,7 +198,7 @@ def get_user_lang(user_id):
 
 # ==================== БАЗА ДАННЫХ ====================
 
-ddef init_db():
+def init_db():
     with sqlite3.connect('users.db') as conn:
         conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -1226,6 +1226,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
