@@ -898,8 +898,16 @@ async function spin() {
 
   const isFreeSpinMode = freeSpins > 0;
 
-  if (!isFreeSpinMode && balance < bet) {
-    showResult('Niewystarczające żetony! Kup więcej 👇', 'lose');
+if (!isFreeSpinMode && balance < bet) {
+    // Если баланс совсем 0
+    if (balance <= 0) {
+      tg.showAlert("Brak żetonów! Wróć do bota, aby doładować konto 💰");
+    } else {
+      // Если денег меньше, чем ставка (например, баланс 2, а ставка 5)
+      showResult('Za mały balans на tę stawkę!', 'lose');
+      tg.showAlert("Twój balans jest za niski для этой ставки. Zmniejsz stawkę или doładuj konto.");
+    }
+    
     if (tg) tg.HapticFeedback.notificationOccurred('error');
     return;
   }
