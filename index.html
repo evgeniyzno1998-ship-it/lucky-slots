@@ -1208,6 +1208,43 @@ grid = generateGrid();
 renderGrid(grid);
 updateBalance();
 fetchBalance();
+ const tg = window.Telegram.WebApp;
+    const urlParams = new URLSearchParams(window.location.search);
+    const API_URL = urlParams.get('api'); 
+
+    async function getBalanceFromBot() {
+        if (!API_URL) {
+            console.log("API_URL не найден в ссылке");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
+            const data = await response.json();
+
+            if (data.ok) {
+                console.log("Баланс получен:", data.balance);
+                
+                // 1. Обновляем цифру на экране
+                // Убедись, что у тебя в HTML есть элемент с id="balance-count" или "balance"
+                const balanceElement = document.getElementById('balance-count'); 
+                if (balanceElement) {
+                    balanceElement.innerText = data.balance;
+                }
+
+                // 2. ВАЖНО: Обнови внутреннюю переменную баланса в самой игре
+                // В разных играх она называется по-разному, например 'balance' или 'currentBalance'
+                balance = data.balance; 
+            }
+        } catch (e) {
+            console.error("Ошибка при получении баланса:", e);
+        }
+    }
+
+    // Запускаем получение баланса
+    getBalanceFromBot();
+    // ----------------------
+
 </script>
 </body>
 </html>
