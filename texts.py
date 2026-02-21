@@ -88,4 +88,19 @@ ADMIN_HEADER = "📱 *Użytkownicy z numerami:*\n\n"
 ADMIN_LINE = "👤 {name} (@{username})\n🆔 {user_id}\n📞 {phone}\n📅 {date}\n💰 Żetony: {coins}\n👥 Zaprosił: {referrals}\n—\n"
 ADMIN_TOP = "\n🏆 *TOP 10 REFERALÓW:*\n"
 ADMIN_TOP_LINE = "{place}. {name} (@{username}) — {count} zaproszeń, {coins} żetonów\n"
+
 ADMIN_DENIED = "⛔ Dostęp zabroniony"
+
+LANGUAGES = {
+    'pl': '🇵🇱 Polski',
+    'ua': '🇺🇦 Українська',
+    'ru': '🇷🇺 Русский',
+    'en': '🇬🇧 English'
+}
+
+BOT_TEXTS = {
+    'pl': {'play': '🎰 Graj teraz', 'settings': '⚙️ Język', 'buy': '💳 Kup żetony', 'welcome': 'Witaj в Lucky Slots!'},
+    'ua': {'play': '🎰 Грати зараз', 'settings': '⚙️ Мова', 'buy': '💳 Купити жетони', 'welcome': 'Вітаємо у Lucky Slots!'},
+    'ru': {'play': '🎰 Играть сейчас', 'settings': '⚙️ Язык', 'buy': '💳 Купить жетоны', 'welcome': 'Добро пожаловать в Lucky Slots!'},
+    'en': {'play': '🎰 Play Now', 'settings': '⚙️ Language', 'buy': '💳 Buy Coins', 'welcome': 'Welcome to Lucky Slots!'}
+}
