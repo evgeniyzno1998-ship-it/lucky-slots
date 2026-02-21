@@ -137,52 +137,66 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 BOT_USERNAME: str | None = None
 
-# ==================== ЛОКАЛИЗАЦИЯ (ШАГ №2) ====================
+# ==================== ЛОКАЛИЗАЦИЯ (Проверь этот блок) ====================
 LANGUAGES = {
-    'pl': '🇵🇱 Polski',
-    'ua': '🇺🇦 Українська',
-    'ru': '🇷🇺 Русский',
-    'en': '🇬🇧 English'
+    'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'
 }
 
 BOT_TEXTS = {
     'pl': {
-        'play': '🎰 Graj teraz',
-        'buy': '💳 Kup żetony',
-        'settings': '⚙️ Język / Мова',
-        'welcome': 'Witaj w Lucky Slots! 🎰\nWybierz opcję:',
-        'stats': '💰 Moje żetony',
-        'ref': '👥 Poleć znajomego',
-        'balance': 'Twój balans: {coins} żetonów'
+        'welcome': 'Witaj в Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 
+        'buy': '💳 Kup żetony', 'stats': '💰 Moje żetony', 
+        'ref': '👥 Poleć znajomego', 'settings': '⚙️ Język / Мова',
+        'balance': 'Twój balans: {coins} żetonów', 'buy_menu': '💳 *Wybierz pakiet żetonów:*'
     },
     'ua': {
-        'play': '🎰 Грати зараз',
-        'buy': '💳 Купити жетони',
-        'settings': '⚙️ Мова / Język',
-        'welcome': 'Вітаємо у Lucky Slots! 🎰\nОберіть дію:',
-        'stats': '💰 Мій баланс',
-        'ref': '👥 Запросити друга',
-        'balance': 'Ваш баланс: {coins} жетонів'
+        'welcome': 'Вітаємо у Lucky Slots! 🎰', 'play': '🎰 Грати зараз', 
+        'buy': '💳 Купити жетони', 'stats': '💰 Мій баланс', 
+        'ref': '👥 Запросити друга', 'settings': '⚙️ Мова / Język',
+        'balance': 'Ваш баланс: {coins} жетонів', 'buy_menu': '💳 *Оберіть пакет жетонів:*'
     },
     'ru': {
-        'play': '🎰 Играть сейчас',
-        'buy': '💳 Купить жетоны',
-        'settings': '⚙️ Язык / Język',
-        'welcome': 'Добро пожаловать в Lucky Slots! 🎰\nВыберите действие:',
-        'stats': '💰 Мой баланс',
-        'ref': '👥 Рефералы',
-        'balance': 'Ваш баланс: {coins} жетонов'
+        'welcome': 'Добро пожаловать в Lucky Slots! 🎰', 'play': '🎰 Играть сейчас', 
+        'buy': '💳 Купить жетоны', 'stats': '💰 Мой баланс', 
+        'ref': '👥 Рефералы', 'settings': '⚙️ Язык / Język',
+        'balance': 'Ваш баланс: {coins} жетонов', 'buy_menu': '💳 *Выберите пакет жетонов:*'
     },
     'en': {
-        'play': '🎰 Play Now',
-        'buy': '💳 Buy Coins',
-        'settings': '⚙️ Language / Język',
-        'welcome': 'Welcome to Lucky Slots! 🎰\nChoose option:',
-        'stats': '💰 My Balance',
-        'ref': '👥 Referrals',
-        'balance': 'Your balance: {coins} coins'
+        'welcome': 'Welcome to Lucky Slots! 🎰', 'play': '🎰 Play Now', 
+        'buy': '💳 Buy Coins', 'stats': '💰 My Balance', 
+        'ref': '👥 Referrals', 'settings': '⚙️ Language / Język',
+        'balance': 'Your balance: {coins} coins', 'buy_menu': '💳 *Choose a package:*'
     }
 }
+
+# Функция-помощник для проверки кнопок на всех языках
+def get_string(key, user_id):
+    lang = get_user_lang(user_id)
+    return BOT_TEXTS[lang].get(key, BOT_TEXTS['pl'][key])
+
+# ==================== ХЕНДЛЕРЫ КНОПОК (ИСПРАВЛЕНО) ====================
+
+# Кнопка "Купить жетоны" (теперь работает для всех языков)
+@dp.message(lambda m: any(m.text == BOT_TEXTS[lang]['buy'] for lang in BOT_TEXTS))
+async def buy_coins_handler(message: Message):
+    lang = get_user_lang(message.from_user.id)
+    await message.answer(BOT_TEXTS[lang]['buy_menu'], reply_markup=packages_keyboard(), parse_mode="Markdown")
+
+# Кнопка "Мои жетоны"
+@dp.message(lambda m: any(m.text == BOT_TEXTS[lang]['stats'] for lang in BOT_TEXTS))
+async def balance_handler(message: Message):
+    coins = get_user_stats(message.from_user.id)
+    lang = get_user_lang(message.from_user.id)
+    await message.answer(BOT_TEXTS[lang]['balance'].format(coins=coins))
+
+# Кнопка "Настройки языка"
+@dp.message(lambda m: any(m.text == BOT_TEXTS[lang]['settings'] for lang in BOT_TEXTS))
+async def lang_settings_handler(message: Message):
+    builder = InlineKeyboardBuilder()
+    for code, name in LANGUAGES.items():
+        builder.button(text=name, callback_data=f"setlang_{code}")
+    builder.adjust(2)
+    await message.answer("Select language / Wybierz język:", reply_markup=builder.as_markup())
 
 def get_user_lang(user_id):
     """Получает язык пользователя из базы данных."""
@@ -1226,6 +1240,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
