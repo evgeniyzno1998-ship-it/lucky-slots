@@ -332,7 +332,7 @@ async def check_invoice(invoice_id: str) -> str | None:
 
 def main_menu():
     # Формируем URL с параметрами: адрес API и имя бота для ссылок
-    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={@testplcas_bot}"
+    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={BOT_USERNAME}"
     
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -1120,6 +1120,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
