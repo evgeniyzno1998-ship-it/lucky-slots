@@ -137,6 +137,65 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 BOT_USERNAME: str | None = None
 
+# ==================== ЛОКАЛИЗАЦИЯ (ШАГ №2) ====================
+LANGUAGES = {
+    'pl': '🇵🇱 Polski',
+    'ua': '🇺🇦 Українська',
+    'ru': '🇷🇺 Русский',
+    'en': '🇬🇧 English'
+}
+
+BOT_TEXTS = {
+    'pl': {
+        'play': '🎰 Graj teraz',
+        'buy': '💳 Kup żetony',
+        'settings': '⚙️ Język / Мова',
+        'welcome': 'Witaj w Lucky Slots! 🎰\nWybierz opcję:',
+        'stats': '💰 Moje żetony',
+        'ref': '👥 Poleć znajomego',
+        'balance': 'Twój balans: {coins} żetonów'
+    },
+    'ua': {
+        'play': '🎰 Грати зараз',
+        'buy': '💳 Купити жетони',
+        'settings': '⚙️ Мова / Język',
+        'welcome': 'Вітаємо у Lucky Slots! 🎰\nОберіть дію:',
+        'stats': '💰 Мій баланс',
+        'ref': '👥 Запросити друга',
+        'balance': 'Ваш баланс: {coins} жетонів'
+    },
+    'ru': {
+        'play': '🎰 Играть сейчас',
+        'buy': '💳 Купить жетоны',
+        'settings': '⚙️ Язык / Język',
+        'welcome': 'Добро пожаловать в Lucky Slots! 🎰\nВыберите действие:',
+        'stats': '💰 Мой баланс',
+        'ref': '👥 Рефералы',
+        'balance': 'Ваш баланс: {coins} жетонов'
+    },
+    'en': {
+        'play': '🎰 Play Now',
+        'buy': '💳 Buy Coins',
+        'settings': '⚙️ Language / Język',
+        'welcome': 'Welcome to Lucky Slots! 🎰\nChoose option:',
+        'stats': '💰 My Balance',
+        'ref': '👥 Referrals',
+        'balance': 'Your balance: {coins} coins'
+    }
+}
+
+def get_user_lang(user_id):
+    """Получает язык пользователя из базы данных."""
+    try:
+        with sqlite3.connect('users.db') as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+            res = cur.fetchone()
+            return res[0] if res and res[0] else 'pl'
+    except Exception as e:
+        logging.error(f"Error getting lang: {e}")
+        return 'pl'
+
 # ==================== БАЗА ДАННЫХ ====================
 
 ddef init_db():
@@ -409,6 +468,8 @@ async def cmd_start(message: Message):
 
     referrer_id = None
     args = message.text.split()
+    
+    lang = get_user_lang(user_id)
     await message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(user_id), parse_mode="Markdown")
     
     # ПРОВЕРКА: Если юзер пришел по ссылке ?start=deposit
@@ -1165,6 +1226,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
