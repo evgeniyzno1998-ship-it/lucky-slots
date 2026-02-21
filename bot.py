@@ -967,7 +967,7 @@ import hmac
 import urllib.parse
 from aiohttp import web
 
-API_PORT = int(os.getenv("API_PORT", "8081"))
+API_PORT = int(os.getenv("PORT", 8081))
 
 def verify_telegram_init_data(init_data: str) -> dict | None:
     """
@@ -1115,4 +1115,5 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
+
     asyncio.run(main())
