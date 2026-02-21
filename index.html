@@ -8,91 +8,53 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
-
-:root {
-  --bg1: #0d001f; --bg2: #1a0040; --gold: #ffd700; --pink: #ff4da6; --cyan: #00f5d4;
-  --win: #00e676; --lose: #ff5252; --wild: #ff9500; --scatter: #ff4da6;
-}
-
+:root { --bg1: #0d001f; --bg2: #1a0040; --gold: #ffd700; --pink: #ff4da6; --cyan: #00f5d4; --win: #00e676; --lose: #ff5252; --wild: #ff9500; --scatter: #ff4da6; }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
-body {
-  background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%);
-  min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; overflow-x: hidden; user-select: none;
-}
-
+body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; overflow-x: hidden; user-select: none; }
 .stars { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
 .star { position:absolute; border-radius:50%; background:#fff; animation: twinkle var(--d) ease-in-out infinite alternate; opacity:0; }
 @keyframes twinkle { from { opacity:0; transform:scale(0.5); } to { opacity:0.6; transform:scale(1.2); } }
-
 .wrap { position:relative; z-index:1; max-width:440px; margin:0 auto; padding:10px 8px 24px; display:flex; flex-direction:column; gap:10px; }
-
-/* Header */
 .header { display:flex; justify-content:space-between; align-items:center; }
 .logo { font-family:'Fredoka One',sans-serif; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 .balance-box { background:rgba(255,255,255,0.07); border:1px solid rgba(255,215,0,0.3); border-radius:20px; padding:5px 12px; display:flex; align-items:center; gap:5px; }
 .balance-val { font-family:'Fredoka One',sans-serif; font-size:17px; color:var(--gold); }
-
-/* Grid */
 .grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:10px 6px; position:relative; overflow:hidden; }
 .grid { display:grid; grid-template-columns:repeat(6, 1fr); grid-template-rows:repeat(5, 1fr); gap:3px; }
 .cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:clamp(18px, 4.5vw, 28px); border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); }
-.cell.winning { background:rgba(255,215,0,0.2); border-color:var(--gold); }
-
-/* Controls */
 .controls { display:flex; gap:8px; align-items:center; }
 .bet-wrap { flex:1; }
 .bet-row { display:flex; gap:4px; }
 .bet-btn { flex:1; padding:8px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One',sans-serif; font-size:13px; cursor:pointer; }
 .bet-btn.active { background:rgba(255,215,0,0.2); border-color:var(--gold); }
-
 .spin-btn { width:95px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One',sans-serif; font-size:12px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 4px 15px rgba(255,77,166,0.3); }
 .spin-btn.deposit { background:linear-gradient(135deg,#00e676,#00a352); box-shadow:0 4px 15px rgba(0,230,118,0.3); }
-
-/* Buy Bonus */
 .buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid rgba(255,77,166,0.3); background:linear-gradient(135deg,rgba(255,77,166,0.1),rgba(155,0,255,0.1)); color:#fff; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
 .bb-price { color:var(--pink); font-family:'Fredoka One'; font-size:18px; }
-
-/* Modal */
-.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; padding:20px; }
-.modal.show { display:flex; }
-.modal-box { background:#1a0040; border:2px solid var(--pink); border-radius:24px; padding:24px; width:100%; max-width:320px; text-align:center; }
-
-/* History & Results */
 .result-bar { min-height:30px; text-align:center; font-family:'Fredoka One',sans-serif; font-size:18px; margin:5px 0; }
 .win { color:var(--win); } .lose { color:rgba(255,255,255,0.4); }
 .history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; }
 .h-item { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
-
-/* Paytable */
-.paytable-title { font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:5px; padding-left:5px;}
 .paytable { background:rgba(255,255,255,0.03); border-radius:16px; padding:10px; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
 .pt-item { text-align:center; background:rgba(255,255,255,0.03); padding:8px 4px; border-radius:10px; }
 .pt-sym { font-size:20px; margin-bottom:3px; }
 .pt-row { font-size:8px; color:rgba(255,255,255,0.5); line-height:1.2; }
 .pt-row span { color:var(--gold); font-weight:700; }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; padding:20px; }
+.modal.show { display:flex; }
+.modal-box { background:#1a0040; border:2px solid var(--pink); border-radius:24px; padding:24px; width:100%; max-width:320px; text-align:center; }
 </style>
 </head>
 <body>
 <div class="stars" id="stars"></div>
-
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box">
-      <span>🪙</span>
-      <span class="balance-val" id="balVal">0</span>
-    </div>
+    <div class="balance-box"><span>🪙</span><span class="balance-val" id="balVal">0</span></div>
   </div>
-
   <div id="fsBanner" style="display:none; text-align:center; color:var(--pink); font-family:'Fredoka One'; padding:5px;">🎰 FREE SPINS: <span id="fsCount">0</span></div>
-
-  <div class="grid-outer">
-    <div class="grid" id="grid"></div>
-  </div>
-
+  <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div class="result-bar" id="resultText"></div>
-
   <div class="controls">
     <div class="bet-wrap">
       <div class="bet-row">
@@ -107,7 +69,6 @@ body {
       <span id="spinBtnText">ZAKRĘĆ</span>
     </button>
   </div>
-
   <button class="buy-bonus-btn" onclick="openBuyBonus()">
     <div style="text-align:left">
       <div style="font-family:'Fredoka One'; font-size:16px;">BUY BONUS</div>
@@ -115,13 +76,10 @@ body {
     </div>
     <div class="bb-price" id="bbPrice">500 🪙</div>
   </button>
-
   <div class="history-wrap">
     <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-bottom:5px;">OSTATNIE SPINY</div>
     <div id="histList"></div>
   </div>
-
-  <div class="paytable-title">Tabela wypłat (8+ symboli)</div>
   <div class="paytable">
     <div class="pt-item"><div class="pt-sym">🍒</div><div class="pt-row">8+ → <span>x0.5</span></div><div class="pt-row">12+ → <span>x1.5</span></div><div class="pt-row">20+ → <span>x3.0</span></div></div>
     <div class="pt-item"><div class="pt-sym">🍋</div><div class="pt-row">8+ → <span>x0.8</span></div><div class="pt-row">12+ → <span>x2.0</span></div><div class="pt-row">20+ → <span>x5.0</span></div></div>
@@ -133,7 +91,6 @@ body {
     <div class="pt-item"><div class="pt-sym">🌟</div><div class="pt-row" style="margin-top:4px;">WILD</div><div class="pt-row">Zastępuje</div><div class="pt-row">всех</div></div>
   </div>
 </div>
-
 <div class="modal" id="bbModal">
   <div class="modal-box">
     <h2 style="font-family:'Fredoka One'; color:var(--pink);">Buy Bonus</h2>
@@ -144,81 +101,46 @@ body {
     </div>
   </div>
 </div>
-
 <script>
 const tg = window.Telegram.WebApp;
-const API_URL = new URLSearchParams(window.location.search).get('api') || document.querySelector('meta[name="api-base"]').content;
+const urlParams = new URLSearchParams(window.location.search);
+const API_URL = urlParams.get('api') || document.querySelector('meta[name="api-base"]').content;
+const BOT_NAME = urlParams.get('bot') || "TvoyBotUsername"; // Сюда придет имя бота из URL
 
 const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-let balance = 0;
-let bet = 5;
-let spinning = false;
-let freeSpins = 0;
+let balance = 0, bet = 5, spinning = false, freeSpins = 0;
 
-// ==================== API ====================
 async function fetchBalance() {
   try {
     const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
-    const d = await r.json();
-    if (d.ok) { 
-        balance = Number(d.balance); 
-        updateUI(); 
-    }
-  } catch(e) { console.error("API error"); }
+    const d = await r.json(); if (d.ok) { balance = Number(d.balance); updateUI(); }
+  } catch(e) {}
 }
-
 async function recordAction(win, cost) {
   const r = await fetch(`${API_URL}/api/spin`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ init_data: tg.initData, bet: cost, winnings: win })
   });
-  const d = await r.json();
-  if (d.ok) { balance = Number(d.balance); updateUI(); return true; }
+  const d = await r.json(); if (d.ok) { balance = Number(d.balance); updateUI(); return true; }
   return false;
 }
-
-// ==================== UI ====================
 function updateUI() {
   document.getElementById('balVal').innerText = balance;
   document.getElementById('bbPrice').innerText = (bet * 100) + " 🪙";
-  
-  const btn = document.getElementById('spinBtn');
-  const txt = document.getElementById('spinBtnText');
-  const ico = document.getElementById('spinIcon');
-
-  // Если баланса не хватает на текущую ставку
-  if (balance < bet && freeSpins <= 0) {
-    btn.classList.add('deposit');
-    txt.innerText = "DEPOZYT";
-    ico.innerText = "💳";
-  } else {
-    btn.classList.remove('deposit');
-    txt.innerText = "ZAKRĘĆ";
-    ico.innerText = "🎰";
-  }
+  const btn = document.getElementById('spinBtn'), txt = document.getElementById('spinBtnText'), ico = document.getElementById('spinIcon');
+  if (balance < bet && freeSpins <= 0) { btn.classList.add('deposit'); txt.innerText = "DEPOZYT"; ico.innerText = "💳"; }
+  else { btn.classList.remove('deposit'); txt.innerText = "ZAKRĘĆ"; ico.innerText = "🎰"; }
 }
-
 function handleMainAction() {
   if (balance < bet && freeSpins <= 0) {
-    tg.showAlert("Brak żetonów! Doładuj konto w bocie.");
+    tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);
     tg.close();
-  } else {
-    spin();
-  }
+  } else { spin(); }
 }
-
-// ==================== GAME ====================
 async function spin() {
-  if (spinning) return;
-  spinning = true;
-  document.getElementById('spinBtn').disabled = true;
-
-  const cost = freeSpins > 0 ? 0 : bet;
-  
-  const grid = [];
+  if (spinning) return; spinning = true; document.getElementById('spinBtn').disabled = true;
+  const cost = freeSpins > 0 ? 0 : bet, grid = [];
   for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
-  
   let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
   let win = 0;
   for(let s in counts) {
@@ -226,86 +148,43 @@ async function spin() {
     else if(counts[s] >= 12) win += bet * 5;
     else if(counts[s] >= 8) win += bet * 1.5;
   }
-
   const success = await recordAction(win, cost);
   if (!success) { tg.showAlert("Błąd!"); spinning = false; document.getElementById('spinBtn').disabled = false; return; }
-
   if (freeSpins > 0) { freeSpins--; updateFSBanner(); }
-
   const cells = document.querySelectorAll('.cell');
   for(let t=0; t<10; t++) {
     cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]);
     await new Promise(r => setTimeout(r, 70));
   }
-
   grid.forEach((s, i) => cells[i].innerText = s);
   const resBar = document.getElementById('resultText');
-  if (win > 0) {
-    resBar.innerHTML = `<span class="win">WYGRANA: +${win} 🪙</span>`;
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-  } else {
-    resBar.innerHTML = `<span class="lose">Brak wygranej</span>`;
-  }
-
-  addHistory(win, cost);
-  spinning = false;
-  document.getElementById('spinBtn').disabled = false;
-  
+  if (win > 0) { resBar.innerHTML = `<span class="win">WYGRANA: +${win} 🪙</span>`; if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); }
+  else { resBar.innerHTML = `<span class="lose">Brak wygranej</span>`; }
+  addHistory(win, cost); spinning = false; document.getElementById('spinBtn').disabled = false;
   if (freeSpins > 0) { await new Promise(r => setTimeout(r, 1000)); spin(); }
 }
-
-function selectBet(v) {
-  if (spinning) return;
-  bet = v;
-  document.querySelectorAll('.bet-btn').forEach(b => b.classList.toggle('active', parseInt(b.innerText) === v));
-  updateUI();
-}
-
+function selectBet(v) { if (spinning) return; bet = v; document.querySelectorAll('.bet-btn').forEach(b => b.classList.toggle('active', parseInt(b.innerText) === v)); updateUI(); }
 function openBuyBonus() {
-  const price = bet * 100;
-  if (balance < price) { tg.showAlert("Brak żetonów!"); return; }
-  document.getElementById('bbConfirmPrice').innerText = price;
-  document.getElementById('bbModal').classList.add('show');
+  const price = bet * 100; if (balance < price) { tg.showAlert("Brak żetonów!"); return; }
+  document.getElementById('bbConfirmPrice').innerText = price; document.getElementById('bbModal').classList.add('show');
 }
 function closeBuyBonus() { document.getElementById('bbModal').classList.remove('show'); }
-
 async function confirmBuyBonus() {
-  const price = bet * 100;
-  closeBuyBonus();
+  const price = bet * 100; closeBuyBonus();
   if (await recordAction(0, price)) { freeSpins = 10; updateFSBanner(); spin(); }
 }
-
-function updateFSBanner() {
-  const b = document.getElementById('fsBanner');
-  document.getElementById('fsCount').innerText = freeSpins;
-  b.style.display = freeSpins > 0 ? 'block' : 'none';
-}
-
+function updateFSBanner() { const b = document.getElementById('fsBanner'); document.getElementById('fsCount').innerText = freeSpins; b.style.display = freeSpins > 0 ? 'block' : 'none'; }
 function addHistory(win, cost) {
-  const list = document.getElementById('histList');
-  const div = document.createElement('div');
-  div.className = 'h-item';
-  div.innerHTML = `<span>🎰 Spin</span><span class="${win>0?'win':'lose'}">${win>0?'+'+win:'-'+cost}</span>`;
-  list.prepend(div);
-  if (list.children.length > 5) list.lastChild.remove();
+  const list = document.getElementById('histList'), div = document.createElement('div');
+  div.className = 'h-item'; div.innerHTML = `<span>🎰 Spin</span><span class="${win>0?'win':'lose'}">${win>0?'+'+win:'-'+cost}</span>`;
+  list.prepend(div); if (list.children.length > 5) list.lastChild.remove();
 }
-
 function init() {
   const g = document.getElementById('grid');
-  for(let i=0; i<30; i++) {
-    const c = document.createElement('div'); c.className = 'cell';
-    c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]; g.appendChild(c);
-  }
-  // Создаем звезды
+  for(let i=0; i<30; i++) { const c = document.createElement('div'); c.className = 'cell'; c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]; g.appendChild(c); }
   const starsWrap = document.getElementById('stars');
-  for(let i=0; i<30; i++) {
-    const s = document.createElement('div'); s.className = 'star';
-    s.style.left = Math.random()*100+'%'; s.style.top = Math.random()*100+'%';
-    s.style.setProperty('--d', (Math.random()*3+1)+'s'); starsWrap.appendChild(s);
-  }
-  
-  updateUI(); // Показать DEPOZYT сразу, пока баланс 0
-  fetchBalance(); // Потом обновить из API
+  for(let i=0; i<30; i++) { const s = document.createElement('div'); s.className = 'star'; s.style.left = Math.random()*100+'%'; s.style.top = Math.random()*100+'%'; s.style.setProperty('--d', (Math.random()*3+1)+'s'); starsWrap.appendChild(s); }
+  updateUI(); fetchBalance();
 }
 init();
 </script>
