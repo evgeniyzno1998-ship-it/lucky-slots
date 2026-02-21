@@ -32,7 +32,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box">🪙 <span id="balVal">...</span></div>
+    <div class="balance-box">🪙 <span id="balVal">0</span></div>
   </div>
   <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
@@ -51,7 +51,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
   </button>
   <div id="histTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">OSTATNIE SPINY</div>
   <div class="history-wrap" id="histList"></div>
-  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁАТ</div>
+  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁAT</div>
   <div class="paytable" id="pt"></div>
 </div>
 
@@ -91,7 +91,7 @@ async function fetchBalance() {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
         if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) { setTimeout(fetchBalance, 2000); }
+    } catch(e) { console.error("Balance fail"); }
 }
 
 function handleMainAction() {
@@ -112,18 +112,18 @@ function selectBet(v) {
 async function spin() {
     if (spinning) return;
     spinning = true; document.getElementById('spinBtn').disabled = true;
-    const cost = bet, grid = [];
-    for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
+    const grid = []; for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
     let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
-    let win = 0; for(let s in counts) {
-        if(counts[s] >= 20) win += bet * 20;
-        else if(counts[s] >= 12) win += bet * 5;
-        else if(counts[s] >= 8) win += bet * 1.5;
-    }
+    let win = 0; for(let s in counts) { if(counts[s] >= 12) win += bet * 5; else if(counts[s] >= 8) win += bet * 1.5; }
+    
     try {
-        const r = await fetch(`${API_URL}/api/spin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ init_data: tg.initData, bet: cost, winnings: win }) });
+        const r = await fetch(`${API_URL}/api/spin`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: tg.initData, bet: bet, winnings: win })
+        });
         const d = await r.json(); if (d.ok) balance = d.balance;
     } catch(e) {}
+
     const cells = document.querySelectorAll('.cell');
     for(let t=0; t<10; t++) {
         cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]);
@@ -131,6 +131,7 @@ async function spin() {
     }
     grid.forEach((s, i) => cells[i].innerText = s);
     document.getElementById('resultText').innerHTML = win > 0 ? `<span style="color:var(--win)">${T.win}: +${win}</span>` : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
+    
     addHistory(win); updateUI(); spinning = false; document.getElementById('spinBtn').disabled = false;
 }
 
@@ -151,21 +152,4 @@ function init() {
     for(let i=0; i<30; i++) {
         const c = document.createElement('div'); c.className = 'cell';
         c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)];
-        g.appendChild(c);
-    }
-    const pt = document.getElementById('pt');
-    SYMS.forEach(s => {
-        const item = document.createElement('div'); item.className = 'pt-item';
-        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5<br>20+ x20`;
-        pt.appendChild(item);
-    });
-    document.getElementById('bbTitle').innerText = T.bbTitle;
-    document.getElementById('bbDesc').innerText = T.bbDesc;
-    document.getElementById('histTitle').innerText = T.hist;
-    document.getElementById('ptTitle').innerText = T.pt;
-    updateUI(); fetchBalance();
-}
-init();
-</script>
-</body>
-</html>
+        g.appen
