@@ -3,39 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="api-base" content="https://lucky-slots-production.up.railway.app">
 <title>Lucky Slots</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
 :root { --bg1: #0d001f; --gold: #ffd700; --pink: #ff4da6; --win: #00e676; }
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; overflow-x: hidden; }
-.wrap { position:relative; z-index:1; max-width:440px; margin:0 auto; padding:10px 8px 24px; display:flex; flex-direction:column; gap:10px; }
+body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; margin:0; }
+.wrap { max-width:440px; margin:0 auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
 .header { display:flex; justify-content:space-between; align-items:center; }
-.logo { font-family:'Fredoka One',sans-serif; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.balance-box { background:rgba(255,255,255,0.07); border:1px solid rgba(255,215,0,0.3); border-radius:20px; padding:5px 12px; display:flex; align-items:center; gap:5px; }
-.balance-val { font-family:'Fredoka One',sans-serif; font-size:17px; color:var(--gold); }
-.grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:10px 6px; }
-.grid { display:grid; grid-template-columns:repeat(6, 1fr); grid-template-rows:repeat(5, 1fr); gap:3px; }
-.cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:clamp(18px, 4.5vw, 28px); border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); }
+.logo { font-family:'Fredoka One'; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.balance-box { background:rgba(255,255,255,0.1); border:1px solid var(--gold); border-radius:20px; padding:5px 12px; font-family:'Fredoka One'; color:var(--gold); }
+.grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:8px; }
+.grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:3px; }
+.cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:24px; border-radius:8px; background:rgba(255,255,255,0.05); }
 .controls { display:flex; gap:8px; align-items:center; }
-.bet-btn { flex:1; padding:8px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; }
-.bet-btn.active { background:rgba(255,215,0,0.2); border-color:var(--gold); }
-.spin-btn { width:95px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One'; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; }
+.bet-btn.active { border-color:var(--gold); background:rgba(255,215,0,0.2); }
+.spin-btn { width:100px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One'; cursor:pointer; }
 .spin-btn.deposit { background:linear-gradient(135deg,#00e676,#00a352); }
-.buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid rgba(255,77,166,0.3); background:rgba(255,255,255,0.03); color:#fff; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-.paytable { background:rgba(255,255,255,0.03); border-radius:16px; padding:10px; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
-.pt-item { text-align:center; font-size:8px; background:rgba(255,255,255,0.03); padding:5px; border-radius:8px; }
+.buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; }
+.h-item { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.paytable { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; background:rgba(255,255,255,0.03); padding:10px; border-radius:16px; }
+.pt-item { text-align:center; font-size:8px; background:rgba(255,255,255,0.05); padding:5px; border-radius:8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box"><span>🪙</span><span class="balance-val" id="balVal">0</span></div>
+    <div class="balance-box">🪙 <span id="balVal">0</span></div>
   </div>
-  <div id="fsBanner" style="display:none; text-align:center; color:var(--pink); font-family:'Fredoka One';">FREE SPINS: <span id="fsCount">0</span></div>
   <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
   <div class="controls">
@@ -46,47 +44,49 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
       <button class="bet-btn" onclick="selectBet(50)">50</button>
     </div>
     <button class="spin-btn" id="spinBtn" onclick="handleMainAction()">
-      <span style="font-size:24px;" id="spinIcon">🎰</span>
       <span id="spinBtnText">ZAKRĘĆ</span>
     </button>
   </div>
   <button class="buy-bonus-btn" onclick="openBuyBonus()">
-    <div style="text-align:left"><div id="bbTitle" style="font-family:'Fredoka One';">BUY BONUS</div><div id="bbDesc" style="font-size:10px; color:rgba(255,255,255,0.5);">10 spins</div></div>
-    <div style="font-family:'Fredoka One'; color:var(--pink);" id="bbPrice">500 🪙</div>
+    <div style="text-align:left"><div id="bbTitle" style="font-family:'Fredoka One';">BUY BONUS</div><div id="bbDesc" style="font-size:10px; opacity:0.6;">10 free spins</div></div>
+    <div id="bbPrice" style="font-family:'Fredoka One'; color:var(--pink);">500 🪙</div>
   </button>
+  <div class="history-wrap">
+    <div id="histTitle" style="font-size:10px; opacity:0.4; margin-bottom:5px;">OSTATNIE SPINY</div>
+    <div id="histList"></div>
+  </div>
+  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:5px;">TABELA WYPŁAT</div>
   <div class="paytable" id="pt"></div>
 </div>
 
 <script>
 const tg = window.Telegram.WebApp;
 const urlParams = new URLSearchParams(window.location.search);
-const API_URL = urlParams.get('api') || document.querySelector('meta[name="api-base"]').content;
+const API_URL = urlParams.get('api');
 const BOT_NAME = urlParams.get('bot');
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", win: "WYGRANA", lose: "Brak wygranej", alert: "Doładuj konto!" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", win: "ВИГРАШ", lose: "Без виграшу", alert: "Поповніть рахунок!" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", win: "ВЫИГРЫШ", lose: "Нет выигрыша", alert: "Пополните счет!" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", win: "WIN", lose: "No win", alert: "Deposit coins!" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinнов", hist: "OSTATNIE SPINY", pt: "TABELA WYПŁAT", win: "WYGRANA", lose: "Brak wygranej" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
 const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-let balance = 0, bet = 5, spinning = false, freeSpins = 0;
+let balance = 0, bet = 5, spinning = false;
 
 function updateUI() {
     document.getElementById('balVal').innerText = balance;
     const btnText = document.getElementById('spinBtnText');
     const btn = document.getElementById('spinBtn');
-    if (balance < bet && freeSpins <= 0) {
+    if (balance < bet) {
         btnText.innerText = T.deposit;
         btn.classList.add('deposit');
-        document.getElementById('spinIcon').innerText = "💳";
     } else {
         btnText.innerText = T.spin;
         btn.classList.remove('deposit');
-        document.getElementById('spinIcon').innerText = "🎰";
     }
 }
 
@@ -99,55 +99,55 @@ async function fetchBalance() {
 }
 
 function handleMainAction() {
-    if (balance < bet && freeSpins <= 0) {
+    if (balance < bet) {
         tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);
         tg.close();
     } else { spin(); }
 }
 
+function selectBet(v) {
+    if (spinning) return;
+    bet = v;
+    document.querySelectorAll('.bet-btn').forEach(b => b.classList.toggle('active', parseInt(b.innerText) === v));
+    document.getElementById('bbPrice').innerText = (v * 100) + " 🪙";
+    updateUI();
+}
+
 async function spin() {
     if (spinning) return;
-    spinning = true;
-    document.getElementById('spinBtn').disabled = true;
-
-    const cost = freeSpins > 0 ? 0 : bet;
-    const grid = [];
-    for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
-    
-    // Расчет выигрыша
+    spinning = true; document.getElementById('spinBtn').disabled = true;
+    const grid = []; for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
     let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
-    let win = 0;
-    for(let s in counts) {
-        if(counts[s] >= 12) win += bet * 5;
-        else if(counts[s] >= 8) win += bet * 1.5;
-    }
-
-    // API запрос
+    let win = 0; for(let s in counts) { if(counts[s] >= 12) win += bet * 5; else if(counts[s] >= 8) win += bet * 1.5; }
+    
     try {
         const r = await fetch(`${API_URL}/api/spin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: tg.initData, bet: cost, winnings: win })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ init_data: tg.initData, bet: bet, winnings: win })
         });
-        const d = await r.json();
-        if (d.ok) { balance = d.balance; }
+        const d = await r.json(); if (d.ok) balance = d.balance;
     } catch(e) {}
 
-    if (freeSpins > 0) { freeSpins--; document.getElementById('fsCount').innerText = freeSpins; }
-
-    // Анимация
     const cells = document.querySelectorAll('.cell');
     for(let t=0; t<10; t++) {
         cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]);
         await new Promise(r => setTimeout(r, 70));
     }
-
     grid.forEach((s, i) => cells[i].innerText = s);
     document.getElementById('resultText').innerHTML = win > 0 ? `<span style="color:var(--win)">${T.win}: +${win}</span>` : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
-
+    
+    addHistory(win);
     updateUI();
-    spinning = false;
-    document.getElementById('spinBtn').disabled = false;
+    spinning = false; document.getElementById('spinBtn').disabled = false;
+}
+
+function addHistory(win) {
+    const list = document.getElementById('histList');
+    const div = document.createElement('div');
+    div.className = 'h-item';
+    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
+    list.prepend(div);
+    if (list.children.length > 5) list.lastChild.remove();
 }
 
 function init() {
@@ -157,8 +157,18 @@ function init() {
         c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)];
         g.appendChild(c);
     }
+    // Рендер таблицы выплат
+    const pt = document.getElementById('pt');
+    SYMS.forEach(s => {
+        const item = document.createElement('div'); item.className = 'pt-item';
+        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
+        pt.appendChild(item);
+    });
+    // Локализация текстов
     document.getElementById('bbTitle').innerText = T.bbTitle;
     document.getElementById('bbDesc').innerText = T.bbDesc;
+    document.getElementById('histTitle').innerText = T.hist;
+    document.getElementById('ptTitle').innerText = T.pt;
     fetchBalance();
 }
 init();
