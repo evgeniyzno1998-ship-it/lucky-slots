@@ -152,6 +152,7 @@ def init_db():
                 coins INTEGER DEFAULT 0,
                 joined_date TEXT,
                 last_click TEXT
+                language TEXT DEFAULT 'en'
             )
         ''')
         # Таблица для хранения инвойсов (ожидающих оплату)
@@ -1120,6 +1121,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
