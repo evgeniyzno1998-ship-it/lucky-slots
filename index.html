@@ -51,7 +51,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
   </button>
   <div id="histTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">OSTATNIE SPINY</div>
   <div class="history-wrap" id="histList"></div>
-  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁAT</div>
+  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁАТ</div>
   <div class="paytable" id="pt"></div>
 </div>
 
@@ -78,11 +78,9 @@ function updateUI() {
     const btnText = document.getElementById('spinBtnText');
     const btn = document.getElementById('spinBtn');
     if (balance < bet) {
-        btnText.innerText = T.deposit;
-        btn.classList.add('deposit');
+        btnText.innerText = T.deposit; btn.classList.add('deposit');
     } else {
-        btnText.innerText = T.spin;
-        btn.classList.remove('deposit');
+        btnText.innerText = T.spin; btn.classList.remove('deposit');
     }
 }
 
@@ -91,7 +89,7 @@ async function fetchBalance() {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
         if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) { console.error("Balance fail"); }
+    } catch(e) { setTimeout(fetchBalance, 3000); }
 }
 
 function handleMainAction() {
@@ -117,10 +115,7 @@ async function spin() {
     let win = 0; for(let s in counts) { if(counts[s] >= 12) win += bet * 5; else if(counts[s] >= 8) win += bet * 1.5; }
     
     try {
-        const r = await fetch(`${API_URL}/api/spin`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: tg.initData, bet: bet, winnings: win })
-        });
+        const r = await fetch(`${API_URL}/api/spin`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({init_data: tg.initData, bet: bet, winnings: win}) });
         const d = await r.json(); if (d.ok) balance = d.balance;
     } catch(e) {}
 
@@ -138,13 +133,8 @@ async function spin() {
 function addHistory(win) {
     const list = document.getElementById('histList');
     const div = document.createElement('div'); div.className = 'h-item';
-    div.innerHTML = `<span>🎰 ${T.sHist}</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
+    div.innerHTML = `<span>🎰 ${T.sHist}</span><span style=\"color:${win>0?'var(--win)':'#fff'}\">${win>0?'+'+win:'-'+bet}</span>`;
     list.prepend(div); if (list.children.length > 5) list.lastChild.remove();
-}
-
-function openBuyBonus() {
-    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
-    tg.showAlert("Coming soon!");
 }
 
 function init() {
@@ -152,4 +142,21 @@ function init() {
     for(let i=0; i<30; i++) {
         const c = document.createElement('div'); c.className = 'cell';
         c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)];
-        g.appen
+        g.appendChild(c);
+    }
+    const pt = document.getElementById('pt');
+    SYMS.forEach(s => {
+        const item = document.createElement('div'); item.className = 'pt-item';
+        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
+        pt.appendChild(item);
+    });
+    document.getElementById('bbTitle').innerText = T.bbTitle;
+    document.getElementById('bbDesc').innerText = T.bbDesc;
+    document.getElementById('histTitle').innerText = T.hist;
+    document.getElementById('ptTitle').innerText = T.pt;
+    updateUI(); fetchBalance();
+}
+init();
+</script>
+</body>
+</html>
