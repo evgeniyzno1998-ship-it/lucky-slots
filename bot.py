@@ -439,6 +439,23 @@ async def handle_contact(message: Message):
     update_user_phone(message.from_user.id, message.contact.phone_number)
     await message.answer(texts.PHONE_THANKS, reply_markup=main_menu(), parse_mode="Markdown")
 
+@dp.message(lambda m: m.text in ["⚙️ Язык", "⚙️ Мова", "⚙️ Language", "⚙️ Język"])
+async def show_language_choice(message: Message):
+    builder = InlineKeyboardBuilder()
+    for code, name in LANGUAGES.items():
+        builder.button(text=name, callback_data=f"setlang_{code}")
+    builder.adjust(2)
+    await message.answer("Select your language / Wybierz język:", reply_markup=builder.as_markup())
+
+@dp.callback_query(lambda c: c.data.startswith("setlang_"))
+async def set_language(call: CallbackQuery):
+    new_lang = call.data.split("_")[1]
+    with sqlite3.connect('users.db') as conn:
+        conn.execute("UPDATE users SET language = ? WHERE user_id = ?", (new_lang, call.from_user.id))
+    
+    await call.message.answer(f"Language changed! / Język zmieniony!", reply_markup=main_menu(call.from_user.id))
+    await call.answer()
+
 @dp.message(lambda m: m.web_app_data is not None)
 async def handle_webapp_data(message: Message):
     """
@@ -1124,6 +1141,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
