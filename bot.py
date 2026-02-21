@@ -331,20 +331,23 @@ async def check_invoice(invoice_id: str) -> str | None:
 
 # ==================== КЛАВИАТУРЫ ====================
 
-def main_menu():
-    global BOT_USERNAME  # Это важно, чтобы функция видела имя бота
-    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={BOT_USERNAME}"
+def main_menu(user_id):
+    global BOT_USERNAME
+    # Получаем язык из БД
+    with sqlite3.connect('users.db') as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+        res = cur.fetchone()
+        lang = res[0] if res else 'en'
+
+    t = BOT_TEXTS[lang]
+    # ПЕРЕДАЕМ ЯЗЫК В ИГРУ через параметр &lang=
+    webapp_url = f"https://evgeniyzno1998-ship-it.github.io/lucky-slots/?api=https://lucky-slots-production.up.railway.app&bot={BOT_USERNAME}&lang={lang}"
     
     kb = ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🎰 Graj теперь")],
-            [KeyboardButton(
-                text="🎰 Lucky Slots",
-                web_app=types.WebAppInfo(url=webapp_url)
-            )],
-            [KeyboardButton(text="🎁 Bonusy")],
-            [KeyboardButton(text="👥 Poleć znajomego"), KeyboardButton(text="💰 Moje żetony")],
-            [KeyboardButton(text="💳 Kup żetony")]
+            [KeyboardButton(text=t['play'], web_app=types.WebAppInfo(url=webapp_url))],
+            [KeyboardButton(text=t['buy']), KeyboardButton(text=t['settings'])]
         ],
         resize_keyboard=True
     )
@@ -1121,6 +1124,7 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
 
