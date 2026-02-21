@@ -58,16 +58,15 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 <script>
 const tg = window.Telegram.WebApp;
 const urlParams = new URLSearchParams(window.location.search);
-// Берем API из ссылки, если пусто - берем дефолт
 const API_URL = urlParams.get('api') || "https://lucky-slots-production.up.railway.app";
 const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Brak żetonów!", spinHist: "Spin" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Немає жетонів!", spinHist: "Спін" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Нет жетонов!", spinHist: "Спин" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "No coins!", spinHist: "Spin" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
@@ -91,14 +90,8 @@ async function fetchBalance() {
     try {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
-        if (d.ok) { 
-            balance = d.balance; 
-            updateUI(); 
-        }
-    } catch(e) {
-        console.error("API error, retrying...");
-        setTimeout(fetchBalance, 2000); // Повтор через 2 сек если ошибка
-    }
+        if (d.ok) { balance = d.balance; updateUI(); }
+    } catch(e) { console.error("Balance fetch error"); }
 }
 
 function handleMainAction() {
@@ -148,18 +141,18 @@ async function spin() {
     spinning = false; document.getElementById('spinBtn').disabled = false;
 }
 
+function openBuyBonus() {
+    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
+    tg.showAlert("Coming soon!");
+}
+
 function addHistory(win) {
     const list = document.getElementById('histList');
     const div = document.createElement('div');
     div.className = 'h-item';
-    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
+    div.innerHTML = `<span>🎰 ${T.spinHist}</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
     list.prepend(div);
     if (list.children.length > 5) list.lastChild.remove();
-}
-
-function openBuyBonus() {
-    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
-    tg.showAlert("Coming soon!");
 }
 
 function init() {
