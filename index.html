@@ -1212,32 +1212,43 @@ fetchBalance();
     const urlParams = new URLSearchParams(window.location.search);
     const API_URL = urlParams.get('api'); 
 
-    async function getBalanceFromBot() {
-        if (!API_URL) {
-            console.log("API_URL не найден в ссылке");
-            return;
-        }
+async function getBalanceFromBot() {
+        if (!API_URL) return;
 
         try {
             const response = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
             const data = await response.json();
 
             if (data.ok) {
-                console.log("Баланс получен:", data.balance);
+                // Принудительно превращаем баланс в число, чтобы 0 не терялся
+                const currentBalance = parseInt(data.balance) || 0; 
                 
-                // 1. Обновляем цифру на экране
-                // Убедись, что у тебя в HTML есть элемент с id="balance-count" или "balance"
+                // 1. Находим элемент баланса (убедись, что ID верный!)
                 const balanceElement = document.getElementById('balance-count'); 
                 if (balanceElement) {
-                    balanceElement.innerText = data.balance;
+                    balanceElement.innerText = currentBalance; // Теперь тут будет "0", а не "-"
                 }
 
-                // 2. ВАЖНО: Обнови внутреннюю переменную баланса в самой игре
-                // В разных играх она называется по-разному, например 'balance' или 'currentBalance'
-                balance = data.balance; 
+                // 2. Обновляем переменную внутри игры
+                balance = currentBalance; 
+
+                // 3. ЛОГИКА ДЛЯ "ПОПОЛНИТЕ СЧЕТ"
+                const spinButton = document.querySelector('.spin-button'); // Проверь класс своей кнопки (Zakręć)
+                if (currentBalance <= 0) {
+                    // Если баланс 0, меняем текст на кнопке или выводим подсказку
+                    if (spinButton) {
+                        spinButton.innerText = "DOŁADUJ KONTO"; // "Пополните счет" по-польски
+                        spinButton.style.background = "linear-gradient(to bottom, #555, #222)"; // Делаем серой
+                    }
+                    // Можно также вывести надпись в поле "Ostatnie spiny" или под балансом
+                    const historyElement = document.querySelector('.history-content');
+                    if (historyElement) {
+                        historyElement.innerHTML = "<span style='color: #ff4444;'>Brak żetonów! Proszę doładować konto в Telegram.</span>";
+                    }
+                }
             }
         } catch (e) {
-            console.error("Ошибка при получении баланса:", e);
+            console.error("Błąd баланса:", e);
         }
     }
 
