@@ -13,15 +13,15 @@ if os.path.exists(load_dotenv_path):
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CRYPTO_TOKEN = os.getenv("CRYPTO_TOKEN")
-# Берем порт, который дает Railway, или 8081 по умолчанию
-API_PORT = int(os.getenv("PORT", 8081))
-# Твой домен из настроек Railway
+# Railway дает порт 8080 через переменную PORT
+API_PORT = int(os.getenv("PORT", 8080))
+# Твой публичный домен
 PUBLIC_URL = "https://lucky-slots-production.up.railway.app"
 
 # ==================== ЛОКАЛИЗАЦИЯ ====================
 LANGUAGES = {'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'}
 BOT_TEXTS = {
-    'pl': {'welcome': 'Witaj w Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'set': '⚙️ Język', 'bal': '💰 Moje żetony', 'ref': '👥 Poleć znajomego', 'lang_ok': '✅ Język zmieniony!', 'balance_text': 'Twój balans: {c} żetonów', 'token': 'żetonów', 'ref_t': '🔗 Link (kliknij чтобы скопировать):\n<code>https://t.me/{b}?start=ref{u}</code>\n\n👥 Poleceni: {cnt}'},
+    'pl': {'welcome': 'Witaj w Lucky Slots! 🎰', 'play': '🎰 Graj teraz', 'buy': '💳 Kup żetony', 'set': '⚙️ Język', 'bal': '💰 Moje żetony', 'ref': '👥 Poleć znajomego', 'lang_ok': '✅ Język zmieniony!', 'balance_text': 'Twój balans: {c} żetonów', 'token': 'żetonów', 'ref_t': '🔗 Link (kliknij aby skopiować):\n<code>https://t.me/{b}?start=ref{u}</code>\n\n👥 Poleceni: {cnt}'},
     'ua': {'welcome': 'Вітаємо у Lucky Slots! 🎰', 'play': '🎰 Грати зараз', 'buy': '💳 Купити жетони', 'set': '⚙️ Мова', 'bal': '💰 Мій баланс', 'ref': '👥 Запросити друга', 'lang_ok': '✅ Мову змінено!', 'balance_text': 'Ваш баланс: {c} жетонів', 'token': 'жетонів', 'ref_t': '🔗 Посилання (натисніть щоб скопіювати):\n<code>https://t.me/{b}?start=ref{u}</code>\n\n👥 Запрошено: {cnt}'},
     'ru': {'welcome': 'Добро пожаловать в Lucky Slots! 🎰', 'play': '🎰 Играть сейчас', 'buy': '💳 Купить жетоны', 'set': '⚙️ Язык', 'bal': '💰 Мой баланс', 'ref': '👥 Рефералы', 'lang_ok': '✅ Язык изменен!', 'balance_text': 'Ваш баланс: {c} жетонов', 'token': 'жетонов', 'ref_t': '🔗 Ссылка (нажми чтобы скопировать):\n<code>https://t.me/{b}?start=ref{u}</code>\n\n👥 Рефералов: {cnt}'},
     'en': {'welcome': 'Welcome to Lucky Slots! 🎰', 'play': '🎰 Play Now', 'buy': '💳 Buy Coins', 'set': '⚙️ Language', 'bal': '💰 My Balance', 'ref': '👥 Referrals', 'lang_ok': '✅ Language changed!', 'balance_text': 'Your balance: {c} coins', 'token': 'coins', 'ref_t': '🔗 Link (tap to copy):\n<code>https://t.me/{b}?start=ref{u}</code>\n\n👥 Referrals: {cnt}'}
@@ -33,13 +33,12 @@ def init_db():
         conn.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, referrals_count INTEGER DEFAULT 0, coins INTEGER DEFAULT 0, language TEXT DEFAULT 'pl')''')
         try: conn.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'pl'")
         except: pass
+        conn.execute("CREATE TABLE IF NOT EXISTS invoices (invoice_id TEXT PRIMARY KEY, user_id INTEGER, coins INTEGER, status TEXT DEFAULT 'pending')")
 
 def get_user_data(user_id):
-    try:
-        with sqlite3.connect('users.db') as conn:
-            res = conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            return res if res else ('pl', 0, 0)
-    except: return ('pl', 0, 0)
+    with sqlite3.connect('users.db') as conn:
+        res = conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        return res if res else ('pl', 0, 0)
 
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu(user_id, bot_name):
@@ -59,7 +58,7 @@ def pkgs_kb(lang):
         builder.button(text=f"{l} {t_n} — {p} USDT", callback_data=f"buy_{l}")
     return builder.adjust(1).as_markup()
 
-# ==================== ХЕНДЛЕРЫ ====================
+# ==================== БОТ ====================
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
@@ -67,20 +66,8 @@ dp = Dispatcher()
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     args = message.text.split()
-    # Реферальная система
-    ref_id = None
-    if len(args) > 1 and args[1].startswith("ref"):
-        try:
-            ref_id = int(args[1].replace("ref", ""))
-            if ref_id == user_id: ref_id = None
-        except: pass
-
     with sqlite3.connect('users.db') as conn:
-        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name, language) VALUES (?, ?, ?, 'pl')", 
-                     (user_id, message.from_user.username, message.from_user.first_name))
-        if ref_id:
-            conn.execute("UPDATE users SET referrals_count = referrals_count + 1, coins = coins + 10 WHERE user_id = ?", (ref_id,))
-    
+        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)", (user_id, message.from_user.username, message.from_user.first_name))
     bot_info = await bot.get_me()
     lang, _, _ = get_user_data(user_id)
     if len(args) > 1 and args[1] == "deposit":
@@ -93,18 +80,18 @@ async def handle_buttons(message: Message):
     uid = message.from_user.id
     txt = message.text
     lang, coins, refs = get_user_data(uid)
-    bot_info = await bot.get_me()
+    b_info = await bot.get_me()
 
     if any(txt == BOT_TEXTS[l]['buy'] for l in BOT_TEXTS):
         await message.answer(BOT_TEXTS[lang]['buy'], reply_markup=pkgs_kb(lang))
     elif any(txt == BOT_TEXTS[l]['bal'] for l in BOT_TEXTS):
         await message.answer(BOT_TEXTS[lang]['balance_text'].format(c=coins))
     elif any(txt == BOT_TEXTS[l]['ref'] for l in BOT_TEXTS):
-        await message.answer(BOT_TEXTS[lang]['ref_t'].format(b=bot_info.username, u=uid, cnt=refs), parse_mode="HTML")
+        await message.answer(BOT_TEXTS[lang]['ref_t'].format(b=b_info.username, u=uid, cnt=refs), parse_mode="HTML")
     elif any(txt == BOT_TEXTS[l]['set'] for l in BOT_TEXTS):
-        kb = InlineKeyboardBuilder()
-        for c, n in LANGUAGES.items(): kb.button(text=n, callback_data=f"sl_{c}")
-        await message.answer("Language:", reply_markup=kb.adjust(2).as_markup())
+        builder = InlineKeyboardBuilder()
+        for c, n in LANGUAGES.items(): builder.button(text=n, callback_data=f"sl_{c}")
+        await message.answer("Language:", reply_markup=builder.adjust(2).as_markup())
 
 @dp.callback_query(F.data.startswith("sl_"))
 async def set_lang(call: CallbackQuery):
@@ -114,20 +101,19 @@ async def set_lang(call: CallbackQuery):
     b_info = await bot.get_me()
     await call.message.edit_text(BOT_TEXTS[lang_code]['lang_ok'])
     await call.message.answer(BOT_TEXTS[lang_code]['welcome'], reply_markup=main_menu(call.from_user.id, b_info.username))
-    await call.answer()
 
-# ==================== API ====================
+# ==================== API (CORS FIXED) ====================
 async def api_get_balance(request):
-    headers = {"Access-Control-Allow-Origin": "*"}
+    headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*"}
     try:
-        init_data = request.rel_url.query.get("init_data", "")
+        init_data = request.rel_url.query.get("init_data")
         parsed = dict(urllib.parse.parse_qsl(init_data))
-        user_data = json.loads(parsed.get("user", "{}"))
-        user_id = user_data.get("id")
-        if not user_id: return web.json_response({"ok": False}, headers=headers)
+        user_id = json.loads(parsed.get("user")).get("id")
         _, coins, _ = get_user_data(user_id)
+        print(f"DEBUG: Balance request for {user_id}, returning {coins}")
         return web.json_response({"ok": True, "balance": coins}, headers=headers)
-    except:
+    except Exception as e:
+        print(f"DEBUG Error: {e}")
         return web.json_response({"ok": False}, headers=headers)
 
 async def api_spin(request):
@@ -135,31 +121,30 @@ async def api_spin(request):
     if request.method == "OPTIONS": return web.Response(headers=headers)
     try:
         data = await request.json()
-        parsed = dict(urllib.parse.parse_qsl(data.get("init_data", "")))
-        uid = json.loads(parsed.get("user", "{}")).get("id")
-        bet, win = int(data.get("bet", 0)), int(data.get("winnings", 0))
+        parsed = dict(urllib.parse.parse_qsl(data.get("init_data")))
+        uid = json.loads(parsed.get("user")).get("id")
+        bet, win = int(data.get("bet")), int(data.get("winnings"))
         with sqlite3.connect('users.db') as conn:
-            cur = conn.execute("SELECT coins FROM users WHERE user_id = ?", (uid,)).fetchone()[0]
-            new_bal = cur - bet + win
+            cur_bal = conn.execute("SELECT coins FROM users WHERE user_id = ?", (uid,)).fetchone()[0]
+            if cur_bal < bet: return web.json_response({"ok": False, "error": "No balance"}, headers=headers)
+            new_bal = cur_bal - bet + win
             conn.execute("UPDATE users SET coins = ? WHERE user_id = ?", (new_bal, uid))
         return web.json_response({"ok": True, "balance": new_bal}, headers=headers)
     except: return web.json_response({"ok": False}, headers=headers)
 
-async def start_api_server():
+async def start_api():
     app = web.Application()
     app.router.add_get("/api/balance", api_get_balance)
     app.router.add_post("/api/spin", api_spin)
     app.router.add_options("/{tail:.*}", lambda r: web.Response(headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"}))
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", API_PORT)
-    await site.start()
-    print(f"✅ API Server started on port {API_PORT}")
+    await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
 
 async def main():
     init_db()
-    await start_api_server()
-    print("📡 Bot is polling...")
+    asyncio.create_task(start_api())
+    print(f"✅ Бот запущен! API на порту {API_PORT}")
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
