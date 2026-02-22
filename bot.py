@@ -69,7 +69,22 @@ BOT_TEXTS = {
 }
 
 PACKAGES = {"50": 0.50, "100": 0.90, "500": 4.00}
-SYMS = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎']
+
+# ==================== СИМВОЛЫ ====================
+# Базовая игра — обычные фрукты/конфеты
+BASE_SYMS = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎']
+
+# Бонусная игра — премиум символы (корона, алмаз, звезда, сердце, клевер, подкова, кольцо, радуга)
+BONUS_SYMS = ['👑', '💎', '⭐', '❤️', '🍀', '🧲', '💰', '🌈']
+
+# Скаттер (запускает бонус) и бомба-множитель
+SCATTER = '🎰'
+BOMB = '💣'
+
+# Бомба-множители: вес → значение
+BOMB_MULTIPLIERS = [
+    (50, 2), (25, 3), (12, 5), (6, 8), (3, 10), (2, 15), (1, 25), (0.5, 50), (0.2, 100)
+]
 
 # ==================== БАЗА ДАННЫХ ====================
 DB_PATH = 'users.db'
@@ -117,37 +132,23 @@ async def db_execute(query, params=(), fetch=False, fetchone=False):
 
 
 async def get_user_data(user_id):
-    row = await db_execute(
-        "SELECT language, coins, referrals_count FROM users WHERE user_id = ?",
-        (int(user_id),), fetchone=True
-    )
+    row = await db_execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (int(user_id),), fetchone=True)
     return (row['language'], row['coins'], row['referrals_count']) if row else ('pl', 0, 0)
 
 
 async def ensure_user(user_id, username=None, first_name=None):
-    existing = await db_execute(
-        "SELECT user_id FROM users WHERE user_id = ?", (int(user_id),), fetchone=True
-    )
+    existing = await db_execute("SELECT user_id FROM users WHERE user_id = ?", (int(user_id),), fetchone=True)
     if not existing:
-        await db_execute(
-            "INSERT OR IGNORE INTO users (user_id, username, first_name, language) VALUES (?, ?, ?, 'pl')",
-            (int(user_id), username, first_name)
-        )
+        await db_execute("INSERT OR IGNORE INTO users (user_id, username, first_name, language) VALUES (?, ?, ?, 'pl')", (int(user_id), username, first_name))
         return True
     else:
         if username or first_name:
-            await db_execute(
-                "UPDATE users SET username = COALESCE(?, username), first_name = COALESCE(?, first_name) WHERE user_id = ?",
-                (username, first_name, int(user_id))
-            )
+            await db_execute("UPDATE users SET username = COALESCE(?, username), first_name = COALESCE(?, first_name) WHERE user_id = ?", (username, first_name, int(user_id)))
     return False
 
 
 async def update_coins(user_id, delta):
-    await db_execute(
-        "UPDATE users SET coins = MAX(0, coins + ?) WHERE user_id = ?",
-        (delta, int(user_id))
-    )
+    await db_execute("UPDATE users SET coins = MAX(0, coins + ?) WHERE user_id = ?", (delta, int(user_id)))
     row = await db_execute("SELECT coins FROM users WHERE user_id = ?", (int(user_id),), fetchone=True)
     return row['coins'] if row else 0
 
@@ -157,35 +158,19 @@ async def get_coins(user_id):
     return row['coins'] if row else 0
 
 
-# ==================== AUTH: подписанный токен для user_id ====================
+# ==================== AUTH ====================
 def make_user_token(user_id: int) -> str:
-    """
-    Создаёт HMAC-подпись для user_id, чтобы клиент не мог подменить uid.
-    Бот вшивает token в URL при создании WebApp-кнопки.
-    """
     msg = str(user_id).encode()
-    sig = hmac.new(BOT_TOKEN.encode(), msg, hashlib.sha256).hexdigest()[:32]
-    return sig
+    return hmac.new(BOT_TOKEN.encode(), msg, hashlib.sha256).hexdigest()[:32]
 
 
 def verify_user_token(user_id: int, token: str) -> bool:
-    """Проверяет подпись uid."""
-    expected = make_user_token(user_id)
-    return hmac.compare_digest(expected, token)
+    return hmac.compare_digest(make_user_token(user_id), token)
 
 
-def extract_uid_from_request(request_data: dict = None, query: dict = None) -> int | None:
-    """
-    Универсальная авторизация: пробуем 3 способа в порядке приоритета:
-    1. tg.initData (HMAC от Telegram)
-    2. uid + token в query/body (HMAC от нашего бота)
-    3. Только uid (логируем warning, но работаем — для совместимости)
-    """
-    # Источник данных
+def extract_uid_from_request(request_data=None, query=None):
     init_data = ""
-    uid_param = None
-    token_param = None
-
+    uid_param = token_param = None
     if query:
         init_data = query.get("init_data", "")
         uid_param = query.get("uid", "")
@@ -195,80 +180,205 @@ def extract_uid_from_request(request_data: dict = None, query: dict = None) -> i
         uid_param = request_data.get("uid", "") or uid_param
         token_param = request_data.get("token", "") or token_param
 
-    # Способ 1: initData от Telegram
     if init_data:
         try:
             parsed = dict(urllib.parse.parse_qsl(init_data))
             user_raw = parsed.get("user", "")
             if user_raw:
-                user_data = json.loads(user_raw)
-                uid = user_data.get("id")
+                uid = json.loads(user_raw).get("id")
                 if uid:
-                    # Пробуем HMAC-проверку
-                    received_hash = parsed.get("hash", "")
-                    if received_hash:
-                        check_params = {k: v for k, v in parsed.items() if k != "hash"}
-                        data_check_str = "\n".join(f"{k}={v}" for k, v in sorted(check_params.items()))
-                        secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
-                        computed = hmac.new(secret, data_check_str.encode(), hashlib.sha256).hexdigest()
-                        if hmac.compare_digest(computed, received_hash):
-                            logging.info(f"✅ Auth via initData HMAC, uid={uid}")
-                            return int(uid)
-
-                    # initData есть но HMAC не совпал — всё равно берём uid
-                    logging.info(f"🔓 Auth via initData (no HMAC), uid={uid}")
                     return int(uid)
-        except Exception as e:
-            logging.warning(f"initData parse failed: {e}")
+        except Exception:
+            pass
 
-    # Способ 2: uid + token (подпись от бота)
     if uid_param:
         try:
             uid_int = int(uid_param)
             if token_param and verify_user_token(uid_int, token_param):
-                logging.info(f"✅ Auth via signed token, uid={uid_int}")
-                return uid_int
+                logging.info(f"✅ Auth token uid={uid_int}")
             else:
-                # Токен не совпал или отсутствует, но uid есть
-                logging.warning(f"⚠️ Auth via uid param (no valid token), uid={uid_int}")
-                return uid_int
+                logging.warning(f"⚠️ Auth uid={uid_int} (no token)")
+            return uid_int
         except (ValueError, TypeError):
             pass
-
-    logging.warning("❌ No auth: no initData, no uid")
     return None
 
 
-# ==================== СЕРВЕРНАЯ ЛОГИКА СПИНА ====================
-def compute_spin():
-    grid = [random.choice(SYMS) for _ in range(30)]
+# ==================== ИГРОВАЯ ЛОГИКА ====================
+
+def _pick_bomb_multiplier():
+    """Выбирает множитель бомбы по весам."""
+    total = sum(w for w, _ in BOMB_MULTIPLIERS)
+    r = random.uniform(0, total)
+    cumulative = 0
+    for weight, mult in BOMB_MULTIPLIERS:
+        cumulative += weight
+        if r <= cumulative:
+            return mult
+    return 2
+
+
+def compute_base_spin(bet: int):
+    """
+    Базовый спин. Возвращает dict:
+    {grid, winnings, scatter_count, triggered_bonus}
+    4-6 скаттеров → запуск бонуса!
+    """
+    grid = []
+    scatter_count = 0
+    for i in range(30):
+        # 5% шанс скаттера на каждую ячейку
+        if random.random() < 0.05:
+            grid.append(SCATTER)
+            scatter_count += 1
+        else:
+            grid.append(random.choice(BASE_SYMS))
+
+    # Считаем выигрыш базы
     counts = {}
     for s in grid:
-        counts[s] = counts.get(s, 0) + 1
+        if s != SCATTER:
+            counts[s] = counts.get(s, 0) + 1
+
     multiplier = 0.0
     for sym, count in counts.items():
         if count >= 12:
             multiplier += 5.0
         elif count >= 8:
             multiplier += 1.5
-    return grid, multiplier
+
+    winnings = int(bet * multiplier)
+    triggered_bonus = scatter_count >= 4
+
+    return {
+        "grid": grid,
+        "winnings": winnings,
+        "scatter_count": scatter_count,
+        "triggered_bonus": triggered_bonus,
+    }
+
+
+def compute_bonus_spin(bet: int):
+    """
+    Один бонусный спин.
+    - Использует BONUS_SYMS (премиум)
+    - Случайные бомбы-множители (💣) — 10% шанс на ячейку
+    - Более щедрые множители: 6+ = x2, 8+ = x3, 10+ = x5, 12+ = x10
+    - Бомба умножает выигрыш ЭТОГО спина
+    - 3+ скаттера = +5 дополнительных спинов (ретриггер)
+    """
+    grid = []
+    bombs = []   # позиции бомб
+    scatter_count = 0
+
+    for i in range(30):
+        r = random.random()
+        if r < 0.03:
+            # 3% скаттер
+            grid.append(SCATTER)
+            scatter_count += 1
+        elif r < 0.13:
+            # 10% бомба-множитель
+            grid.append(BOMB)
+            bombs.append(i)
+        else:
+            grid.append(random.choice(BONUS_SYMS))
+
+    # Считаем совпадения премиум-символов
+    counts = {}
+    for s in grid:
+        if s not in (SCATTER, BOMB):
+            counts[s] = counts.get(s, 0) + 1
+
+    multiplier = 0.0
+    winning_symbols = {}
+    for sym, count in counts.items():
+        if count >= 12:
+            multiplier += 10.0
+            winning_symbols[sym] = count
+        elif count >= 10:
+            multiplier += 5.0
+            winning_symbols[sym] = count
+        elif count >= 8:
+            multiplier += 3.0
+            winning_symbols[sym] = count
+        elif count >= 6:
+            multiplier += 2.0
+            winning_symbols[sym] = count
+
+    base_win = int(bet * multiplier)
+
+    # Бомбы-множители — суммируются и умножают выигрыш
+    bomb_multipliers = []
+    total_bomb_mult = 1
+    for pos in bombs:
+        bm = _pick_bomb_multiplier()
+        bomb_multipliers.append({"pos": pos, "mult": bm})
+        total_bomb_mult *= bm  # Множители ПЕРЕМНОЖАЮТСЯ!
+
+    # Если нет базового выигрыша, бомбы дают минимум bet * bomb_mult
+    if base_win > 0:
+        final_win = base_win * total_bomb_mult
+    elif bombs and multiplier == 0:
+        # Бомбы без совпадений — маленький бонус
+        final_win = 0
+    else:
+        final_win = 0
+
+    retrigger = scatter_count >= 3
+    extra_spins = 5 if retrigger else 0
+
+    return {
+        "grid": grid,
+        "winnings": int(final_win),
+        "bombs": bomb_multipliers,
+        "total_bomb_mult": total_bomb_mult,
+        "base_win": base_win,
+        "scatter_count": scatter_count,
+        "retrigger": retrigger,
+        "extra_spins": extra_spins,
+        "winning_symbols": winning_symbols,
+    }
+
+
+def compute_full_bonus_round(bet: int):
+    """
+    Полный бонус-раунд: 10 фри-спинов с возможностью ретриггера.
+    Возвращает все спины + итоговый выигрыш.
+    """
+    total_spins = 10
+    spins_done = 0
+    spins_results = []
+    total_win = 0
+
+    while spins_done < total_spins:
+        result = compute_bonus_spin(bet)
+        spins_done += 1
+        total_win += result["winnings"]
+        result["spin_number"] = spins_done
+        result["total_spins"] = total_spins
+        result["running_total"] = total_win
+        spins_results.append(result)
+
+        # Ретриггер добавляет спины
+        if result["retrigger"]:
+            total_spins += result["extra_spins"]
+            total_spins = min(total_spins, 30)  # Максимум 30 спинов
+
+    return {
+        "spins": spins_results,
+        "total_win": total_win,
+        "total_spins_played": spins_done,
+    }
 
 
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu(user_id, bot_name, lang):
-    """
-    КЛЮЧЕВОЙ ФИКС: передаём uid и token прямо в URL webapp-а.
-    Это гарантирует что баланс подтянется даже если tg.initData пустой.
-    """
     t = BOT_TEXTS[lang]
     token = make_user_token(user_id)
     webapp_url = (
-        f"{WEBAPP_URL}"
-        f"?api={urllib.parse.quote(PUBLIC_URL, safe='')}"
-        f"&bot={bot_name}"
-        f"&lang={lang}"
-        f"&uid={user_id}"
-        f"&token={token}"
+        f"{WEBAPP_URL}?api={urllib.parse.quote(PUBLIC_URL, safe='')}"
+        f"&bot={bot_name}&lang={lang}&uid={user_id}&token={token}"
     )
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=t['play'], web_app=WebAppInfo(url=webapp_url))],
@@ -306,14 +416,8 @@ async def cmd_start(message: Message):
         try:
             referrer_id = int(args[1][3:])
             if referrer_id != user_id:
-                await db_execute(
-                    "UPDATE users SET referred_by = ? WHERE user_id = ? AND referred_by IS NULL",
-                    (referrer_id, user_id)
-                )
-                await db_execute(
-                    "UPDATE users SET referrals_count = referrals_count + 1, coins = coins + ? WHERE user_id = ?",
-                    (REFERRAL_BONUS, referrer_id)
-                )
+                await db_execute("UPDATE users SET referred_by = ? WHERE user_id = ? AND referred_by IS NULL", (referrer_id, user_id))
+                await db_execute("UPDATE users SET referrals_count = referrals_count + 1, coins = coins + ? WHERE user_id = ?", (REFERRAL_BONUS, referrer_id))
                 await update_coins(user_id, REFERRAL_BONUS)
                 ref_lang, _, _ = await get_user_data(referrer_id)
                 try:
@@ -340,10 +444,7 @@ async def handle_buttons(message: Message):
         await message.answer(BOT_TEXTS[lang]['balance_text'].format(c=coins))
     elif any(txt == BOT_TEXTS[l]['ref'] for l in BOT_TEXTS):
         earned = refs * REFERRAL_BONUS
-        await message.answer(
-            BOT_TEXTS[lang]['ref_t'].format(b=bot_info.username, u=uid, refs=refs, earned=earned, bonus=REFERRAL_BONUS),
-            parse_mode="HTML"
-        )
+        await message.answer(BOT_TEXTS[lang]['ref_t'].format(b=bot_info.username, u=uid, refs=refs, earned=earned, bonus=REFERRAL_BONUS), parse_mode="HTML")
     elif any(txt == BOT_TEXTS[l]['set'] for l in BOT_TEXTS):
         kb = InlineKeyboardBuilder()
         for c, n in LANGUAGES.items():
@@ -359,10 +460,7 @@ async def set_lang(call: CallbackQuery):
     await db_execute("UPDATE users SET language = ? WHERE user_id = ?", (lang_code, call.from_user.id))
     b_info = await bot.get_me()
     await call.message.edit_text(BOT_TEXTS[lang_code]['lang_ok'])
-    await call.message.answer(
-        BOT_TEXTS[lang_code]['welcome'],
-        reply_markup=main_menu(call.from_user.id, b_info.username, lang_code)
-    )
+    await call.message.answer(BOT_TEXTS[lang_code]['welcome'], reply_markup=main_menu(call.from_user.id, b_info.username, lang_code))
 
 
 @dp.callback_query(F.data.startswith("buy_"))
@@ -374,45 +472,33 @@ async def handle_buy(call: CallbackQuery):
     coins_amount = int(amount_str)
     uid = call.from_user.id
     lang, _, _ = await get_user_data(uid)
-
     if not CRYPTO_TOKEN:
         await call.answer("Payment not configured", show_alert=True)
         return
-
     try:
         import aiohttp
         async with aiohttp.ClientSession() as session:
-            resp = await session.post(
-                "https://pay.crypt.bot/api/createInvoice",
-                json={
-                    "currency_type": "fiat", "fiat": "USD", "amount": str(price),
-                    "description": f"Lucky Slots: {coins_amount} {BOT_TEXTS[lang]['token']}",
-                    "payload": json.dumps({"user_id": uid, "coins": coins_amount}),
-                    "paid_btn_name": "callback",
-                    "paid_btn_url": f"https://t.me/{(await bot.get_me()).username}"
-                },
-                headers={"Crypto-Pay-API-Token": CRYPTO_TOKEN}
-            )
+            resp = await session.post("https://pay.crypt.bot/api/createInvoice", json={
+                "currency_type": "fiat", "fiat": "USD", "amount": str(price),
+                "description": f"Lucky Slots: {coins_amount} {BOT_TEXTS[lang]['token']}",
+                "payload": json.dumps({"user_id": uid, "coins": coins_amount}),
+                "paid_btn_name": "callback",
+                "paid_btn_url": f"https://t.me/{(await bot.get_me()).username}"
+            }, headers={"Crypto-Pay-API-Token": CRYPTO_TOKEN})
             data = await resp.json()
             if not data.get("ok"):
-                logging.error(f"Crypto Bot error: {data}")
                 await call.answer("Payment error", show_alert=True)
                 return
-            pay_url = data["result"]["mini_app_invoice_url"]
             kb = InlineKeyboardBuilder()
-            kb.button(text=f"💳 Pay {price} USDT", url=pay_url)
+            kb.button(text=f"💳 Pay {price} USDT", url=data["result"]["mini_app_invoice_url"])
             await call.message.edit_text(BOT_TEXTS[lang]['pay_pending'], reply_markup=kb.as_markup())
     except Exception as e:
-        logging.error(f"Payment creation error: {e}")
+        logging.error(f"Payment error: {e}")
         await call.answer("Payment service unavailable", show_alert=True)
 
 
-# ==================== API ENDPOINTS ====================
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "*",
-}
+# ==================== API ====================
+CORS_HEADERS = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, OPTIONS", "Access-Control-Allow-Headers": "*"}
 
 
 async def handle_options(request):
@@ -420,32 +506,26 @@ async def handle_options(request):
 
 
 async def api_get_balance(request):
-    """GET /api/balance?init_data=...&uid=...&token=..."""
     try:
-        q = dict(request.rel_url.query)
-        uid = extract_uid_from_request(query=q)
-
+        uid = extract_uid_from_request(query=dict(request.rel_url.query))
         if not uid:
-            return web.json_response({"ok": False, "error": "auth_failed"}, headers=CORS_HEADERS)
-
+            return web.json_response({"ok": False, "error": "auth"}, headers=CORS_HEADERS)
         await ensure_user(uid)
         coins = await get_coins(uid)
         logging.info(f"💰 Balance: uid={uid}, coins={coins}")
         return web.json_response({"ok": True, "balance": int(coins)}, headers=CORS_HEADERS)
-
     except Exception as e:
-        logging.error(f"API balance error: {e}", exc_info=True)
+        logging.error(f"Balance error: {e}", exc_info=True)
         return web.json_response({"ok": False, "error": "server"}, headers=CORS_HEADERS)
 
 
 async def api_spin(request):
-    """POST /api/spin {init_data, uid, token, bet}"""
+    """POST /api/spin — базовый спин. Может триггернуть бонус."""
     if request.method == "OPTIONS":
         return web.Response(headers=CORS_HEADERS)
     try:
         data = await request.json()
         uid = extract_uid_from_request(request_data=data)
-
         if not uid:
             return web.json_response({"ok": False, "error": "auth"}, headers=CORS_HEADERS)
 
@@ -453,36 +533,80 @@ async def api_spin(request):
         if bet not in (5, 10, 25, 50):
             return web.json_response({"ok": False, "error": "invalid_bet"}, headers=CORS_HEADERS)
 
-        current_coins = await get_coins(uid)
-        if current_coins < bet:
-            return web.json_response({"ok": False, "error": "insufficient_funds", "balance": int(current_coins)}, headers=CORS_HEADERS)
+        current = await get_coins(uid)
+        if current < bet:
+            return web.json_response({"ok": False, "error": "insufficient_funds", "balance": int(current)}, headers=CORS_HEADERS)
 
-        grid, multiplier = compute_spin()
-        winnings = int(bet * multiplier)
-        new_balance = await update_coins(uid, -bet + winnings)
+        result = compute_base_spin(bet)
+        new_balance = await update_coins(uid, -bet + result["winnings"])
 
-        logging.info(f"🎰 Spin: uid={uid}, bet={bet}, win={winnings}, bal={new_balance}")
-        return web.json_response({"ok": True, "grid": grid, "winnings": winnings, "balance": new_balance}, headers=CORS_HEADERS)
+        logging.info(f"🎰 Spin: uid={uid}, bet={bet}, win={result['winnings']}, scatters={result['scatter_count']}, bonus={result['triggered_bonus']}, bal={new_balance}")
+
+        return web.json_response({
+            "ok": True,
+            "grid": result["grid"],
+            "winnings": result["winnings"],
+            "balance": new_balance,
+            "scatter_count": result["scatter_count"],
+            "triggered_bonus": result["triggered_bonus"],
+        }, headers=CORS_HEADERS)
 
     except Exception as e:
-        logging.error(f"API spin error: {e}", exc_info=True)
+        logging.error(f"Spin error: {e}", exc_info=True)
+        return web.json_response({"ok": False, "error": "server"}, headers=CORS_HEADERS)
+
+
+async def api_bonus(request):
+    """POST /api/bonus — запуск бонус-раунда (10+ фри-спинов)."""
+    if request.method == "OPTIONS":
+        return web.Response(headers=CORS_HEADERS)
+    try:
+        data = await request.json()
+        uid = extract_uid_from_request(request_data=data)
+        if not uid:
+            return web.json_response({"ok": False, "error": "auth"}, headers=CORS_HEADERS)
+
+        bet = int(data.get("bet", 0))
+        mode = data.get("mode", "triggered")  # "triggered" (бесплатно) или "bought" (за монеты)
+
+        if bet not in (5, 10, 25, 50):
+            return web.json_response({"ok": False, "error": "invalid_bet"}, headers=CORS_HEADERS)
+
+        # Если куплен — списываем стоимость (bet * 100)
+        if mode == "bought":
+            cost = bet * 100
+            current = await get_coins(uid)
+            if current < cost:
+                return web.json_response({"ok": False, "error": "insufficient_funds", "balance": int(current)}, headers=CORS_HEADERS)
+            await update_coins(uid, -cost)
+
+        # Генерируем весь бонус-раунд
+        bonus = compute_full_bonus_round(bet)
+        total_win = bonus["total_win"]
+
+        # Начисляем выигрыш
+        new_balance = await update_coins(uid, total_win)
+
+        logging.info(f"🎁 Bonus: uid={uid}, bet={bet}, mode={mode}, spins={bonus['total_spins_played']}, total_win={total_win}, bal={new_balance}")
+
+        return web.json_response({
+            "ok": True,
+            "spins": bonus["spins"],
+            "total_win": total_win,
+            "total_spins": bonus["total_spins_played"],
+            "balance": new_balance,
+        }, headers=CORS_HEADERS)
+
+    except Exception as e:
+        logging.error(f"Bonus error: {e}", exc_info=True)
         return web.json_response({"ok": False, "error": "server"}, headers=CORS_HEADERS)
 
 
 async def api_debug(request):
-    """GET /api/debug — диагностика."""
     try:
         q = dict(request.rel_url.query)
         uid = extract_uid_from_request(query=q)
-        db_coins = await get_coins(uid) if uid else -1
-        return web.json_response({
-            "uid_resolved": uid,
-            "db_coins": db_coins,
-            "has_init_data": bool(q.get("init_data")),
-            "has_uid_param": bool(q.get("uid")),
-            "has_token": bool(q.get("token")),
-            "query_keys": list(q.keys()),
-        }, headers=CORS_HEADERS)
+        return web.json_response({"uid": uid, "coins": await get_coins(uid) if uid else -1}, headers=CORS_HEADERS)
     except Exception as e:
         return web.json_response({"error": str(e)}, headers=CORS_HEADERS)
 
@@ -492,30 +616,27 @@ async def api_crypto_webhook(request):
         body = await request.json()
         if body.get("update_type") != "invoice_paid":
             return web.json_response({"ok": True})
-        payload_raw = body.get("payload", {}).get("payload", "{}")
-        payload = json.loads(payload_raw)
-        uid = payload.get("user_id")
-        coins_amount = payload.get("coins", 0)
+        payload = json.loads(body.get("payload", {}).get("payload", "{}"))
+        uid, coins_amount = payload.get("user_id"), payload.get("coins", 0)
         if not uid or not coins_amount:
             return web.json_response({"ok": False})
         new_balance = await update_coins(uid, coins_amount)
         lang, _, _ = await get_user_data(uid)
-        logging.info(f"💳 Payment: uid={uid}, +{coins_amount}, bal={new_balance}")
         try:
             await bot.send_message(uid, BOT_TEXTS[lang]['pay_success'].format(amount=coins_amount, balance=new_balance))
         except Exception:
             pass
         return web.json_response({"ok": True})
     except Exception as e:
-        logging.error(f"Crypto webhook error: {e}")
+        logging.error(f"Webhook error: {e}")
         return web.json_response({"ok": False})
 
 
-# ==================== WEB СЕРВЕР ====================
 async def start_api():
     app = web.Application()
     app.router.add_get("/api/balance", api_get_balance)
     app.router.add_post("/api/spin", api_spin)
+    app.router.add_post("/api/bonus", api_bonus)
     app.router.add_get("/api/debug", api_debug)
     app.router.add_post("/api/crypto-webhook", api_crypto_webhook)
     app.router.add_options("/{tail:.*}", handle_options)
@@ -523,13 +644,12 @@ async def start_api():
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
-    logging.info(f"🚀 API started on :{API_PORT}")
+    logging.info(f"🚀 API on :{API_PORT}")
 
 
 async def main():
     init_db()
     await start_api()
-    logging.info("🤖 Bot polling...")
     await dp.start_polling(bot)
 
 
