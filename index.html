@@ -7,17 +7,17 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
-:root { --bg1: #0d001f; --gold: #ffd700; --pink: #ff4da6; --win: #00e676; --deposit-green: #00e676; }
+:root { --bg1: #0d001f; --gold: #ffd700; --pink: #ff4da6; --win: #00e676; }
 *, *::before, *::after { box-sizing: border-box; }
 body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; margin:0; padding:0; overflow-x: hidden; }
 .wrap { max-width:440px; margin:0 auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
 .header { display:flex; justify-content:space-between; align-items:center; }
 .logo { font-family:'Fredoka One'; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.balance-box { background:rgba(255,255,255,0.1); border:1px solid var(--gold); border-radius:20px; padding:5px 12px; font-family:'Fredoka One'; color:var(--gold); }
-.balance-box.low { border-color: var(--deposit-green); color: var(--deposit-green); animation: pulse-green 2s infinite; }
+.balance-box { background:rgba(255,255,255,0.1); border:1px solid var(--gold); border-radius:20px; padding:5px 12px; font-family:'Fredoka One'; color:var(--gold); transition: all 0.3s; }
+.balance-box.low { border-color: var(--win); color: var(--win); animation: pulse-green 1.5s infinite; }
 @keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.3); }
-    50% { box-shadow: 0 0 12px 4px rgba(0,230,118,0.25); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+    50% { box-shadow: 0 0 14px 4px rgba(0,230,118,0.3); }
 }
 .grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:8px; }
 .grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:3px; }
@@ -25,15 +25,29 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 .cell.win-cell { background:rgba(255,215,0,0.25); transform:scale(1.1); }
 .controls { display:flex; gap:8px; align-items:center; }
 .bet-group { flex:1; display:flex; gap:4px; }
-.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; font-size:14px; transition: all 0.2s; }
+.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; font-size:14px; }
 .bet-btn.active { border-color:var(--gold); background:rgba(255,215,0,0.2); }
 
-/* Кнопка SPIN / DEPOSIT */
-.spin-btn { width:110px; height:75px; border-radius:18px; border:none; color:#fff; font-family:'Fredoka One'; cursor:pointer; font-size:15px; transition: all 0.3s ease; position: relative; overflow: hidden; }
-.spin-btn.mode-spin { background:linear-gradient(135deg,#ff4da6,#ff9500); }
-.spin-btn.mode-deposit { background:linear-gradient(135deg, #00e676, #00c853); box-shadow: 0 0 20px rgba(0,230,118,0.4); }
+/* === КНОПКА SPIN / DEPOSIT === */
+.spin-btn {
+    width:110px; height:75px; border-radius:18px; border:none;
+    color:#fff; font-family:'Fredoka One'; cursor:pointer; font-size:15px;
+    transition: all 0.3s ease; position:relative; overflow:hidden;
+}
+.spin-btn.mode-spin {
+    background: linear-gradient(135deg, #ff4da6, #ff9500);
+}
+.spin-btn.mode-deposit {
+    background: linear-gradient(135deg, #00e676, #00c853);
+    box-shadow: 0 0 20px rgba(0,230,118,0.5);
+    animation: glow-deposit 1.5s infinite;
+}
+@keyframes glow-deposit {
+    0%, 100% { box-shadow: 0 0 10px rgba(0,230,118,0.4); }
+    50% { box-shadow: 0 0 25px rgba(0,230,118,0.6); }
+}
 .spin-btn.mode-deposit:active { transform: scale(0.95); }
-.spin-btn.mode-loading { background:rgba(255,255,255,0.1); cursor:wait; }
+.spin-btn.mode-loading { background: rgba(255,255,255,0.1); cursor:wait; }
 .spin-btn:disabled { opacity:0.5; cursor:not-allowed; }
 
 .buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:14px; }
@@ -77,9 +91,9 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
         <div id="bbPrice" style="font-family:'Fredoka One'; color:var(--pink);">500 🪙</div>
     </button>
 
-    <div id="histTitle" class="section-title">OSTATNIE SPINY</div>
+    <div id="histTitle" class="section-title"></div>
     <div class="history-wrap" id="histList"></div>
-    <div id="ptTitle" class="section-title">TABELA WYPŁАТ</div>
+    <div id="ptTitle" class="section-title"></div>
     <div class="paytable" id="pt"></div>
 </div>
 
@@ -90,26 +104,44 @@ tg.ready();
 tg.expand();
 
 const urlParams = new URLSearchParams(window.location.search);
-const API_URL = urlParams.get('api') || "https://lucky-slots-production.up.railway.app";
-const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
-const LANG = urlParams.get('lang') || 'pl';
+const API_URL  = urlParams.get('api')   || "https://lucky-slots-production.up.railway.app";
+const BOT_NAME = urlParams.get('bot')   || "testplcas_bot";
+const LANG     = urlParams.get('lang')  || 'pl';
+const UID      = urlParams.get('uid')   || '';     // user_id от бота
+const TOKEN    = urlParams.get('token') || '';     // HMAC-подпись от бота
+
+console.log('[Init] API_URL:', API_URL);
+console.log('[Init] UID:', UID, 'TOKEN:', TOKEN ? TOKEN.substring(0,8) + '...' : 'none');
+console.log('[Init] tg.initData length:', (tg.initData || '').length);
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", error: "Błąd połączenia", retry: "Ponów" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", error: "Помилка з'єднання", retry: "Повторити" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", error: "Ошибка соединения", retry: "Повторить" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", error: "Connection error", retry: "Retry" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", error: "Błąd połączenia" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", error: "Помилка з'єднання" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", error: "Ошибка соединения" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", error: "Connection error" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
 const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-const MIN_BET = 5;
-
-let balance = null;  // null = ещё не загружен
+let balance = null;
 let bet = 5;
 let spinning = false;
-let balanceRetries = 0;
-const MAX_BALANCE_RETRIES = 5;
+
+// ==================== AUTH PARAMS ====================
+function authParams() {
+    // Строим параметры авторизации для каждого API-запроса
+    const p = {};
+    const initData = tg.initData || '';
+    if (initData) p.init_data = initData;
+    if (UID)   p.uid = UID;
+    if (TOKEN) p.token = TOKEN;
+    return p;
+}
+
+function authQueryString() {
+    const p = authParams();
+    return new URLSearchParams(p).toString();
+}
 
 // ==================== UI ====================
 function updateUI() {
@@ -118,15 +150,11 @@ function updateUI() {
     const btnText = document.getElementById('spinBtnText');
     const balBox = document.getElementById('balanceBox');
 
-    // Баланс
-    if (balance === null) {
-        balEl.innerText = '...';
-    } else {
-        balEl.innerText = balance;
-    }
+    balEl.innerText = (balance !== null) ? balance : '...';
 
-    // Режим кнопки
-    btn.className = 'spin-btn';  // сброс
+    // Сброс классов
+    btn.className = 'spin-btn';
+    balBox.classList.remove('low');
 
     if (balance === null) {
         // Загрузка
@@ -134,17 +162,16 @@ function updateUI() {
         btnText.innerText = '...';
         btn.disabled = true;
     } else if (balance < bet) {
-        // ДЕПОЗИТ — зелёная кнопка, НЕ disabled!
+        // === РЕЖИМ ДЕПОЗИТА — зелёная мигающая кнопка, АКТИВНА ===
         btn.classList.add('mode-deposit');
         btnText.innerText = T.deposit;
         btn.disabled = false;
         balBox.classList.add('low');
     } else {
-        // Можно играть
+        // Можно крутить
         btn.classList.add('mode-spin');
         btnText.innerText = T.spin;
         btn.disabled = false;
-        balBox.classList.remove('low');
     }
 }
 
@@ -155,67 +182,52 @@ function showError(msg) {
     setTimeout(() => { banner.style.display = 'none'; }, 4000);
 }
 
-// ==================== BALANCE FETCH ====================
+// ==================== BALANCE ====================
+let balRetries = 0;
 async function fetchBalance() {
-    const initData = tg.initData || '';
-
-    // Дебаг: логируем что отправляем
-    console.log('[Balance] initData length:', initData.length);
-    console.log('[Balance] initData preview:', initData.substring(0, 120));
-    console.log('[Balance] API_URL:', API_URL);
-
-    if (!initData) {
-        console.warn('[Balance] tg.initData is EMPTY! Telegram WebApp may not be initialized.');
-    }
-
     try {
-        const url = `${API_URL}/api/balance?init_data=${encodeURIComponent(initData)}`;
-        console.log('[Balance] Fetching:', url.substring(0, 150));
+        const qs = authQueryString();
+        console.log('[Balance] Fetching with:', qs.substring(0, 100));
 
-        const r = await fetch(url);
+        const r = await fetch(`${API_URL}/api/balance?${qs}`);
         const d = await r.json();
-
         console.log('[Balance] Response:', JSON.stringify(d));
 
         if (d.ok) {
             balance = d.balance;
-            balanceRetries = 0;
+            balRetries = 0;
             updateUI();
             return;
         }
-
-        console.error('[Balance] Server returned ok=false:', d.error);
+        console.error('[Balance] Error:', d.error);
     } catch(e) {
-        console.error('[Balance] Fetch error:', e);
+        console.error('[Balance] Fetch failed:', e);
     }
 
-    // Retry с экспоненциальной задержкой
-    balanceRetries++;
-    if (balanceRetries <= MAX_BALANCE_RETRIES) {
-        const delay = Math.min(1000 * Math.pow(2, balanceRetries - 1), 10000);
-        console.log(`[Balance] Retry ${balanceRetries}/${MAX_BALANCE_RETRIES} in ${delay}ms`);
+    // Retry
+    balRetries++;
+    if (balRetries <= 5) {
+        const delay = Math.min(1000 * Math.pow(2, balRetries - 1), 8000);
+        console.log(`[Balance] Retry ${balRetries}/5 in ${delay}ms`);
         setTimeout(fetchBalance, delay);
     } else {
-        console.error('[Balance] Max retries reached');
         showError(T.error);
-        // Показываем кнопку депозита как fallback
         balance = 0;
         updateUI();
     }
 }
 
-// ==================== MAIN ACTION ====================
+// ==================== ACTIONS ====================
 function handleMainAction() {
     if (balance === null) return;
 
     if (balance < bet) {
-        // Переходим в бота на блок депозита
-        console.log('[Deposit] Opening deposit in bot:', BOT_NAME);
+        // === ПЕРЕХОД НА ДЕПОЗИТ В БОТЕ ===
+        console.log('[Deposit] Redirecting to bot:', BOT_NAME);
         tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);
         tg.close();
         return;
     }
-
     spin();
 }
 
@@ -232,64 +244,48 @@ function selectBet(v) {
 // ==================== SPIN (SERVER-SIDE) ====================
 async function spin() {
     if (spinning || balance === null || balance < bet) return;
-
     spinning = true;
     const btn = document.getElementById('spinBtn');
     btn.disabled = true;
     document.getElementById('resultText').innerHTML = '';
-
-    // Убираем подсветку
     document.querySelectorAll('.cell.win-cell').forEach(c => c.classList.remove('win-cell'));
 
-    // Анимация пока ждём сервер
     const cells = document.querySelectorAll('.cell');
     const animInterval = setInterval(() => {
         cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)]);
     }, 80);
 
     try {
+        const body = { ...authParams(), bet: bet };
         const r = await fetch(`${API_URL}/api/spin`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ init_data: tg.initData, bet: bet })
+            body: JSON.stringify(body)
         });
         const d = await r.json();
         clearInterval(animInterval);
 
         if (!d.ok) {
-            if (d.error === 'insufficient_funds') {
-                // Обновляем баланс с сервера
-                if (d.balance !== undefined) balance = d.balance;
-                showError(T.noMoney);
-            } else {
-                showError(T.error);
-                fetchBalance();
-            }
+            if (d.error === 'insufficient_funds' && d.balance !== undefined) balance = d.balance;
+            showError(d.error === 'insufficient_funds' ? T.noMoney : T.error);
             spinning = false;
             btn.disabled = false;
             updateUI();
             return;
         }
 
-        // Сервер вернул сетку и результат
-        const serverGrid = d.grid;
-        const winnings = d.winnings;
         balance = d.balance;
+        const winnings = d.winnings;
 
         // Показываем серверную сетку
-        serverGrid.forEach((s, i) => cells[i].innerText = s);
+        d.grid.forEach((s, i) => cells[i].innerText = s);
 
         // Подсвечиваем выигрышные
         if (winnings > 0) {
             const counts = {};
-            serverGrid.forEach(s => counts[s] = (counts[s] || 0) + 1);
-            const winSyms = new Set();
-            for (const [s, c] of Object.entries(counts)) {
-                if (c >= 8) winSyms.add(s);
-            }
-            cells.forEach(c => {
-                if (winSyms.has(c.innerText)) c.classList.add('win-cell');
-            });
+            d.grid.forEach(s => counts[s] = (counts[s] || 0) + 1);
+            const winSyms = new Set(Object.entries(counts).filter(([s,c]) => c >= 8).map(([s]) => s));
+            cells.forEach(c => { if (winSyms.has(c.innerText)) c.classList.add('win-cell'); });
         }
 
         document.getElementById('resultText').innerHTML = winnings > 0
@@ -334,7 +330,6 @@ function openBuyBonus() {
 
 // ==================== INIT ====================
 function init() {
-    // Сетка
     const g = document.getElementById('grid');
     for (let i = 0; i < 30; i++) {
         const c = document.createElement('div');
@@ -342,8 +337,6 @@ function init() {
         c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)];
         g.appendChild(c);
     }
-
-    // Paytable
     const pt = document.getElementById('pt');
     SYMS.forEach(s => {
         const item = document.createElement('div');
@@ -351,17 +344,14 @@ function init() {
         item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
         pt.appendChild(item);
     });
-
-    // Локализация статичных элементов
     document.getElementById('bbTitle').innerText = T.bbTitle;
     document.getElementById('bbDesc').innerText = T.bbDesc;
     document.getElementById('histTitle').innerText = T.hist;
     document.getElementById('ptTitle').innerText = T.pt;
-
     updateUI();
 
-    // Загружаем баланс (с небольшой задержкой чтобы tg.initData точно был готов)
-    setTimeout(fetchBalance, 300);
+    // Загружаем баланс
+    setTimeout(fetchBalance, 200);
 }
 
 init();
