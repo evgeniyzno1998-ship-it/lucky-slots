@@ -15,25 +15,29 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 .balance-box { background:rgba(255,255,255,0.1); border:1px solid var(--gold); border-radius:20px; padding:5px 12px; font-family:'Fredoka One'; color:var(--gold); }
 .grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:8px; }
 .grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:3px; }
-.cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:24px; border-radius:8px; background:rgba(255,255,255,0.05); }
+.cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:24px; border-radius:8px; background:rgba(255,255,255,0.05); transition: transform 0.1s; }
+.cell.win-cell { background:rgba(255,215,0,0.2); transform:scale(1.1); }
 .controls { display:flex; gap:8px; align-items:center; }
-.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; }
+.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; font-size:14px; }
 .bet-btn.active { border-color:var(--gold); background:rgba(255,215,0,0.2); }
-.spin-btn { width:100px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One'; cursor:pointer; }
+.spin-btn { width:100px; height:75px; border-radius:18px; border:none; background:linear-gradient(135deg,#ff4da6,#ff9500); color:#fff; font-family:'Fredoka One'; cursor:pointer; font-size:14px; }
+.spin-btn:disabled { opacity:0.5; cursor:not-allowed; }
 .spin-btn.deposit { background:linear-gradient(135deg,#00e676,#00a352); }
-.buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:14px; }
 .history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; min-height:60px; }
 .h-item { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
 .paytable { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; background:rgba(255,255,255,0.03); padding:10px; border-radius:16px; }
 .pt-item { text-align:center; font-size:8px; background:rgba(255,255,255,0.05); padding:5px; border-radius:8px; }
+.error-banner { background:rgba(255,0,0,0.2); border:1px solid rgba(255,0,0,0.4); border-radius:10px; padding:8px 12px; text-align:center; font-size:12px; display:none; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box">🪙 <span id="balVal">0</span></div>
+    <div class="balance-box">🪙 <span id="balVal">...</span></div>
   </div>
+  <div id="errorBanner" class="error-banner"></div>
   <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
   <div class="controls">
@@ -57,30 +61,47 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 
 <script>
 const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
 const urlParams = new URLSearchParams(window.location.search);
 const API_URL = urlParams.get('api') || "https://lucky-slots-production.up.railway.app";
 const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", error: "Błąd połączenia. Spróbuj ponownie." },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", error: "Помилка з'єднання. Спробуйте ще." },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", error: "Ошибка соединения. Попробуйте снова." },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", error: "Connection error. Try again." }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
 const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-let balance = 0, bet = 5, spinning = false;
+let balance = null, bet = 5, spinning = false;
+
+function showError(msg) {
+    const banner = document.getElementById('errorBanner');
+    banner.innerText = msg;
+    banner.style.display = 'block';
+    setTimeout(() => { banner.style.display = 'none'; }, 4000);
+}
 
 function updateUI() {
-    document.getElementById('balVal').innerText = balance;
+    document.getElementById('balVal').innerText = balance !== null ? balance : '...';
     const btnText = document.getElementById('spinBtnText');
     const btn = document.getElementById('spinBtn');
-    if (balance < bet) {
-        btnText.innerText = T.deposit; btn.classList.add('deposit');
+    if (balance === null) {
+        btnText.innerText = '...';
+        btn.disabled = true;
+    } else if (balance < bet) {
+        btnText.innerText = T.deposit;
+        btn.classList.add('deposit');
+        btn.disabled = false;
     } else {
-        btnText.innerText = T.spin; btn.classList.remove('deposit');
+        btnText.innerText = T.spin;
+        btn.classList.remove('deposit');
+        btn.disabled = false;
     }
 }
 
@@ -88,61 +109,128 @@ async function fetchBalance() {
     try {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
-        if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) { setTimeout(fetchBalance, 3000); }
+        if (d.ok) {
+            balance = d.balance;
+            updateUI();
+        } else {
+            console.error('Balance fetch failed:', d.error);
+            // Повторяем через 2 сек
+            setTimeout(fetchBalance, 2000);
+        }
+    } catch(e) {
+        console.error('Balance fetch error:', e);
+        setTimeout(fetchBalance, 3000);
+    }
 }
 
 function handleMainAction() {
+    if (balance === null) return;
     if (balance < bet) {
         tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);
         tg.close();
-    } else { spin(); }
+    } else {
+        spin();
+    }
 }
 
 function selectBet(v) {
     if (spinning) return;
     bet = v;
-    document.querySelectorAll('.bet-btn').forEach(b => b.classList.toggle('active', parseInt(b.innerText) === v));
+    document.querySelectorAll('.bet-btn').forEach(b =>
+        b.classList.toggle('active', parseInt(b.innerText) === v)
+    );
     document.getElementById('bbPrice').innerText = (v * 100) + " 🪙";
     updateUI();
 }
 
 async function spin() {
-    if (spinning) return;
-    spinning = true; document.getElementById('spinBtn').disabled = true;
-    const grid = []; for(let i=0; i<30; i++) grid.push(SYMS[Math.floor(Math.random()*SYMS.length)]);
-    let counts = {}; grid.forEach(s => counts[s] = (counts[s]||0)+1);
-    let win = 0; for(let s in counts) { if(counts[s] >= 12) win += bet * 5; else if(counts[s] >= 8) win += bet * 1.5; }
-    
-    try {
-        const r = await fetch(`${API_URL}/api/spin`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({init_data: tg.initData, bet: bet, winnings: win})
-        });
-        const d = await r.json(); if (d.ok) balance = d.balance;
-    } catch(e) {}
+    if (spinning || balance === null || balance < bet) return;
+    spinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('resultText').innerHTML = '';
 
+    // Убираем подсветку предыдущего выигрыша
+    document.querySelectorAll('.cell.win-cell').forEach(c => c.classList.remove('win-cell'));
+
+    // Анимация рандомных символов пока ждём ответ от сервера
     const cells = document.querySelectorAll('.cell');
-    for(let t=0; t<10; t++) {
-        cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)]);
-        await new Promise(r => setTimeout(r, 70));
+    const animInterval = setInterval(() => {
+        cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)]);
+    }, 80);
+
+    try {
+        // FIX #2: Отправляем ТОЛЬКО ставку. Сервер сам генерирует сетку и считает выигрыш.
+        const r = await fetch(`${API_URL}/api/spin`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                init_data: tg.initData,
+                bet: bet
+            })
+        });
+        const d = await r.json();
+
+        clearInterval(animInterval);
+
+        if (!d.ok) {
+            showError(d.error === 'insufficient_funds' ? T.noMoney : T.error);
+            // Обновляем баланс на всякий случай
+            fetchBalance();
+            spinning = false;
+            document.getElementById('spinBtn').disabled = false;
+            return;
+        }
+
+        // Получаем сетку от сервера и отображаем
+        const serverGrid = d.grid;
+        const winnings = d.winnings;
+        balance = d.balance;
+
+        // Финальная анимация — показываем результат от сервера
+        serverGrid.forEach((s, i) => cells[i].innerText = s);
+
+        // Подсвечиваем выигрышные символы
+        if (winnings > 0) {
+            const counts = {};
+            serverGrid.forEach(s => counts[s] = (counts[s] || 0) + 1);
+            const winSyms = new Set();
+            for (const [s, c] of Object.entries(counts)) {
+                if (c >= 8) winSyms.add(s);
+            }
+            cells.forEach(c => {
+                if (winSyms.has(c.innerText)) c.classList.add('win-cell');
+            });
+        }
+
+        document.getElementById('resultText').innerHTML = winnings > 0
+            ? `<span style="color:var(--win)">${T.win}: +${winnings}</span>`
+            : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
+
+        addHistory(winnings);
+        updateUI();
+
+    } catch(e) {
+        clearInterval(animInterval);
+        console.error('Spin error:', e);
+        showError(T.error);
+        fetchBalance(); // Синхронизируем баланс
     }
-    grid.forEach((s, i) => cells[i].innerText = s);
-    document.getElementById('resultText').innerHTML = win > 0 ? `<span style="color:var(--win)">${T.win}: +${win}</span>` : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
-    
-    addHistory(win); updateUI(); spinning = false; document.getElementById('spinBtn').disabled = false;
+
+    spinning = false;
+    document.getElementById('spinBtn').disabled = false;
 }
 
 function addHistory(win) {
     const list = document.getElementById('histList');
-    const div = document.createElement('div'); div.className = 'h-item';
-    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
-    list.prepend(div); if (list.children.length > 5) list.lastChild.remove();
+    const div = document.createElement('div');
+    div.className = 'h-item';
+    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win > 0 ? 'var(--win)' : '#fff'}">${win > 0 ? '+' + win : '-' + bet}</span>`;
+    list.prepend(div);
+    if (list.children.length > 10) list.lastChild.remove();
 }
 
 function openBuyBonus() {
-    // ВЕРНУЛ ПРОВЕРКУ БАЛАНСА И ПОП-АП
-    if (balance < bet * 100) {
+    if (balance === null || balance < bet * 100) {
         tg.showAlert(T.noMoney);
         return;
     }
@@ -151,14 +239,16 @@ function openBuyBonus() {
 
 function init() {
     const g = document.getElementById('grid');
-    for(let i=0; i<30; i++) {
-        const c = document.createElement('div'); c.className = 'cell';
-        c.innerText = SYMS[Math.floor(Math.random()*SYMS.length)];
+    for (let i = 0; i < 30; i++) {
+        const c = document.createElement('div');
+        c.className = 'cell';
+        c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)];
         g.appendChild(c);
     }
     const pt = document.getElementById('pt');
     SYMS.forEach(s => {
-        const item = document.createElement('div'); item.className = 'pt-item';
+        const item = document.createElement('div');
+        item.className = 'pt-item';
         item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
         pt.appendChild(item);
     });
@@ -169,6 +259,7 @@ function init() {
     updateUI();
     fetchBalance();
 }
+
 init();
 </script>
 </body>
