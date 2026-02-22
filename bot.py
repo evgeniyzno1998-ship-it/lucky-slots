@@ -13,8 +13,10 @@ if os.path.exists(load_dotenv_path):
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CRYPTO_TOKEN = os.getenv("CRYPTO_TOKEN")
+# Берем порт, который дает Railway, или 8081 по умолчанию
 API_PORT = int(os.getenv("PORT", 8081))
-PUBLIC_URL = f"https://{os.getenv('RAILWAY_STATIC_URL', 'lucky-slots-production.up.railway.app')}"
+# Твой домен из настроек Railway
+PUBLIC_URL = "https://lucky-slots-production.up.railway.app"
 
 # ==================== ЛОКАЛИЗАЦИЯ ====================
 LANGUAGES = {'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'}
@@ -33,9 +35,11 @@ def init_db():
         except: pass
 
 def get_user_data(user_id):
-    with sqlite3.connect('users.db') as conn:
-        res = conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone()
-        return res if res else ('pl', 0, 0)
+    try:
+        with sqlite3.connect('users.db') as conn:
+            res = conn.execute("SELECT language, coins, referrals_count FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            return res if res else ('pl', 0, 0)
+    except: return ('pl', 0, 0)
 
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu(user_id, bot_name):
@@ -55,7 +59,7 @@ def pkgs_kb(lang):
         builder.button(text=f"{l} {t_n} — {p} USDT", callback_data=f"buy_{l}")
     return builder.adjust(1).as_markup()
 
-# ==================== БОТ ====================
+# ==================== ХЕНДЛЕРЫ ====================
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
@@ -63,8 +67,20 @@ dp = Dispatcher()
 async def cmd_start(message: Message):
     user_id = message.from_user.id
     args = message.text.split()
+    # Реферальная система
+    ref_id = None
+    if len(args) > 1 and args[1].startswith("ref"):
+        try:
+            ref_id = int(args[1].replace("ref", ""))
+            if ref_id == user_id: ref_id = None
+        except: pass
+
     with sqlite3.connect('users.db') as conn:
-        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)", (user_id, message.from_user.username, message.from_user.first_name))
+        conn.execute("INSERT OR IGNORE INTO users (user_id, username, first_name, language) VALUES (?, ?, ?, 'pl')", 
+                     (user_id, message.from_user.username, message.from_user.first_name))
+        if ref_id:
+            conn.execute("UPDATE users SET referrals_count = referrals_count + 1, coins = coins + 10 WHERE user_id = ?", (ref_id,))
+    
     bot_info = await bot.get_me()
     lang, _, _ = get_user_data(user_id)
     if len(args) > 1 and args[1] == "deposit":
@@ -73,20 +89,19 @@ async def cmd_start(message: Message):
     await message.answer(BOT_TEXTS[lang]['welcome'], reply_markup=main_menu(user_id, bot_info.username))
 
 @dp.message(F.text)
-async def handle_all_buttons(message: Message):
+async def handle_buttons(message: Message):
     uid = message.from_user.id
     txt = message.text
     lang, coins, refs = get_user_data(uid)
     bot_info = await bot.get_me()
 
-    # Проверка кнопок по всем языкам
-    if any(txt in [BOT_TEXTS[l]['buy'] for l in BOT_TEXTS]):
+    if any(txt == BOT_TEXTS[l]['buy'] for l in BOT_TEXTS):
         await message.answer(BOT_TEXTS[lang]['buy'], reply_markup=pkgs_kb(lang))
-    elif any(txt in [BOT_TEXTS[l]['bal'] for l in BOT_TEXTS]):
+    elif any(txt == BOT_TEXTS[l]['bal'] for l in BOT_TEXTS):
         await message.answer(BOT_TEXTS[lang]['balance_text'].format(c=coins))
-    elif any(txt in [BOT_TEXTS[l]['ref'] for l in BOT_TEXTS]):
+    elif any(txt == BOT_TEXTS[l]['ref'] for l in BOT_TEXTS):
         await message.answer(BOT_TEXTS[lang]['ref_t'].format(b=bot_info.username, u=uid, cnt=refs), parse_mode="HTML")
-    elif any(txt in [BOT_TEXTS[l]['set'] for l in BOT_TEXTS]):
+    elif any(txt == BOT_TEXTS[l]['set'] for l in BOT_TEXTS):
         kb = InlineKeyboardBuilder()
         for c, n in LANGUAGES.items(): kb.button(text=n, callback_data=f"sl_{c}")
         await message.answer("Language:", reply_markup=kb.adjust(2).as_markup())
@@ -101,25 +116,28 @@ async def set_lang(call: CallbackQuery):
     await call.message.answer(BOT_TEXTS[lang_code]['welcome'], reply_markup=main_menu(call.from_user.id, b_info.username))
     await call.answer()
 
-# ==================== API С ПОДДЕРЖКОЙ CORS ====================
+# ==================== API ====================
 async def api_get_balance(request):
-    headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*"}
+    headers = {"Access-Control-Allow-Origin": "*"}
     try:
-        init_data = request.rel_url.query.get("init_data")
+        init_data = request.rel_url.query.get("init_data", "")
         parsed = dict(urllib.parse.parse_qsl(init_data))
-        user_id = json.loads(parsed.get("user")).get("id")
+        user_data = json.loads(parsed.get("user", "{}"))
+        user_id = user_data.get("id")
+        if not user_id: return web.json_response({"ok": False}, headers=headers)
         _, coins, _ = get_user_data(user_id)
         return web.json_response({"ok": True, "balance": coins}, headers=headers)
-    except: return web.json_response({"ok": False}, headers=headers)
+    except:
+        return web.json_response({"ok": False}, headers=headers)
 
 async def api_spin(request):
     headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "*"}
     if request.method == "OPTIONS": return web.Response(headers=headers)
     try:
         data = await request.json()
-        parsed = dict(urllib.parse.parse_qsl(data.get("init_data")))
-        uid = json.loads(parsed.get("user")).get("id")
-        bet, win = int(data.get("bet")), int(data.get("winnings"))
+        parsed = dict(urllib.parse.parse_qsl(data.get("init_data", "")))
+        uid = json.loads(parsed.get("user", "{}")).get("id")
+        bet, win = int(data.get("bet", 0)), int(data.get("winnings", 0))
         with sqlite3.connect('users.db') as conn:
             cur = conn.execute("SELECT coins FROM users WHERE user_id = ?", (uid,)).fetchone()[0]
             new_bal = cur - bet + win
@@ -127,33 +145,23 @@ async def api_spin(request):
         return web.json_response({"ok": True, "balance": new_bal}, headers=headers)
     except: return web.json_response({"ok": False}, headers=headers)
 
-async def start_api():
+async def start_api_server():
     app = web.Application()
     app.router.add_get("/api/balance", api_get_balance)
     app.router.add_post("/api/spin", api_spin)
     app.router.add_options("/{tail:.*}", lambda r: web.Response(headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"}))
     runner = web.AppRunner(app)
     await runner.setup()
-    await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
+    site = web.TCPSite(runner, "0.0.0.0", API_PORT)
+    await site.start()
+    print(f"✅ API Server started on port {API_PORT}")
 
 async def main():
-    print("--- ЗАПУСК ИНИЦИАЛИЗАЦИИ ---")
-    try:
-        init_db()
-        print("✅ База данных готова")
-        
-        bot_info = await bot.get_me()
-        print(f"✅ Авторизация успешна: @{bot_info.username}")
-        
-        # Запускаем API сервер
-        asyncio.create_task(start_api())
-        print(f"🚀 API сервер запущен на порту {API_PORT}")
-        
-        print("📡 Начинаю опрос Telegram (Polling)...")
-        await dp.start_polling(bot)
-    except Exception as e:
-        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА ПРИ ЗАПУСКЕ: {e}")
+    init_db()
+    await start_api_server()
+    print("📡 Bot is polling...")
+    await dp.start_polling(bot)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
-
