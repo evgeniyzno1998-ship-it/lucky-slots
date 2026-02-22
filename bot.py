@@ -137,10 +137,23 @@ async def start_api():
     await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
 
 async def main():
-    init_db()
-    asyncio.create_task(start_api())
-    logging.info(f"API Server started on port {API_PORT}")
-    await dp.start_polling(bot)
+    print("--- ЗАПУСК ИНИЦИАЛИЗАЦИИ ---")
+    try:
+        init_db()
+        print("✅ База данных готова")
+        
+        bot_info = await bot.get_me()
+        print(f"✅ Авторизация успешна: @{bot_info.username}")
+        
+        # Запускаем API сервер
+        asyncio.create_task(start_api())
+        print(f"🚀 API сервер запущен на порту {API_PORT}")
+        
+        print("📡 Начинаю опрос Telegram (Polling)...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА ПРИ ЗАПУСКЕ: {e}")
 
 if __name__ == '__main__':
     asyncio.run(main())
+
