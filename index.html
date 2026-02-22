@@ -1,356 +1,478 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Lucky Slots</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Lucky Bonanza</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
-:root { --bg1:#0d001f; --gold:#ffd700; --pink:#ff4da6; --win:#00e676; --bomb:#ff3d00; }
-*,*::before,*::after{box-sizing:border-box}
-body{background:radial-gradient(ellipse at 50% 0%,#2d0060,var(--bg1) 65%);min-height:100vh;font-family:'Nunito',sans-serif;color:#fff;user-select:none;margin:0;padding:0;overflow-x:hidden}
-.wrap{max-width:440px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
-.header{display:flex;justify-content:space-between;align-items:center}
-.logo{font-family:'Fredoka One';font-size:22px;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.balance-box{background:rgba(255,255,255,.1);border:1px solid var(--gold);border-radius:20px;padding:5px 12px;font-family:'Fredoka One';color:var(--gold);transition:all .3s}
-.balance-box.low{border-color:var(--win);color:var(--win);animation:pulse-g 1.5s infinite}
-@keyframes pulse-g{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,.4)}50%{box-shadow:0 0 14px 4px rgba(0,230,118,.3)}}
-.grid-outer{background:rgba(0,0,0,.5);border:2px solid rgba(255,215,0,.2);border-radius:20px;padding:8px;position:relative;overflow:hidden}
-.grid-outer.bonus-active{border-color:var(--pink);box-shadow:0 0 30px rgba(255,77,166,.3);animation:bonus-border 1s infinite}
-@keyframes bonus-border{0%,100%{box-shadow:0 0 15px rgba(255,77,166,.3)}50%{box-shadow:0 0 35px rgba(255,77,166,.5)}}
-.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
-.cell{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:8px;background:rgba(255,255,255,.05);transition:transform .2s,background .2s}
-.cell.win-cell{background:rgba(255,215,0,.25);transform:scale(1.1)}
-.cell.scatter-cell{background:rgba(255,77,166,.3);animation:scatter-pulse .6s infinite}
-@keyframes scatter-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-.cell.bomb-cell{background:rgba(255,61,0,.3);animation:bomb-shake .3s infinite}
-@keyframes bomb-shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
-.controls{display:flex;gap:8px;align-items:center}
-.bet-group{flex:1;display:flex;gap:4px}
-.bet-btn{flex:1;padding:10px 0;border-radius:10px;border:2px solid rgba(255,215,0,.2);background:rgba(255,255,255,.05);color:var(--gold);font-family:'Fredoka One';cursor:pointer;font-size:14px}
-.bet-btn.active{border-color:var(--gold);background:rgba(255,215,0,.2)}
-.spin-btn{width:110px;height:75px;border-radius:18px;border:none;color:#fff;font-family:'Fredoka One';cursor:pointer;font-size:15px;transition:all .3s}
-.spin-btn.mode-spin{background:linear-gradient(135deg,#ff4da6,#ff9500)}
-.spin-btn.mode-deposit{background:linear-gradient(135deg,#00e676,#00c853);box-shadow:0 0 20px rgba(0,230,118,.5);animation:glow-d 1.5s infinite}
-@keyframes glow-d{0%,100%{box-shadow:0 0 10px rgba(0,230,118,.4)}50%{box-shadow:0 0 25px rgba(0,230,118,.6)}}
-.spin-btn.mode-loading{background:rgba(255,255,255,.1);cursor:wait}
-.spin-btn:disabled{opacity:.5;cursor:not-allowed}
-.buy-bonus-btn{width:100%;padding:12px;border-radius:14px;border:2px solid var(--pink);background:rgba(255,255,255,.05);color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;transition:all .3s}
-.buy-bonus-btn:active{transform:scale(.97)}
-.history-wrap{background:rgba(255,255,255,.03);border-radius:16px;padding:12px;min-height:60px}
-.h-item{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-.h-item.bonus-item{color:var(--pink);border-bottom-color:rgba(255,77,166,.2)}
-.paytable{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;background:rgba(255,255,255,.03);padding:10px;border-radius:16px}
-.pt-item{text-align:center;font-size:8px;background:rgba(255,255,255,.05);padding:5px;border-radius:8px}
-.error-banner{background:rgba(255,77,77,.15);border:1px solid rgba(255,77,77,.3);border-radius:10px;padding:8px 12px;text-align:center;font-size:12px;display:none;color:#ff6b6b}
-.section-title{font-size:10px;opacity:.4;margin-top:10px}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
+:root{--bg:#0a0a14;--card:#151525;--card2:#1a1a30;--accent:#c8ff2e;--pink:#ff3d8a;--gold:#ffd700;--blue:#4d7cff;--text:#e8e8f0;--dim:#6b6b8d;--green:#00e676;--red:#ff4444;--nav:#0d0d1a;--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:70px}
+::-webkit-scrollbar{display:none}
 
-/* ===== BONUS OVERLAY ===== */
-.bonus-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:20px}
-.bonus-overlay.active{display:flex}
-.bonus-title{font-family:'Fredoka One';font-size:28px;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;animation:bonus-title-pop .5s ease-out}
-@keyframes bonus-title-pop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
-.bonus-info{display:flex;gap:20px;font-family:'Fredoka One';font-size:14px}
-.bonus-info-item{text-align:center;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,.1)}
-.bonus-info-item .label{font-size:10px;opacity:.6;font-family:'Nunito'}
-.bonus-info-item .value{color:var(--gold);font-size:18px}
-.bonus-grid-wrap{width:100%;max-width:400px;background:rgba(0,0,0,.5);border:2px solid var(--pink);border-radius:20px;padding:8px}
-.bonus-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
-.bonus-result{font-family:'Fredoka One';font-size:20px;color:var(--win);text-align:center;min-height:30px}
-.bonus-total{font-family:'Fredoka One';font-size:32px;color:var(--gold);text-align:center;text-shadow:0 0 20px rgba(255,215,0,.5)}
-.bonus-close-btn{padding:12px 40px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--gold),#ff9500);color:#000;font-family:'Fredoka One';font-size:16px;cursor:pointer;display:none}
-.bomb-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Fredoka One';font-size:48px;color:var(--bomb);z-index:1100;pointer-events:none;animation:bomb-pop .8s ease-out forwards}
-@keyframes bomb-pop{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.5);opacity:1}100%{transform:translate(-50%,-70%) scale(1);opacity:0}}
+/* === SCREENS === */
+.screen{display:none;opacity:0;transition:opacity .2s}.screen.active{display:block;opacity:1}
+
+/* === TOP BAR === */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;position:sticky;top:0;z-index:50;background:var(--bg)}
+.topbar-logo{font-weight:900;font-size:20px;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-balance{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid rgba(200,255,46,.2);border-radius:30px;padding:6px 14px 6px 10px;font-weight:700;font-size:14px;color:var(--accent);cursor:pointer}
+.topbar-balance .coin-icon{width:18px;height:18px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:900}
+
+/* === PROMO BANNER === */
+.promo-banner{margin:0 16px 12px;border-radius:var(--radius);background:linear-gradient(135deg,#1a0a3e,#3d1266 50%,#0a2a5e);padding:20px;position:relative;overflow:hidden;min-height:100px}
+.promo-banner::after{content:'';position:absolute;top:-50%;right:-30%;width:200px;height:200px;background:radial-gradient(circle,rgba(200,255,46,.15),transparent 70%);border-radius:50%}
+.promo-tag{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:2px;margin-bottom:6px}
+.promo-title{font-size:22px;font-weight:900;line-height:1.2;margin-bottom:4px}
+.promo-sub{font-size:12px;color:var(--dim)}
+
+/* === WHEEL BANNER === */
+.wheel-banner{margin:0 16px 12px;border-radius:var(--radius);background:linear-gradient(135deg,#1a2a0a,#0a3a1a);border:1px solid rgba(0,230,118,.2);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s}
+.wheel-banner:active{transform:scale(.97)}
+.wheel-icon{font-size:36px;animation:wheel-rotate 3s linear infinite}
+@keyframes wheel-rotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+.wheel-banner.done{opacity:.5;pointer-events:none}
+.wheel-banner.done .wheel-icon{animation:none}
+.wheel-info h3{font-size:14px;font-weight:700;color:var(--green)}.wheel-info p{font-size:11px;color:var(--dim)}
+
+/* === SECTION === */
+.section{padding:0 16px;margin-bottom:16px}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.section-title{font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)}
+.section-more{font-size:11px;color:var(--accent);cursor:pointer}
+
+/* === GAME CARDS === */
+.games-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.game-card{min-width:130px;border-radius:var(--radius);overflow:hidden;background:var(--card);cursor:pointer;transition:transform .15s;scroll-snap-align:start;flex-shrink:0}
+.game-card:active{transform:scale(.95)}
+.game-card-img{width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-size:48px;position:relative}
+.game-card-img.slots-bg{background:linear-gradient(135deg,#2d0060,#0d001f)}
+.game-card-img.coming-bg{background:linear-gradient(135deg,#1a1a30,#0a0a20)}
+.game-card-info{padding:8px 10px}
+.game-card-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.game-card-tag{font-size:9px;color:var(--accent);font-weight:600;text-transform:uppercase;margin-top:2px}
+.game-card .coming-label{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:4px;text-align:center;font-size:9px;font-weight:700;color:var(--dim)}
+
+/* === VIP CARD === */
+.vip-card{margin:0 16px 16px;border-radius:var(--radius);background:var(--card);padding:16px;display:flex;align-items:center;gap:14px}
+.vip-icon{font-size:36px}
+.vip-info{flex:1}
+.vip-name{font-size:14px;font-weight:800}.vip-cb{font-size:11px;color:var(--dim)}
+.vip-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:6px;overflow:hidden}
+.vip-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:2px;transition:width .5s}
+
+/* === BOTTOM NAV === */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:var(--nav);border-top:1px solid rgba(255,255,255,.06);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--dim);transition:color .2s;position:relative}
+.nav-item.active{color:var(--accent)}
+.nav-item .nav-icon{font-size:20px;line-height:1}.nav-item .nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.nav-item .nav-dot{position:absolute;top:6px;right:calc(50% - 16px);width:6px;height:6px;background:var(--pink);border-radius:50%;display:none}
+.nav-item .nav-dot.show{display:block}
+
+/* === GAME SCREEN === */
+.game-topbar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px}
+.game-back{font-size:24px;cursor:pointer;padding:4px 8px}
+.game-balance{font-weight:700;color:var(--accent);font-size:14px}
+.game-area{padding:0 10px}
+.grid-frame{background:rgba(0,0,0,.5);border:2px solid rgba(200,255,46,.1);border-radius:var(--radius);padding:6px;position:relative;overflow:hidden}
+.grid-frame.bonus-mode{border-color:var(--pink);box-shadow:0 0 30px rgba(255,61,138,.2)}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:8px;background:rgba(255,255,255,.04);transition:all .2s}
+.cell.win{background:rgba(200,255,46,.15);transform:scale(1.08)}.cell.scatter{background:rgba(255,61,138,.2);animation:sc-p .5s infinite}
+.cell.bomb{background:rgba(255,61,0,.2);animation:bm-s .3s infinite}
+@keyframes sc-p{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes bm-s{0%,100%{transform:rotate(0)}25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
+.game-result{text-align:center;height:28px;font-weight:800;font-size:16px;padding:4px 0}
+.game-controls{display:flex;gap:8px;align-items:center;padding:0 6px}
+.bet-group{flex:1;display:flex;gap:4px}
+.bet-btn{flex:1;padding:10px 0;border-radius:12px;border:1.5px solid rgba(200,255,46,.15);background:transparent;color:var(--accent);font-family:'Outfit';font-weight:700;cursor:pointer;font-size:13px;transition:all .15s}
+.bet-btn.on{border-color:var(--accent);background:rgba(200,255,46,.12)}
+.spin-btn{width:100px;height:68px;border-radius:16px;border:none;color:#000;font-family:'Outfit';font-weight:900;cursor:pointer;font-size:14px;transition:all .2s}
+.spin-btn.m-spin{background:linear-gradient(135deg,var(--accent),#a0ff00)}
+.spin-btn.m-deposit{background:linear-gradient(135deg,var(--green),#00c853);color:#fff;animation:glow-g 1.5s infinite}
+.spin-btn.m-load{background:var(--card);color:var(--dim)}
+@keyframes glow-g{0%,100%{box-shadow:0 0 10px rgba(0,230,118,.3)}50%{box-shadow:0 0 25px rgba(0,230,118,.5)}}
+.spin-btn:disabled{opacity:.4;cursor:not-allowed}
+.free-spin-badge{text-align:center;padding:4px;font-size:11px;color:var(--pink);font-weight:700}
+.buy-bonus{width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1.5px solid rgba(255,61,138,.3);background:transparent;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:'Outfit';font-size:13px;transition:all .15s}
+.buy-bonus:active{transform:scale(.97)}
+.bb-left{font-weight:700}.bb-right{font-weight:800;color:var(--pink)}
+
+/* === PROFILE SCREEN === */
+.profile-header{text-align:center;padding:30px 16px 20px}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 10px}
+.profile-name{font-size:18px;font-weight:800}.profile-vip{font-size:12px;color:var(--accent);font-weight:700}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 16px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:14px;text-align:center}
+.stat-val{font-size:20px;font-weight:900;color:var(--accent)}.stat-label{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;margin-top:2px}
+.profile-actions{padding:0 16px;display:flex;flex-direction:column;gap:8px}
+.profile-btn{padding:14px 16px;border-radius:var(--radius);background:var(--card);border:none;color:var(--text);display:flex;align-items:center;gap:10px;font-family:'Outfit';font-size:14px;font-weight:600;cursor:pointer;text-align:left}
+.profile-btn:active{opacity:.7}
+.profile-btn .pb-icon{font-size:18px}
+
+/* === BONUS OVERLAY === */
+.bonus-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
+.bonus-overlay.show{display:flex}
+.bo-title{font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:bo-pop .5s ease-out}
+@keyframes bo-pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.bo-info{display:flex;gap:16px}.bo-info-item{text-align:center;background:var(--card);border-radius:12px;padding:8px 16px}
+.bo-info-item .label{font-size:10px;color:var(--dim)}.bo-info-item .val{font-size:18px;font-weight:900;color:var(--gold)}
+.bo-grid-wrap{width:100%;max-width:380px;background:rgba(0,0,0,.5);border:2px solid var(--pink);border-radius:var(--radius);padding:6px}
+.bo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.bo-result{font-weight:800;font-size:18px;color:var(--green);text-align:center;min-height:24px}
+.bo-total{font-size:28px;font-weight:900;color:var(--gold);text-align:center}
+.bo-close{padding:12px 36px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent),#a0ff00);color:#000;font-family:'Outfit';font-weight:900;font-size:15px;cursor:pointer;display:none}
+
+/* Wheel overlay */
+.wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px}
+.wheel-overlay.show{display:flex}
+.wo-title{font-size:22px;font-weight:900;color:var(--green)}
+.wo-wheel{width:200px;height:200px;border-radius:50%;border:4px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:48px;transition:transform 3s cubic-bezier(.17,.67,.12,.99)}
+.wo-prize{font-size:28px;font-weight:900;color:var(--accent);min-height:40px}
+.wo-btn{padding:14px 40px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--green),#00c853);color:#fff;font-family:'Outfit';font-weight:900;font-size:16px;cursor:pointer}
+
+.bomb-pop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:900;font-size:44px;color:var(--red);z-index:300;pointer-events:none;animation:bp .7s ease-out forwards}
+@keyframes bp{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.4);opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 </style>
 </head>
 <body>
-<div class="wrap">
-    <div class="header">
-        <div class="logo">🍭 Lucky Bonanza</div>
-        <div class="balance-box" id="balanceBox">🪙 <span id="balVal">...</span></div>
+
+<!-- ===== SCREEN: LOBBY ===== -->
+<div class="screen active" id="scrLobby">
+    <div class="topbar">
+        <div class="topbar-logo">Lucky Bonanza</div>
+        <div class="topbar-balance" onclick="nav('deposit')"><div class="coin-icon">$</div><span id="lobbyBal">...</span></div>
     </div>
-    <div id="errorBanner" class="error-banner"></div>
-    <div class="grid-outer" id="gridOuter"><div class="grid" id="grid"></div></div>
-    <div id="resultText" style="text-align:center;height:30px;font-family:'Fredoka One'"></div>
-    <div class="controls">
-        <div class="bet-group">
-            <button class="bet-btn active" onclick="selectBet(5)">5</button>
-            <button class="bet-btn" onclick="selectBet(10)">10</button>
-            <button class="bet-btn" onclick="selectBet(25)">25</button>
-            <button class="bet-btn" onclick="selectBet(50)">50</button>
-        </div>
-        <button class="spin-btn mode-loading" id="spinBtn" onclick="handleMainAction()">
-            <span id="spinBtnText">...</span>
-        </button>
+    <div class="promo-banner">
+        <div class="promo-tag" id="promoTag">Welcome Bonus</div>
+        <div class="promo-title" id="promoTitle">Lucky Bonanza 🍭</div>
+        <div class="promo-sub" id="promoSub">Spin & win up to x100!</div>
     </div>
-    <button class="buy-bonus-btn" id="buyBonusBtn" onclick="buyBonus()">
-        <div style="text-align:left">
-            <div id="bbTitle" style="font-family:'Fredoka One'">🔥 BUY BONUS</div>
-            <div id="bbDesc" style="font-size:10px;opacity:.6">10+ free spins</div>
+    <div class="wheel-banner" id="wheelBanner" onclick="openWheel()">
+        <div class="wheel-icon">🎡</div>
+        <div class="wheel-info"><h3 id="wheelTitle">Daily Wheel</h3><p id="wheelSub">Spin for free coins!</p></div>
+    </div>
+    <div class="vip-card" id="vipCard">
+        <div class="vip-icon" id="vipIcon">🥉</div>
+        <div class="vip-info">
+            <div class="vip-name" id="vipName">Bronze</div>
+            <div class="vip-cb" id="vipCb">1% cashback</div>
+            <div class="vip-bar"><div class="vip-bar-fill" id="vipBar" style="width:0%"></div></div>
         </div>
-        <div id="bbPrice" style="font-family:'Fredoka One';color:var(--pink)">500 🪙</div>
-    </button>
-    <div id="histTitle" class="section-title"></div>
-    <div class="history-wrap" id="histList"></div>
-    <div id="ptTitle" class="section-title"></div>
-    <div class="paytable" id="pt"></div>
+    </div>
+    <div class="section">
+        <div class="section-header"><div class="section-title" id="secGames">Games</div></div>
+        <div class="games-row" id="gamesRow"></div>
+    </div>
+    <div class="section">
+        <div class="section-header"><div class="section-title" id="secComing">Coming Soon</div></div>
+        <div class="games-row" id="comingRow"></div>
+    </div>
 </div>
 
-<!-- BONUS OVERLAY -->
-<div class="bonus-overlay" id="bonusOverlay">
-    <div class="bonus-title" id="bonusTitle">🎰 BONUS ROUND 🎰</div>
-    <div class="bonus-info">
-        <div class="bonus-info-item"><div class="label" id="bonusSpinLabel">SPIN</div><div class="value" id="bonusSpinCounter">0/10</div></div>
-        <div class="bonus-info-item"><div class="label" id="bonusTotalLabel">TOTAL WIN</div><div class="value" id="bonusRunningTotal">0</div></div>
+<!-- ===== SCREEN: GAME ===== -->
+<div class="screen" id="scrGame">
+    <div class="game-topbar">
+        <div class="game-back" onclick="nav('lobby')">←</div>
+        <div style="font-weight:800;font-size:16px">🍭 Lucky Bonanza</div>
+        <div class="game-balance">🪙 <span id="gameBal">0</span></div>
     </div>
-    <div class="bonus-grid-wrap"><div class="bonus-grid" id="bonusGrid"></div></div>
-    <div class="bonus-result" id="bonusSpinResult"></div>
-    <div class="bonus-total" id="bonusFinalTotal"></div>
-    <button class="bonus-close-btn" id="bonusCloseBtn" onclick="closeBonus()">COLLECT 🪙</button>
+    <div class="game-area">
+        <div class="grid-frame" id="gridFrame"><div class="grid" id="grid"></div></div>
+        <div class="game-result" id="gameResult"></div>
+        <div class="free-spin-badge" id="freeBadge"></div>
+        <div class="game-controls">
+            <div class="bet-group">
+                <button class="bet-btn on" onclick="setBet(5)">5</button>
+                <button class="bet-btn" onclick="setBet(10)">10</button>
+                <button class="bet-btn" onclick="setBet(25)">25</button>
+                <button class="bet-btn" onclick="setBet(50)">50</button>
+            </div>
+            <button class="spin-btn m-load" id="spinBtn" onclick="doSpin()"><span id="spinTxt">...</span></button>
+        </div>
+        <button class="buy-bonus" onclick="buyBonus()">
+            <div class="bb-left">🔥 <span id="bbLabel">Buy Bonus</span></div>
+            <div class="bb-right"><span id="bbPrice">500</span> 🪙</div>
+        </button>
+    </div>
+</div>
+
+<!-- ===== SCREEN: PROFILE ===== -->
+<div class="screen" id="scrProfile">
+    <div class="profile-header">
+        <div class="profile-avatar" id="profAvatar">😎</div>
+        <div class="profile-name" id="profName">Player</div>
+        <div class="profile-vip" id="profVip">🥉 Bronze</div>
+    </div>
+    <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val" id="stSpins">0</div><div class="stat-label" id="stSpinsL">Spins</div></div>
+        <div class="stat-card"><div class="stat-val" id="stWon">0</div><div class="stat-label" id="stWonL">Won</div></div>
+        <div class="stat-card"><div class="stat-val" id="stBiggest">0</div><div class="stat-label" id="stBigL">Best Win</div></div>
+        <div class="stat-card"><div class="stat-val" id="stProfit">0</div><div class="stat-label" id="stProfL">Profit</div></div>
+    </div>
+    <div class="profile-actions">
+        <button class="profile-btn" onclick="nav('deposit')"><span class="pb-icon">💳</span><span id="profBuy">Buy Coins</span></button>
+        <button class="profile-btn" onclick="shareRef()"><span class="pb-icon">👥</span><span id="profRef">Invite Friends</span> <span id="profRefCnt" style="margin-left:auto;color:var(--accent)"></span></button>
+        <button class="profile-btn" onclick="changeLang()"><span class="pb-icon">🌐</span><span id="profLang">Language</span></button>
+    </div>
+</div>
+
+<!-- ===== BOTTOM NAV ===== -->
+<div class="bottom-nav">
+    <div class="nav-item active" data-screen="lobby" onclick="nav('lobby')"><div class="nav-icon">🏠</div><div class="nav-label" id="navLobby">Lobby</div></div>
+    <div class="nav-item" data-screen="game" onclick="nav('game')"><div class="nav-icon">🎰</div><div class="nav-label" id="navPlay">Play</div></div>
+    <div class="nav-item" data-screen="profile" onclick="nav('profile')"><div class="nav-icon">👤</div><div class="nav-label" id="navProfile">Profile</div><div class="nav-dot" id="wheelDot"></div></div>
+</div>
+
+<!-- ===== BONUS OVERLAY ===== -->
+<div class="bonus-overlay" id="bonusOL">
+    <div class="bo-title" id="boTitle">🎰 BONUS ROUND 🎰</div>
+    <div class="bo-info"><div class="bo-info-item"><div class="label" id="boSpinL">SPIN</div><div class="val" id="boSpinC">0/10</div></div><div class="bo-info-item"><div class="label" id="boTotalL">WIN</div><div class="val" id="boRunT">0</div></div></div>
+    <div class="bo-grid-wrap"><div class="bo-grid" id="boGrid"></div></div>
+    <div class="bo-result" id="boRes"></div>
+    <div class="bo-total" id="boFinal"></div>
+    <button class="bo-close" id="boClose" onclick="closeBonus()">COLLECT 🪙</button>
+</div>
+
+<!-- ===== WHEEL OVERLAY ===== -->
+<div class="wheel-overlay" id="wheelOL">
+    <div class="wo-title" id="woTitle">🎡 Daily Wheel</div>
+    <div class="wo-wheel" id="woWheel">🎡</div>
+    <div class="wo-prize" id="woPrize"></div>
+    <button class="wo-btn" id="woBtn" onclick="spinWheel()">SPIN!</button>
 </div>
 
 <script>
-const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
-const P = new URLSearchParams(window.location.search);
-const API_URL = P.get('api') || "https://lucky-slots-production.up.railway.app";
-const BOT_NAME = P.get('bot') || "testplcas_bot";
-const LANG = P.get('lang') || 'pl';
-const UID = P.get('uid') || '';
-const TOKEN = P.get('token') || '';
+const tg=window.Telegram.WebApp;tg.ready();tg.expand();
+try{tg.setHeaderColor('#0a0a14');tg.setBackgroundColor('#0a0a14')}catch(e){}
+const P=new URLSearchParams(location.search);
+const API=P.get('api')||"https://lucky-slots-production.up.railway.app";
+const BOT=P.get('bot')||"testplcas_bot";
+const LANG=P.get('lang')||'pl';
+const UID=P.get('uid')||'';
+const TOK=P.get('token')||'';
 
-const L = {
-    pl:{spin:"ZAKRĘĆ",deposit:"DEPOZYT",bbTitle:"🔥 KUP BONUS",bbDesc:"10+ darmowych spinów",hist:"OSTATNIE SPINY",pt:"TABELA WYPŁAT",win:"WYGRANA",lose:"Brak wygranej",noMoney:"Doładuj konto!",error:"Błąd",bonusTitle:"🎰 RUNDA BONUSOWA 🎰",bonusSpin:"SPIN",bonusTotal:"WYGRANA",bonusTrigger:"BONUS!",bonusRetrigger:"+5 SPINÓW!",collect:"ODBIERZ",bombHit:"💣 MNOŻNIK"},
-    ua:{spin:"ГРАТИ",deposit:"ДЕПОЗИТ",bbTitle:"🔥 КУПИТИ БОНУС",bbDesc:"10+ безкоштовних спінів",hist:"ОСТАННІ СПІНИ",pt:"ТАБЛИЦЯ ВИПЛАТ",win:"ВИГРАШ",lose:"Без виграшу",noMoney:"Поповніть!",error:"Помилка",bonusTitle:"🎰 БОНУС РАУНД 🎰",bonusSpin:"СПІН",bonusTotal:"ВИГРАШ",bonusTrigger:"БОНУС!",bonusRetrigger:"+5 СПІНІВ!",collect:"ЗАБРАТИ",bombHit:"💣 МНОЖНИК"},
-    ru:{spin:"ИГРАТЬ",deposit:"ДЕПОЗИТ",bbTitle:"🔥 КУПИТЬ БОНУС",bbDesc:"10+ бесплатных спинов",hist:"ПОСЛЕДНИЕ СПИНЫ",pt:"ТАБЛИЦА ВЫПЛАТ",win:"ВЫИГРЫШ",lose:"Нет выигрыша",noMoney:"Пополните!",error:"Ошибка",bonusTitle:"🎰 БОНУС РАУНД 🎰",bonusSpin:"СПИН",bonusTotal:"ВЫИГРЫШ",bonusTrigger:"БОНУС!",bonusRetrigger:"+5 СПИНОВ!",collect:"ЗАБРАТЬ",bombHit:"💣 МНОЖИТЕЛЬ"},
-    en:{spin:"SPIN",deposit:"DEPOSIT",bbTitle:"🔥 BUY BONUS",bbDesc:"10+ free spins",hist:"LAST SPINS",pt:"PAYTABLE",win:"WIN",lose:"No win",noMoney:"Deposit!",error:"Error",bonusTitle:"🎰 BONUS ROUND 🎰",bonusSpin:"SPIN",bonusTotal:"TOTAL WIN",bonusTrigger:"BONUS!",bonusRetrigger:"+5 SPINS!",collect:"COLLECT",bombHit:"💣 MULTIPLIER"}
+// === LOCALE ===
+const LC={
+pl:{lobby:"Lobby",play:"Graj",profile:"Profil",spin:"ZAKRĘĆ",deposit:"DEPOZYT",games:"Gry",coming:"Wkrótce",buyBonus:"Kup Bonus",buyCoins:"Kup Żetony",invite:"Zaproś Znajomych",language:"Język",spins:"Spiny",won:"Wygrane",best:"Najlepsza",profit:"Zysk",wheel:"Koło Dnia",wheelSub:"Kręć za darmowe monety!",wheelSpin:"KRĘĆ!",collect:"ODBIERZ",bonusRound:"🎰 RUNDA BONUSOWA 🎰",spinL:"SPIN",winL:"WYGRANA",promo:"Bonus Powitalny",promoT:"Lucky Bonanza 🍭",promoS:"Kręć i wygrywaj do x100!",noMoney:"Doładuj konto!",lose:"Brak wygranej",win:"WYGRANA",slotName:"Lucky Bonanza",slotTag:"GORĄCE",crashName:"Crash",diceName:"Kości",mineName:"Miny",coinName:"Coin Flip",comingTag:"WKRÓTCE",freeSpins:"Darmowe spiny"},
+ua:{lobby:"Лобі",play:"Грати",profile:"Профіль",spin:"ГРАТИ",deposit:"ДЕПОЗИТ",games:"Ігри",coming:"Незабаром",buyBonus:"Купити Бонус",buyCoins:"Купити Жетони",invite:"Запросити Друзів",language:"Мова",spins:"Спіни",won:"Виграно",best:"Найбільший",profit:"Прибуток",wheel:"Колесо Дня",wheelSub:"Крути за безкоштовні монети!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТИ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПІН",winL:"ВИГРАШ",promo:"Вітальний Бонус",promoT:"Lucky Bonanza 🍭",promoS:"Крути та вигравай до x100!",noMoney:"Поповніть!",lose:"Без виграшу",win:"ВИГРАШ",slotName:"Lucky Bonanza",slotTag:"ГАРЯЧЕ",crashName:"Crash",diceName:"Кості",mineName:"Міни",coinName:"Монетка",comingTag:"НЕЗАБАРОМ",freeSpins:"Безкоштовні спіни"},
+ru:{lobby:"Лобби",play:"Играть",profile:"Профиль",spin:"ИГРАТЬ",deposit:"ДЕПОЗИТ",games:"Игры",coming:"Скоро",buyBonus:"Купить Бонус",buyCoins:"Купить Жетоны",invite:"Пригласить Друзей",language:"Язык",spins:"Спины",won:"Выиграно",best:"Лучший",profit:"Профит",wheel:"Колесо Дня",wheelSub:"Крути за бесплатные монеты!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТЬ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПИН",winL:"ВЫИГРЫШ",promo:"Приветственный Бонус",promoT:"Lucky Bonanza 🍭",promoS:"Крути и выигрывай до x100!",noMoney:"Пополните!",lose:"Нет выигрыша",win:"ВЫИГРЫШ",slotName:"Lucky Bonanza",slotTag:"ГОРЯЧЕЕ",crashName:"Crash",diceName:"Кости",mineName:"Мины",coinName:"Монетка",comingTag:"СКОРО",freeSpins:"Бесплатные спины"},
+en:{lobby:"Lobby",play:"Play",profile:"Profile",spin:"SPIN",deposit:"DEPOSIT",games:"Games",coming:"Coming Soon",buyBonus:"Buy Bonus",buyCoins:"Buy Coins",invite:"Invite Friends",language:"Language",spins:"Spins",won:"Won",best:"Best Win",profit:"Profit",wheel:"Daily Wheel",wheelSub:"Spin for free coins!",wheelSpin:"SPIN!",collect:"COLLECT",bonusRound:"🎰 BONUS ROUND 🎰",spinL:"SPIN",winL:"WIN",promo:"Welcome Bonus",promoT:"Lucky Bonanza 🍭",promoS:"Spin & win up to x100!",noMoney:"Deposit!",lose:"No win",win:"WIN",slotName:"Lucky Bonanza",slotTag:"HOT",crashName:"Crash",diceName:"Dice",mineName:"Mines",coinName:"Coin Flip",comingTag:"SOON",freeSpins:"Free spins"}
 };
-const T = L[LANG] || L.pl;
-const BASE_SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-const BONUS_SYMS = ['👑','💎','⭐','❤️','🍀','🧲','💰','🌈'];
-const SCATTER = '🎰';
-const BOMB = '💣';
+const T=LC[LANG]||LC.en;
+const BSYM=['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
+const BONSYM=['👑','💎','⭐','❤️','🍀','🧲','💰','🌈'];
+let balance=null,freeSpins=0,bet=5,spinning=false,currentScreen='lobby';
 
-let balance=null, bet=5, spinning=false;
+function auth(){const p={};if(tg.initData)p.init_data=tg.initData;if(UID)p.uid=UID;if(TOK)p.token=TOK;return p}
+function qs(){return new URLSearchParams(auth()).toString()}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-function authParams(){const p={};if(tg.initData)p.init_data=tg.initData;if(UID)p.uid=UID;if(TOKEN)p.token=TOKEN;return p}
-function authQS(){return new URLSearchParams(authParams()).toString()}
-
-// ==================== UI ====================
-function updateUI(){
-    const balEl=document.getElementById('balVal'),btn=document.getElementById('spinBtn'),btnText=document.getElementById('spinBtnText'),balBox=document.getElementById('balanceBox');
-    balEl.innerText=(balance!==null)?balance:'...';
-    btn.className='spin-btn';balBox.classList.remove('low');
-    if(balance===null){btn.classList.add('mode-loading');btnText.innerText='...';btn.disabled=true}
-    else if(balance<bet){btn.classList.add('mode-deposit');btnText.innerText=T.deposit;btn.disabled=false;balBox.classList.add('low')}
-    else{btn.classList.add('mode-spin');btnText.innerText=T.spin;btn.disabled=false}
-}
-function showError(m){const b=document.getElementById('errorBanner');b.innerText=m||T.error;b.style.display='block';setTimeout(()=>b.style.display='none',4000)}
-
-// ==================== BALANCE ====================
-let balR=0;
-async function fetchBalance(){
-    try{const r=await fetch(`${API_URL}/api/balance?${authQS()}`);const d=await r.json();if(d.ok){balance=d.balance;balR=0;updateUI();return}}catch(e){}
-    if(++balR<=5)setTimeout(fetchBalance,Math.min(1000*Math.pow(2,balR-1),8000));else{balance=0;updateUI()}
+// === NAVIGATION ===
+function nav(s){
+    if(s==='deposit'){tg.openTelegramLink(`https://t.me/${BOT}?start=deposit`);tg.close();return}
+    document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+    const scr=document.getElementById('scr'+s.charAt(0).toUpperCase()+s.slice(1));
+    if(scr)scr.classList.add('active');
+    const ni=document.querySelector(`.nav-item[data-screen="${s}"]`);
+    if(ni)ni.classList.add('active');
+    currentScreen=s;
+    if(s==='game')initGame();
+    if(s==='profile')loadProfile();
 }
 
-// ==================== ACTIONS ====================
-function handleMainAction(){
+// === DATA ===
+async function loadBalance(){
+    try{
+        const r=await fetch(`${API}/api/balance?${qs()}`);const d=await r.json();
+        if(d.ok){balance=d.balance;freeSpins=d.free_spins||0;updateBalanceUI();
+            if(d.vip)updateVIP(d.vip);return}
+    }catch(e){}
+    setTimeout(loadBalance,2000);
+}
+function updateBalanceUI(){
+    document.getElementById('lobbyBal').textContent=balance!==null?balance:'...';
+    const gb=document.getElementById('gameBal');if(gb)gb.textContent=balance||0;
+    const fb=document.getElementById('freeBadge');
+    if(fb)fb.textContent=freeSpins>0?`⚡ ${freeSpins} ${T.freeSpins}`:'';
+    updateSpinBtn();
+}
+function updateVIP(v){
+    document.getElementById('vipIcon').textContent=v.icon;
+    document.getElementById('vipName').textContent=v.name;
+    document.getElementById('vipCb').textContent=v.cb+'% cashback';
+    const bar=document.getElementById('vipBar');
+    if(v.next_at){const pct=Math.min(100,v.wagered/v.next_at*100);bar.style.width=pct+'%'}
+    else bar.style.width='100%';
+}
+
+// === GAME ===
+function initGame(){
+    const g=document.getElementById('grid');
+    if(!g.children.length){for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.textContent=BSYM[Math.floor(Math.random()*BSYM.length)];g.appendChild(c)}}
+    updateSpinBtn();
+}
+function updateSpinBtn(){
+    const btn=document.getElementById('spinBtn'),txt=document.getElementById('spinTxt');
+    btn.className='spin-btn';btn.disabled=false;
+    if(balance===null){btn.classList.add('m-load');txt.textContent='...';btn.disabled=true}
+    else if(balance<bet&&freeSpins<=0){btn.classList.add('m-deposit');txt.textContent=T.deposit}
+    else{btn.classList.add('m-spin');txt.textContent=freeSpins>0?`⚡ ${T.spin}`:T.spin}
+}
+function setBet(v){
+    if(spinning)return;bet=v;
+    document.querySelectorAll('.bet-btn').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===v));
+    document.getElementById('bbPrice').textContent=v*100;updateSpinBtn();
+}
+function doSpin(){
     if(balance===null)return;
-    if(balance<bet){tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);tg.close();return}
+    if(balance<bet&&freeSpins<=0){nav('deposit');return}
     spin();
 }
-function selectBet(v){
-    if(spinning)return;bet=v;
-    document.querySelectorAll('.bet-btn').forEach(b=>b.classList.toggle('active',parseInt(b.innerText)===v));
-    document.getElementById('bbPrice').innerText=(v*100)+' 🪙';updateUI();
-}
-
-// ==================== BASE SPIN ====================
 async function spin(){
-    if(spinning||balance===null||balance<bet)return;
-    spinning=true;const btn=document.getElementById('spinBtn');btn.disabled=true;
-    document.getElementById('resultText').innerHTML='';
-    document.querySelectorAll('.cell').forEach(c=>{c.className='cell'});
-    const cells=document.querySelectorAll('.cell');
-    const anim=setInterval(()=>cells.forEach(c=>c.innerText=BASE_SYMS[Math.floor(Math.random()*BASE_SYMS.length)]),80);
-
+    if(spinning)return;spinning=true;
+    const btn=document.getElementById('spinBtn');btn.disabled=true;
+    document.getElementById('gameResult').innerHTML='';
+    document.querySelectorAll('#grid .cell').forEach(c=>c.className='cell');
+    const cells=document.querySelectorAll('#grid .cell');
+    const anim=setInterval(()=>cells.forEach(c=>c.textContent=BSYM[Math.floor(Math.random()*BSYM.length)]),70);
     try{
-        const r=await fetch(`${API_URL}/api/spin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...authParams(),bet})});
+        const useFree=freeSpins>0&&balance<bet;
+        const body={...auth(),bet,use_free_spin:useFree};
+        const r=await fetch(`${API}/api/spin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const d=await r.json();clearInterval(anim);
-        if(!d.ok){if(d.error==='insufficient_funds'&&d.balance!==undefined)balance=d.balance;showError(d.error==='insufficient_funds'?T.noMoney:T.error);spinning=false;btn.disabled=false;updateUI();return}
-
-        balance=d.balance;const win=d.winnings;
-        d.grid.forEach((s,i)=>{cells[i].innerText=s;
-            if(s===SCATTER)cells[i].classList.add('scatter-cell');
-        });
-
-        // Подсветка выигрышных
-        if(win>0){const co={};d.grid.forEach(s=>{if(s!==SCATTER)co[s]=(co[s]||0)+1});
+        if(!d.ok){spinning=false;btn.disabled=false;if(d.balance!==undefined)balance=d.balance;updateBalanceUI();return}
+        balance=d.balance;freeSpins=d.free_spins||freeSpins;
+        d.grid.forEach((s,i)=>{cells[i].textContent=s;if(s==='🎰')cells[i].classList.add('scatter')});
+        if(d.winnings>0){const co={};d.grid.forEach(s=>{if(s!=='🎰')co[s]=(co[s]||0)+1});
             const ws=new Set(Object.entries(co).filter(([,c])=>c>=8).map(([s])=>s));
-            cells.forEach(c=>{if(ws.has(c.innerText))c.classList.add('win-cell')});
-        }
-
-        const resEl=document.getElementById('resultText');
-        if(d.triggered_bonus){
-            resEl.innerHTML=`<span style="color:var(--pink);font-size:22px;animation:bonus-title-pop .5s">${T.bonusTrigger} ${d.scatter_count}x ${SCATTER}</span>`;
-            addHistory(win,false);updateUI();
-            // Запускаем бонус через 1.5с
-            setTimeout(()=>startBonusRound('triggered'),1500);
-        }else{
-            resEl.innerHTML=win>0?`<span style="color:var(--win)">${T.win}: +${win} 🪙</span>`:`<span style="color:rgba(255,255,255,.4)">${T.lose}</span>`;
-            addHistory(win,false);updateUI();
-        }
-    }catch(e){clearInterval(anim);showError(T.error);fetchBalance()}
+            cells.forEach(c=>{if(ws.has(c.textContent))c.classList.add('win')})}
+        const res=document.getElementById('gameResult');
+        if(d.triggered_bonus){res.innerHTML=`<span style="color:var(--pink)">🎰 BONUS! ${d.scatter_count}x</span>`;
+            updateBalanceUI();setTimeout(()=>startBonus('triggered'),1200)}
+        else{res.innerHTML=d.winnings>0?`<span style="color:var(--green)">${T.win}: +${d.winnings} 🪙</span>`:`<span style="color:var(--dim)">${T.lose}</span>`;updateBalanceUI()}
+    }catch(e){clearInterval(anim)}
     spinning=false;btn.disabled=false;
 }
 
-// ==================== BONUS ROUND ====================
-async function startBonusRound(mode){
-    spinning=true;
-    const overlay=document.getElementById('bonusOverlay');
-    overlay.classList.add('active');
-    document.getElementById('bonusTitle').innerText=T.bonusTitle;
-    document.getElementById('bonusSpinLabel').innerText=T.bonusSpin;
-    document.getElementById('bonusTotalLabel').innerText=T.bonusTotal;
-    document.getElementById('bonusCloseBtn').style.display='none';
-    document.getElementById('bonusFinalTotal').innerText='';
-    document.getElementById('bonusSpinResult').innerText='';
-    document.getElementById('bonusSpinCounter').innerText='0/10';
-    document.getElementById('bonusRunningTotal').innerText='0';
-    document.getElementById('gridOuter').classList.add('bonus-active');
-
-    // Создаём бонусную сетку
-    const bg=document.getElementById('bonusGrid');
-    bg.innerHTML='';
-    for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.innerText=BONUS_SYMS[Math.floor(Math.random()*BONUS_SYMS.length)];bg.appendChild(c)}
-
+// === BONUS ROUND ===
+async function startBonus(mode){
+    spinning=true;const ol=document.getElementById('bonusOL');ol.classList.add('show');
+    document.getElementById('boTitle').textContent=T.bonusRound;
+    document.getElementById('boSpinL').textContent=T.spinL;document.getElementById('boTotalL').textContent=T.winL;
+    document.getElementById('boClose').style.display='none';document.getElementById('boFinal').textContent='';document.getElementById('boRes').textContent='';
+    document.getElementById('boSpinC').textContent='0/10';document.getElementById('boRunT').textContent='0';
+    const bg=document.getElementById('boGrid');bg.innerHTML='';
+    for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.textContent=BONSYM[Math.floor(Math.random()*BONSYM.length)];bg.appendChild(c)}
     try{
-        const r=await fetch(`${API_URL}/api/bonus`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...authParams(),bet,mode})});
-        const d=await r.json();
-        if(!d.ok){showError(T.error);closeBonus();return}
-
-        // Проигрываем каждый спин с анимацией
-        const bonusCells=bg.querySelectorAll('.cell');
-        for(let i=0;i<d.spins.length;i++){
-            const sp=d.spins[i];
-            document.getElementById('bonusSpinCounter').innerText=`${sp.spin_number}/${sp.total_spins}`;
-
-            // Анимация вращения
-            for(let t=0;t<8;t++){
-                bonusCells.forEach(c=>c.innerText=BONUS_SYMS[Math.floor(Math.random()*BONUS_SYMS.length)]);
-                await sleep(60);
-            }
-
-            // Показываем результат
-            sp.grid.forEach((s,idx)=>{
-                bonusCells[idx].innerText=s;
-                bonusCells[idx].className='cell';
-                if(s===SCATTER)bonusCells[idx].classList.add('scatter-cell');
-                else if(s===BOMB)bonusCells[idx].classList.add('bomb-cell');
-            });
-
-            // Подсветка выигрышных
-            if(sp.winning_symbols){
-                const ws=new Set(Object.keys(sp.winning_symbols));
-                bonusCells.forEach(c=>{if(ws.has(c.innerText))c.classList.add('win-cell')});
-            }
-
-            await sleep(300);
-
-            // Бомбы — показываем попап
-            if(sp.bombs&&sp.bombs.length>0&&sp.base_win>0){
-                for(const bomb of sp.bombs){
-                    showBombPopup(bomb.mult);
-                    await sleep(500);
-                }
-            }
-
-            // Результат спина
-            const resEl=document.getElementById('bonusSpinResult');
-            if(sp.winnings>0){
-                let txt=`+${sp.winnings} 🪙`;
-                if(sp.total_bomb_mult>1)txt+=` (${T.bombHit} x${sp.total_bomb_mult})`;
-                resEl.innerHTML=`<span style="color:var(--win)">${txt}</span>`;
-            }else{
-                resEl.innerHTML=`<span style="opacity:.4">—</span>`;
-            }
-
-            // Ретриггер
-            if(sp.retrigger){
-                resEl.innerHTML+=`<br><span style="color:var(--pink);font-size:16px">${T.bonusRetrigger}</span>`;
-                await sleep(800);
-            }
-
-            // Running total
-            document.getElementById('bonusRunningTotal').innerText=sp.running_total;
-            await sleep(600);
+        const r=await fetch(`${API}/api/bonus`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...auth(),bet,mode})});
+        const d=await r.json();if(!d.ok){closeBonus();return}
+        const bc=bg.querySelectorAll('.cell');
+        for(const sp of d.spins){
+            document.getElementById('boSpinC').textContent=`${sp.spin_number}/${sp.total_spins}`;
+            for(let t=0;t<6;t++){bc.forEach(c=>c.textContent=BONSYM[Math.floor(Math.random()*BONSYM.length)]);await sleep(50)}
+            sp.grid.forEach((s,i)=>{bc[i].textContent=s;bc[i].className='cell';if(s==='🎰')bc[i].classList.add('scatter');else if(s==='💣')bc[i].classList.add('bomb')});
+            if(sp.winning_symbols){const ws=new Set(Object.keys(sp.winning_symbols));bc.forEach(c=>{if(ws.has(c.textContent))c.classList.add('win')})}
+            await sleep(200);
+            if(sp.bombs&&sp.bombs.length>0&&sp.base_win>0){for(const b of sp.bombs){showBombPop(b.mult);await sleep(400)}}
+            document.getElementById('boRes').innerHTML=sp.winnings>0?`<span style="color:var(--green)">+${sp.winnings}${sp.total_bomb_mult>1?' 💣x'+sp.total_bomb_mult:''}</span>`:'—';
+            if(sp.retrigger){document.getElementById('boRes').innerHTML+=`<br><span style="color:var(--pink)">+5!</span>`;await sleep(600)}
+            document.getElementById('boRunT').textContent=sp.running_total;await sleep(400);
         }
+        balance=d.balance;document.getElementById('boRes').textContent='';
+        document.getElementById('boFinal').innerHTML=`🏆 ${d.total_win} 🪙`;
+        const cb=document.getElementById('boClose');cb.textContent=`${T.collect} ${d.total_win} 🪙`;cb.style.display='block';
+    }catch(e){closeBonus()}
+}
+function closeBonus(){document.getElementById('bonusOL').classList.remove('show');spinning=false;updateBalanceUI()}
+function showBombPop(m){const e=document.createElement('div');e.className='bomb-pop';e.textContent=`💣 x${m}`;document.body.appendChild(e);setTimeout(()=>e.remove(),800)}
+async function buyBonus(){if(!balance||balance<bet*100){tg.showAlert(T.noMoney);return}startBonus('bought')}
 
-        // Финал!
-        balance=d.balance;
-        document.getElementById('bonusSpinResult').innerHTML='';
-        document.getElementById('bonusFinalTotal').innerHTML=`🏆 ${T.bonusTotal}: <span style="color:var(--win)">${d.total_win} 🪙</span>`;
-        document.getElementById('bonusCloseBtn').innerText=`${T.collect} ${d.total_win} 🪙`;
-        document.getElementById('bonusCloseBtn').style.display='block';
-        addHistory(d.total_win,true);
-
-    }catch(e){console.error('Bonus error:',e);showError(T.error);closeBonus()}
+// === DAILY WHEEL ===
+async function openWheel(){
+    document.getElementById('wheelOL').classList.add('show');
+    document.getElementById('woTitle').textContent='🎡 '+T.wheel;
+    document.getElementById('woBtn').textContent=T.wheelSpin;
+    document.getElementById('woPrize').textContent='';document.getElementById('woBtn').disabled=false;
+}
+async function spinWheel(){
+    document.getElementById('woBtn').disabled=true;
+    const wheel=document.getElementById('woWheel');
+    wheel.style.transition='transform 3s cubic-bezier(.17,.67,.12,.99)';
+    wheel.style.transform=`rotate(${1440+Math.random()*360}deg)`;
+    try{
+        const r=await fetch(`${API}/api/wheel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(auth())});
+        const d=await r.json();
+        await sleep(3200);
+        if(d.ok){
+            balance=d.balance;freeSpins=d.free_spins||0;
+            const p=d.prize;
+            document.getElementById('woPrize').textContent=p.type==='coins'?`+${p.value} 🪙`:`+${p.value} ⚡`;
+            document.getElementById('wheelBanner').classList.add('done');
+            updateBalanceUI();
+        }else{document.getElementById('woPrize').textContent='⏳'}
+    }catch(e){}
+    const cb=document.getElementById('woBtn');cb.textContent='✓';
+    setTimeout(()=>{document.getElementById('wheelOL').classList.remove('show');wheel.style.transition='none';wheel.style.transform='rotate(0)'},2000);
 }
 
-function closeBonus(){
-    document.getElementById('bonusOverlay').classList.remove('active');
-    document.getElementById('gridOuter').classList.remove('bonus-active');
-    spinning=false;updateUI();
+// === PROFILE ===
+async function loadProfile(){
+    try{
+        const r=await fetch(`${API}/api/profile?${qs()}`);const d=await r.json();
+        if(!d.ok)return;
+        document.getElementById('profName').textContent=d.first_name||d.username||'Player';
+        document.getElementById('profVip').textContent=`${d.vip.icon} ${d.vip.name}`;
+        document.getElementById('stSpins').textContent=d.stats.spins;
+        document.getElementById('stWon').textContent=d.stats.won;
+        document.getElementById('stBiggest').textContent=d.stats.biggest;
+        const prof=d.stats.profit;
+        const pe=document.getElementById('stProfit');pe.textContent=(prof>=0?'+':'')+prof;pe.style.color=prof>=0?'var(--green)':'var(--red)';
+        document.getElementById('profRefCnt').textContent=d.refs>0?d.refs:'';
+    }catch(e){}
+}
+function shareRef(){tg.openTelegramLink(`https://t.me/share/url?url=https://t.me/${BOT}?start=ref${UID}&text=🎰`)}
+function changeLang(){tg.openTelegramLink(`https://t.me/${BOT}`);tg.close()}
+
+// === WHEEL STATUS ===
+async function checkWheel(){
+    try{const r=await fetch(`${API}/api/wheel-status?${qs()}`);const d=await r.json();
+        if(d.ok&&!d.available)document.getElementById('wheelBanner').classList.add('done')}catch(e){}}
+
+// === INIT ===
+function initLocale(){
+    document.getElementById('navLobby').textContent=T.lobby;
+    document.getElementById('navPlay').textContent=T.play;
+    document.getElementById('navProfile').textContent=T.profile;
+    document.getElementById('secGames').textContent=T.games;
+    document.getElementById('secComing').textContent=T.coming;
+    document.getElementById('promoTag').textContent=T.promo;
+    document.getElementById('promoTitle').textContent=T.promoT;
+    document.getElementById('promoSub').textContent=T.promoS;
+    document.getElementById('wheelTitle').textContent=T.wheel;
+    document.getElementById('wheelSub').textContent=T.wheelSub;
+    document.getElementById('bbLabel').textContent=T.buyBonus;
+    document.getElementById('profBuy').textContent=T.buyCoins;
+    document.getElementById('profRef').textContent=T.invite;
+    document.getElementById('profLang').textContent=T.language;
+    document.getElementById('stSpinsL').textContent=T.spins;
+    document.getElementById('stWonL').textContent=T.won;
+    document.getElementById('stBigL').textContent=T.best;
+    document.getElementById('stProfL').textContent=T.profit;
 }
 
-function showBombPopup(mult){
-    const el=document.createElement('div');
-    el.className='bomb-popup';
-    el.innerText=`💣 x${mult}`;
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),900);
+function buildGameCards(){
+    const gr=document.getElementById('gamesRow');
+    gr.innerHTML=`<div class="game-card" onclick="nav('game')"><div class="game-card-img slots-bg">🍭</div><div class="game-card-info"><div class="game-card-name">${T.slotName}</div><div class="game-card-tag">${T.slotTag}</div></div></div>`;
+    const cr=document.getElementById('comingRow');
+    const coming=[{e:'📈',n:T.crashName},{e:'🎲',n:T.diceName},{e:'💣',n:T.mineName},{e:'🪙',n:T.coinName}];
+    cr.innerHTML=coming.map(g=>`<div class="game-card"><div class="game-card-img coming-bg">${g.e}<div class="coming-label">${T.comingTag}</div></div><div class="game-card-info"><div class="game-card-name">${g.n}</div><div class="game-card-tag" style="color:var(--dim)">${T.comingTag}</div></div></div>`).join('');
 }
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
-
-// ==================== BUY BONUS ====================
-async function buyBonus(){
-    if(balance===null)return;
-    const cost=bet*100;
-    if(balance<cost){tg.showAlert(T.noMoney);return}
-    startBonusRound('bought');
-}
-
-// ==================== HISTORY ====================
-function addHistory(win,isBonus){
-    const list=document.getElementById('histList');
-    const div=document.createElement('div');
-    div.className='h-item'+(isBonus?' bonus-item':'');
-    const icon=isBonus?'🎁':'🎰';
-    const label=isBonus?'Bonus':'Spin';
-    const sign=win>0?'+':'-';
-    const val=win>0?win:bet;
-    const color=win>0?'var(--win)':'#ff6b6b';
-    div.innerHTML=`<span>${icon} ${label} (${bet})</span><span style="color:${color}">${sign}${val}</span>`;
-    list.prepend(div);if(list.children.length>10)list.lastChild.remove();
-}
-
-// ==================== INIT ====================
-function init(){
-    const g=document.getElementById('grid');
-    for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.innerText=BASE_SYMS[Math.floor(Math.random()*BASE_SYMS.length)];g.appendChild(c)}
-    const pt=document.getElementById('pt');
-    // Показываем и базовые и бонусные символы в paytable
-    BASE_SYMS.forEach(s=>{const it=document.createElement('div');it.className='pt-item';it.innerHTML=`<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;pt.appendChild(it)});
-
-    document.getElementById('bbTitle').innerText=T.bbTitle;
-    document.getElementById('bbDesc').innerText=T.bbDesc;
-    document.getElementById('histTitle').innerText=T.hist;
-    document.getElementById('ptTitle').innerText=T.pt;
-    updateUI();setTimeout(fetchBalance,200);
-}
-init();
+initLocale();buildGameCards();loadBalance();checkWheel();
 </script>
 </body>
 </html>
