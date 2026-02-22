@@ -91,7 +91,7 @@ async function fetchBalance() {
         const r = await fetch(`${API_URL}/api/balance?init_data=${encodeURIComponent(tg.initData)}`);
         const d = await r.json();
         if (d.ok) { balance = d.balance; updateUI(); }
-    } catch(e) { console.error("API error, retrying..."); setTimeout(fetchBalance, 3000); }
+    } catch(e) { setTimeout(fetchBalance, 3000); }
 }
 
 function handleMainAction() {
@@ -132,21 +132,23 @@ async function spin() {
     grid.forEach((s, i) => cells[i].innerText = s);
     document.getElementById('resultText').innerHTML = win > 0 ? `<span style="color:var(--win)">${T.win}: +${win}</span>` : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
     
-    addHistory(win); updateUI(); spinning = false; document.getElementById('spinBtn').disabled = false;
+    addHistory(win);
+    updateUI();
+    spinning = false;
+    document.getElementById('spinBtn').disabled = false;
 }
 
 function addHistory(win) {
     const list = document.getElementById('histList');
-    const div = document.createElement('div'); div.className = 'h-item';
+    const div = document.createElement('div');
+    div.className = 'h-item';
     div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
-    list.prepend(div); if (list.children.length > 5) list.lastChild.remove();
+    list.prepend(div);
+    if (list.children.length > 5) list.lastChild.remove();
 }
 
 function openBuyBonus() {
-    if (balance < bet * 100) {
-        tg.showAlert(T.noMoney); // ПОП-АП ВОЗВРАЩЕН
-        return;
-    }
+    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
     tg.showAlert("Coming soon!");
 }
 
@@ -167,7 +169,8 @@ function init() {
     document.getElementById('bbDesc').innerText = T.bbDesc;
     document.getElementById('histTitle').innerText = T.hist;
     document.getElementById('ptTitle').innerText = T.pt;
-    updateUI(); fetchBalance();
+    updateUI();
+    fetchBalance();
 }
 init();
 </script>
