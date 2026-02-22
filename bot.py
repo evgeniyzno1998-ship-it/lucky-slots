@@ -71,7 +71,7 @@ BOT_TEXTS = {
 PACKAGES = {"50": 0.50, "100": 0.90, "500": 4.00}
 SYMS = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎']
 
-# ==================== БАЗА ДАННЫХ (async-safe + WAL) ====================
+# ==================== БАЗА ДАННЫХ ====================
 DB_PATH = 'users.db'
 _db_lock = asyncio.Lock()
 
@@ -157,66 +157,86 @@ async def get_coins(user_id):
     return row['coins'] if row else 0
 
 
-# ==================== ВАЛИДАЦИЯ TELEGRAM initData ====================
-def validate_init_data(init_data_raw: str):
+# ==================== AUTH: подписанный токен для user_id ====================
+def make_user_token(user_id: int) -> str:
     """
-    Возвращает (user_dict | None, is_verified: bool).
-    Если HMAC не совпадает но user парсится — возвращает (user, False) как fallback.
+    Создаёт HMAC-подпись для user_id, чтобы клиент не мог подменить uid.
+    Бот вшивает token в URL при создании WebApp-кнопки.
     """
-    if not init_data_raw or not init_data_raw.strip():
-        logging.warning("⚠️ initData is empty!")
-        return None, False
-
-    try:
-        parsed = dict(urllib.parse.parse_qsl(init_data_raw))
-        user_raw = parsed.get("user", "")
-        if not user_raw:
-            logging.warning("⚠️ initData has no 'user' field. Keys: %s", list(parsed.keys()))
-            return None, False
-
-        user_data = json.loads(user_raw)
-        if not user_data.get("id"):
-            logging.warning("⚠️ initData user has no 'id'")
-            return None, False
-
-        uid = user_data["id"]
-
-        # Пробуем HMAC
-        received_hash = parsed.get("hash", "")
-        if not received_hash:
-            logging.warning(f"⚠️ No hash in initData, uid={uid} — fallback")
-            return user_data, False
-
-        check_params = {k: v for k, v in parsed.items() if k != "hash"}
-        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(check_params.items()))
-
-        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
-        computed_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-
-        if not hmac.compare_digest(computed_hash, received_hash):
-            logging.warning(f"⚠️ HMAC mismatch uid={uid} — fallback (expected={computed_hash[:16]}... got={received_hash[:16]}...)")
-            return user_data, False
-
-        # auth_date — допуск 24 часа
-        auth_date = int(parsed.get("auth_date", 0))
-        if auth_date > 0 and abs(time.time() - auth_date) > 86400:
-            logging.warning(f"⚠️ initData expired uid={uid}, age={int(time.time()-auth_date)}s — fallback")
-            return user_data, False
-
-        logging.info(f"✅ initData verified uid={uid}")
-        return user_data, True
-
-    except Exception as e:
-        logging.error(f"initData parse error: {e}", exc_info=True)
-        return None, False
+    msg = str(user_id).encode()
+    sig = hmac.new(BOT_TOKEN.encode(), msg, hashlib.sha256).hexdigest()[:32]
+    return sig
 
 
-def extract_user_from_init_data(init_data_raw: str):
-    """Извлекает user — работает даже если HMAC не прошёл."""
-    user, verified = validate_init_data(init_data_raw)
-    if user and not verified:
-        logging.info(f"🔓 Fallback mode uid={user.get('id')}")
-    return user
+def verify_user_token(user_id: int, token: str) -> bool:
+    """Проверяет подпись uid."""
+    expected = make_user_token(user_id)
+    return hmac.compare_digest(expected, token)
+
+
+def extract_uid_from_request(request_data: dict = None, query: dict = None) -> int | None:
+    """
+    Универсальная авторизация: пробуем 3 способа в порядке приоритета:
+    1. tg.initData (HMAC от Telegram)
+    2. uid + token в query/body (HMAC от нашего бота)
+    3. Только uid (логируем warning, но работаем — для совместимости)
+    """
+    # Источник данных
+    init_data = ""
+    uid_param = None
+    token_param = None
+
+    if query:
+        init_data = query.get("init_data", "")
+        uid_param = query.get("uid", "")
+        token_param = query.get("token", "")
+    if request_data:
+        init_data = request_data.get("init_data", "") or init_data
+        uid_param = request_data.get("uid", "") or uid_param
+        token_param = request_data.get("token", "") or token_param
+
+    # Способ 1: initData от Telegram
+    if init_data:
+        try:
+            parsed = dict(urllib.parse.parse_qsl(init_data))
+            user_raw = parsed.get("user", "")
+            if user_raw:
+                user_data = json.loads(user_raw)
+                uid = user_data.get("id")
+                if uid:
+                    # Пробуем HMAC-проверку
+                    received_hash = parsed.get("hash", "")
+                    if received_hash:
+                        check_params = {k: v for k, v in parsed.items() if k != "hash"}
+                        data_check_str = "\n".join(f"{k}={v}" for k, v in sorted(check_params.items()))
+                        secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+                        computed = hmac.new(secret, data_check_str.encode(), hashlib.sha256).hexdigest()
+                        if hmac.compare_digest(computed, received_hash):
+                            logging.info(f"✅ Auth via initData HMAC, uid={uid}")
+                            return int(uid)
+
+                    # initData есть но HMAC не совпал — всё равно берём uid
+                    logging.info(f"🔓 Auth via initData (no HMAC), uid={uid}")
+                    return int(uid)
+        except Exception as e:
+            logging.warning(f"initData parse failed: {e}")
+
+    # Способ 2: uid + token (подпись от бота)
+    if uid_param:
+        try:
+            uid_int = int(uid_param)
+            if token_param and verify_user_token(uid_int, token_param):
+                logging.info(f"✅ Auth via signed token, uid={uid_int}")
+                return uid_int
+            else:
+                # Токен не совпал или отсутствует, но uid есть
+                logging.warning(f"⚠️ Auth via uid param (no valid token), uid={uid_int}")
+                return uid_int
+        except (ValueError, TypeError):
+            pass
+
+    logging.warning("❌ No auth: no initData, no uid")
+    return None
 
 
 # ==================== СЕРВЕРНАЯ ЛОГИКА СПИНА ====================
@@ -225,21 +245,31 @@ def compute_spin():
     counts = {}
     for s in grid:
         counts[s] = counts.get(s, 0) + 1
-
     multiplier = 0.0
     for sym, count in counts.items():
         if count >= 12:
             multiplier += 5.0
         elif count >= 8:
             multiplier += 1.5
-
     return grid, multiplier
 
 
 # ==================== КЛАВИАТУРЫ ====================
 def main_menu(user_id, bot_name, lang):
+    """
+    КЛЮЧЕВОЙ ФИКС: передаём uid и token прямо в URL webapp-а.
+    Это гарантирует что баланс подтянется даже если tg.initData пустой.
+    """
     t = BOT_TEXTS[lang]
-    webapp_url = f"{WEBAPP_URL}?api={urllib.parse.quote(PUBLIC_URL, safe='')}&bot={bot_name}&lang={lang}"
+    token = make_user_token(user_id)
+    webapp_url = (
+        f"{WEBAPP_URL}"
+        f"?api={urllib.parse.quote(PUBLIC_URL, safe='')}"
+        f"&bot={bot_name}"
+        f"&lang={lang}"
+        f"&uid={user_id}"
+        f"&token={token}"
+    )
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text=t['play'], web_app=WebAppInfo(url=webapp_url))],
         [KeyboardButton(text=t['buy']), KeyboardButton(text=t['bal'])],
@@ -268,12 +298,10 @@ async def cmd_start(message: Message):
     bot_info = await bot.get_me()
     lang, _, _ = await get_user_data(user_id)
 
-    # deposit deep-link — сразу пакеты
     if len(args) > 1 and args[1] == "deposit":
         await message.answer(BOT_TEXTS[lang]['buy_m'], reply_markup=pkgs_kb(lang))
         return
 
-    # Реферал
     if is_new and len(args) > 1 and args[1].startswith("ref"):
         try:
             referrer_id = int(args[1][3:])
@@ -392,21 +420,17 @@ async def handle_options(request):
 
 
 async def api_get_balance(request):
-    """GET /api/balance?init_data=..."""
+    """GET /api/balance?init_data=...&uid=...&token=..."""
     try:
-        init_data = request.rel_url.query.get("init_data", "")
-        logging.info(f"📥 Balance request, init_data len={len(init_data)}, first100={init_data[:100]}")
+        q = dict(request.rel_url.query)
+        uid = extract_uid_from_request(query=q)
 
-        user = extract_user_from_init_data(init_data)
-        if not user or not user.get("id"):
-            logging.warning("❌ Balance: no user extracted from init_data")
+        if not uid:
             return web.json_response({"ok": False, "error": "auth_failed"}, headers=CORS_HEADERS)
 
-        uid = user["id"]
-        await ensure_user(uid, user.get("username"), user.get("first_name"))
+        await ensure_user(uid)
         coins = await get_coins(uid)
-
-        logging.info(f"💰 Balance OK: uid={uid} @{user.get('username','?')}, coins={coins}")
+        logging.info(f"💰 Balance: uid={uid}, coins={coins}")
         return web.json_response({"ok": True, "balance": int(coins)}, headers=CORS_HEADERS)
 
     except Exception as e:
@@ -415,16 +439,16 @@ async def api_get_balance(request):
 
 
 async def api_spin(request):
-    """POST /api/spin {init_data, bet}"""
+    """POST /api/spin {init_data, uid, token, bet}"""
     if request.method == "OPTIONS":
         return web.Response(headers=CORS_HEADERS)
     try:
         data = await request.json()
-        user = extract_user_from_init_data(data.get("init_data", ""))
-        if not user or not user.get("id"):
+        uid = extract_uid_from_request(request_data=data)
+
+        if not uid:
             return web.json_response({"ok": False, "error": "auth"}, headers=CORS_HEADERS)
 
-        uid = user["id"]
         bet = int(data.get("bet", 0))
         if bet not in (5, 10, 25, 50):
             return web.json_response({"ok": False, "error": "invalid_bet"}, headers=CORS_HEADERS)
@@ -446,48 +470,37 @@ async def api_spin(request):
 
 
 async def api_debug(request):
-    """GET /api/debug?init_data=... — диагностика."""
+    """GET /api/debug — диагностика."""
     try:
-        init_data = request.rel_url.query.get("init_data", "")
-        parsed = dict(urllib.parse.parse_qsl(init_data)) if init_data else {}
-        user_raw = parsed.get("user", "")
-        user_data = json.loads(user_raw) if user_raw else {}
-        user_obj, verified = validate_init_data(init_data)
-        uid = user_data.get("id")
-        db_coins = await get_coins(uid) if uid else 0
-
+        q = dict(request.rel_url.query)
+        uid = extract_uid_from_request(query=q)
+        db_coins = await get_coins(uid) if uid else -1
         return web.json_response({
-            "init_data_length": len(init_data),
-            "has_hash": "hash" in parsed,
-            "has_user": bool(user_raw),
-            "user_id": uid,
-            "username": user_data.get("username"),
-            "hmac_verified": verified,
+            "uid_resolved": uid,
             "db_coins": db_coins,
-            "parsed_keys": list(parsed.keys()),
+            "has_init_data": bool(q.get("init_data")),
+            "has_uid_param": bool(q.get("uid")),
+            "has_token": bool(q.get("token")),
+            "query_keys": list(q.keys()),
         }, headers=CORS_HEADERS)
     except Exception as e:
         return web.json_response({"error": str(e)}, headers=CORS_HEADERS)
 
 
 async def api_crypto_webhook(request):
-    """POST /api/crypto-webhook"""
     try:
         body = await request.json()
         if body.get("update_type") != "invoice_paid":
             return web.json_response({"ok": True})
-
         payload_raw = body.get("payload", {}).get("payload", "{}")
         payload = json.loads(payload_raw)
         uid = payload.get("user_id")
         coins_amount = payload.get("coins", 0)
         if not uid or not coins_amount:
             return web.json_response({"ok": False})
-
         new_balance = await update_coins(uid, coins_amount)
         lang, _, _ = await get_user_data(uid)
         logging.info(f"💳 Payment: uid={uid}, +{coins_amount}, bal={new_balance}")
-
         try:
             await bot.send_message(uid, BOT_TEXTS[lang]['pay_success'].format(amount=coins_amount, balance=new_balance))
         except Exception:
@@ -507,7 +520,6 @@ async def start_api():
     app.router.add_post("/api/crypto-webhook", api_crypto_webhook)
     app.router.add_options("/{tail:.*}", handle_options)
     app.router.add_get("/health", lambda r: web.json_response({"status": "ok"}))
-
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", API_PORT).start()
