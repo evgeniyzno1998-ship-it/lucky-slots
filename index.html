@@ -32,7 +32,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
 <div class="wrap">
   <div class="header">
     <div class="logo">🍭 Lucky Bonanza</div>
-    <div class="balance-box">🪙 <span id="balVal">0</span></div>
+    <div class="balance-box">🪙 <span id=\"balVal\">0</span></div>
   </div>
   <div class="grid-outer"><div class="grid" id="grid"></div></div>
   <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
@@ -51,7 +51,7 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
   </button>
   <div id="histTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">OSTATNIE SPINY</div>
   <div class="history-wrap" id="histList"></div>
-  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁAT</div>
+  <div id="ptTitle" style="font-size:10px; opacity:0.4; margin-top:10px;">TABELA WYPŁАТ</div>
   <div class="paytable" id="pt"></div>
 </div>
 
@@ -63,10 +63,10 @@ const BOT_NAME = urlParams.get('bot') || "testplcas_bot";
 const LANG = urlParams.get('lang') || 'pl';
 
 const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!" }
+    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", sHist: "Spin" },
+    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", sHist: "Спін" },
+    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", sHist: "Спин" },
+    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", sHist: "Spin" }
 };
 
 const T = LOCALES[LANG] || LOCALES.pl;
@@ -132,19 +132,14 @@ async function spin() {
     grid.forEach((s, i) => cells[i].innerText = s);
     document.getElementById('resultText').innerHTML = win > 0 ? `<span style="color:var(--win)">${T.win}: +${win}</span>` : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
     
-    addHistory(win);
-    updateUI();
-    spinning = false;
-    document.getElementById('spinBtn').disabled = false;
+    addHistory(win); updateUI(); spinning = false; document.getElementById('spinBtn').disabled = false;
 }
 
 function addHistory(win) {
     const list = document.getElementById('histList');
-    const div = document.createElement('div');
-    div.className = 'h-item';
-    div.innerHTML = `<span>🎰 Spin</span><span style="color:${win>0?'var(--win)':'#fff'}">${win>0?'+'+win:'-'+bet}</span>`;
-    list.prepend(div);
-    if (list.children.length > 5) list.lastChild.remove();
+    const div = document.createElement('div'); div.className = 'h-item';
+    div.innerHTML = `<span>🎰 ${T.sHist}</span><span style=\"color:${win>0?'var(--win)':'#fff'}\">${win>0?'+'+win:'-'+bet}</span>`;
+    list.prepend(div); if (list.children.length > 5) list.lastChild.remove();
 }
 
 function openBuyBonus() {
@@ -162,15 +157,14 @@ function init() {
     const pt = document.getElementById('pt');
     SYMS.forEach(s => {
         const item = document.createElement('div'); item.className = 'pt-item';
-        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
+        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5<br>20+ x20`;
         pt.appendChild(item);
     });
     document.getElementById('bbTitle').innerText = T.bbTitle;
     document.getElementById('bbDesc').innerText = T.bbDesc;
     document.getElementById('histTitle').innerText = T.hist;
     document.getElementById('ptTitle').innerText = T.pt;
-    updateUI();
-    fetchBalance();
+    updateUI(); fetchBalance();
 }
 init();
 </script>
