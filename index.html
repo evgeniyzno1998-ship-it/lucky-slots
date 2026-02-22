@@ -7,56 +7,61 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
-:root { --bg1: #0d001f; --gold: #ffd700; --pink: #ff4da6; --win: #00e676; }
-*, *::before, *::after { box-sizing: border-box; }
-body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); min-height: 100vh; font-family: 'Nunito', sans-serif; color: #fff; user-select: none; margin:0; padding:0; overflow-x: hidden; }
-.wrap { max-width:440px; margin:0 auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
-.header { display:flex; justify-content:space-between; align-items:center; }
-.logo { font-family:'Fredoka One'; font-size:22px; background:linear-gradient(135deg,var(--gold),var(--pink)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-.balance-box { background:rgba(255,255,255,0.1); border:1px solid var(--gold); border-radius:20px; padding:5px 12px; font-family:'Fredoka One'; color:var(--gold); transition: all 0.3s; }
-.balance-box.low { border-color: var(--win); color: var(--win); animation: pulse-green 1.5s infinite; }
-@keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
-    50% { box-shadow: 0 0 14px 4px rgba(0,230,118,0.3); }
-}
-.grid-outer { background:rgba(0,0,0,0.5); border:2px solid rgba(255,215,0,0.2); border-radius:20px; padding:8px; }
-.grid { display:grid; grid-template-columns:repeat(6, 1fr); gap:3px; }
-.cell { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:24px; border-radius:8px; background:rgba(255,255,255,0.05); transition: transform 0.2s, background 0.2s; }
-.cell.win-cell { background:rgba(255,215,0,0.25); transform:scale(1.1); }
-.controls { display:flex; gap:8px; align-items:center; }
-.bet-group { flex:1; display:flex; gap:4px; }
-.bet-btn { flex:1; padding:10px 0; border-radius:10px; border:2px solid rgba(255,215,0,0.2); background:rgba(255,255,255,0.05); color:var(--gold); font-family:'Fredoka One'; cursor:pointer; font-size:14px; }
-.bet-btn.active { border-color:var(--gold); background:rgba(255,215,0,0.2); }
+:root { --bg1:#0d001f; --gold:#ffd700; --pink:#ff4da6; --win:#00e676; --bomb:#ff3d00; }
+*,*::before,*::after{box-sizing:border-box}
+body{background:radial-gradient(ellipse at 50% 0%,#2d0060,var(--bg1) 65%);min-height:100vh;font-family:'Nunito',sans-serif;color:#fff;user-select:none;margin:0;padding:0;overflow-x:hidden}
+.wrap{max-width:440px;margin:0 auto;padding:10px;display:flex;flex-direction:column;gap:10px}
+.header{display:flex;justify-content:space-between;align-items:center}
+.logo{font-family:'Fredoka One';font-size:22px;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.balance-box{background:rgba(255,255,255,.1);border:1px solid var(--gold);border-radius:20px;padding:5px 12px;font-family:'Fredoka One';color:var(--gold);transition:all .3s}
+.balance-box.low{border-color:var(--win);color:var(--win);animation:pulse-g 1.5s infinite}
+@keyframes pulse-g{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,.4)}50%{box-shadow:0 0 14px 4px rgba(0,230,118,.3)}}
+.grid-outer{background:rgba(0,0,0,.5);border:2px solid rgba(255,215,0,.2);border-radius:20px;padding:8px;position:relative;overflow:hidden}
+.grid-outer.bonus-active{border-color:var(--pink);box-shadow:0 0 30px rgba(255,77,166,.3);animation:bonus-border 1s infinite}
+@keyframes bonus-border{0%,100%{box-shadow:0 0 15px rgba(255,77,166,.3)}50%{box-shadow:0 0 35px rgba(255,77,166,.5)}}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.cell{width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:24px;border-radius:8px;background:rgba(255,255,255,.05);transition:transform .2s,background .2s}
+.cell.win-cell{background:rgba(255,215,0,.25);transform:scale(1.1)}
+.cell.scatter-cell{background:rgba(255,77,166,.3);animation:scatter-pulse .6s infinite}
+@keyframes scatter-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.cell.bomb-cell{background:rgba(255,61,0,.3);animation:bomb-shake .3s infinite}
+@keyframes bomb-shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+.controls{display:flex;gap:8px;align-items:center}
+.bet-group{flex:1;display:flex;gap:4px}
+.bet-btn{flex:1;padding:10px 0;border-radius:10px;border:2px solid rgba(255,215,0,.2);background:rgba(255,255,255,.05);color:var(--gold);font-family:'Fredoka One';cursor:pointer;font-size:14px}
+.bet-btn.active{border-color:var(--gold);background:rgba(255,215,0,.2)}
+.spin-btn{width:110px;height:75px;border-radius:18px;border:none;color:#fff;font-family:'Fredoka One';cursor:pointer;font-size:15px;transition:all .3s}
+.spin-btn.mode-spin{background:linear-gradient(135deg,#ff4da6,#ff9500)}
+.spin-btn.mode-deposit{background:linear-gradient(135deg,#00e676,#00c853);box-shadow:0 0 20px rgba(0,230,118,.5);animation:glow-d 1.5s infinite}
+@keyframes glow-d{0%,100%{box-shadow:0 0 10px rgba(0,230,118,.4)}50%{box-shadow:0 0 25px rgba(0,230,118,.6)}}
+.spin-btn.mode-loading{background:rgba(255,255,255,.1);cursor:wait}
+.spin-btn:disabled{opacity:.5;cursor:not-allowed}
+.buy-bonus-btn{width:100%;padding:12px;border-radius:14px;border:2px solid var(--pink);background:rgba(255,255,255,.05);color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;transition:all .3s}
+.buy-bonus-btn:active{transform:scale(.97)}
+.history-wrap{background:rgba(255,255,255,.03);border-radius:16px;padding:12px;min-height:60px}
+.h-item{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.h-item.bonus-item{color:var(--pink);border-bottom-color:rgba(255,77,166,.2)}
+.paytable{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;background:rgba(255,255,255,.03);padding:10px;border-radius:16px}
+.pt-item{text-align:center;font-size:8px;background:rgba(255,255,255,.05);padding:5px;border-radius:8px}
+.error-banner{background:rgba(255,77,77,.15);border:1px solid rgba(255,77,77,.3);border-radius:10px;padding:8px 12px;text-align:center;font-size:12px;display:none;color:#ff6b6b}
+.section-title{font-size:10px;opacity:.4;margin-top:10px}
 
-/* === КНОПКА SPIN / DEPOSIT === */
-.spin-btn {
-    width:110px; height:75px; border-radius:18px; border:none;
-    color:#fff; font-family:'Fredoka One'; cursor:pointer; font-size:15px;
-    transition: all 0.3s ease; position:relative; overflow:hidden;
-}
-.spin-btn.mode-spin {
-    background: linear-gradient(135deg, #ff4da6, #ff9500);
-}
-.spin-btn.mode-deposit {
-    background: linear-gradient(135deg, #00e676, #00c853);
-    box-shadow: 0 0 20px rgba(0,230,118,0.5);
-    animation: glow-deposit 1.5s infinite;
-}
-@keyframes glow-deposit {
-    0%, 100% { box-shadow: 0 0 10px rgba(0,230,118,0.4); }
-    50% { box-shadow: 0 0 25px rgba(0,230,118,0.6); }
-}
-.spin-btn.mode-deposit:active { transform: scale(0.95); }
-.spin-btn.mode-loading { background: rgba(255,255,255,0.1); cursor:wait; }
-.spin-btn:disabled { opacity:0.5; cursor:not-allowed; }
-
-.buy-bonus-btn { width:100%; padding:12px; border-radius:14px; border:2px solid var(--pink); background:rgba(255,255,255,0.05); color:#fff; display:flex; justify-content:space-between; align-items:center; cursor:pointer; font-size:14px; }
-.history-wrap { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; min-height:60px; }
-.h-item { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
-.paytable { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; background:rgba(255,255,255,0.03); padding:10px; border-radius:16px; }
-.pt-item { text-align:center; font-size:8px; background:rgba(255,255,255,0.05); padding:5px; border-radius:8px; }
-.error-banner { background:rgba(255,77,77,0.15); border:1px solid rgba(255,77,77,0.3); border-radius:10px; padding:8px 12px; text-align:center; font-size:12px; display:none; color:#ff6b6b; }
-.section-title { font-size:10px; opacity:0.4; margin-top:10px; }
+/* ===== BONUS OVERLAY ===== */
+.bonus-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:15px;padding:20px}
+.bonus-overlay.active{display:flex}
+.bonus-title{font-family:'Fredoka One';font-size:28px;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;animation:bonus-title-pop .5s ease-out}
+@keyframes bonus-title-pop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+.bonus-info{display:flex;gap:20px;font-family:'Fredoka One';font-size:14px}
+.bonus-info-item{text-align:center;padding:8px 16px;border-radius:12px;background:rgba(255,255,255,.1)}
+.bonus-info-item .label{font-size:10px;opacity:.6;font-family:'Nunito'}
+.bonus-info-item .value{color:var(--gold);font-size:18px}
+.bonus-grid-wrap{width:100%;max-width:400px;background:rgba(0,0,0,.5);border:2px solid var(--pink);border-radius:20px;padding:8px}
+.bonus-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.bonus-result{font-family:'Fredoka One';font-size:20px;color:var(--win);text-align:center;min-height:30px}
+.bonus-total{font-family:'Fredoka One';font-size:32px;color:var(--gold);text-align:center;text-shadow:0 0 20px rgba(255,215,0,.5)}
+.bonus-close-btn{padding:12px 40px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--gold),#ff9500);color:#000;font-family:'Fredoka One';font-size:16px;cursor:pointer;display:none}
+.bomb-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Fredoka One';font-size:48px;color:var(--bomb);z-index:1100;pointer-events:none;animation:bomb-pop .8s ease-out forwards}
+@keyframes bomb-pop{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.5);opacity:1}100%{transform:translate(-50%,-70%) scale(1);opacity:0}}
 </style>
 </head>
 <body>
@@ -65,12 +70,9 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
         <div class="logo">🍭 Lucky Bonanza</div>
         <div class="balance-box" id="balanceBox">🪙 <span id="balVal">...</span></div>
     </div>
-
     <div id="errorBanner" class="error-banner"></div>
-
-    <div class="grid-outer"><div class="grid" id="grid"></div></div>
-    <div id="resultText" style="text-align:center; height:30px; font-family:'Fredoka One';"></div>
-
+    <div class="grid-outer" id="gridOuter"><div class="grid" id="grid"></div></div>
+    <div id="resultText" style="text-align:center;height:30px;font-family:'Fredoka One'"></div>
     <div class="controls">
         <div class="bet-group">
             <button class="bet-btn active" onclick="selectBet(5)">5</button>
@@ -82,278 +84,272 @@ body { background: radial-gradient(ellipse at 50% 0%, #2d0060, var(--bg1) 65%); 
             <span id="spinBtnText">...</span>
         </button>
     </div>
-
-    <button class="buy-bonus-btn" onclick="openBuyBonus()">
+    <button class="buy-bonus-btn" id="buyBonusBtn" onclick="buyBonus()">
         <div style="text-align:left">
-            <div id="bbTitle" style="font-family:'Fredoka One';">BUY BONUS</div>
-            <div id="bbDesc" style="font-size:10px; opacity:0.6;">10 free spins</div>
+            <div id="bbTitle" style="font-family:'Fredoka One'">🔥 BUY BONUS</div>
+            <div id="bbDesc" style="font-size:10px;opacity:.6">10+ free spins</div>
         </div>
-        <div id="bbPrice" style="font-family:'Fredoka One'; color:var(--pink);">500 🪙</div>
+        <div id="bbPrice" style="font-family:'Fredoka One';color:var(--pink)">500 🪙</div>
     </button>
-
     <div id="histTitle" class="section-title"></div>
     <div class="history-wrap" id="histList"></div>
     <div id="ptTitle" class="section-title"></div>
     <div class="paytable" id="pt"></div>
 </div>
 
+<!-- BONUS OVERLAY -->
+<div class="bonus-overlay" id="bonusOverlay">
+    <div class="bonus-title" id="bonusTitle">🎰 BONUS ROUND 🎰</div>
+    <div class="bonus-info">
+        <div class="bonus-info-item"><div class="label" id="bonusSpinLabel">SPIN</div><div class="value" id="bonusSpinCounter">0/10</div></div>
+        <div class="bonus-info-item"><div class="label" id="bonusTotalLabel">TOTAL WIN</div><div class="value" id="bonusRunningTotal">0</div></div>
+    </div>
+    <div class="bonus-grid-wrap"><div class="bonus-grid" id="bonusGrid"></div></div>
+    <div class="bonus-result" id="bonusSpinResult"></div>
+    <div class="bonus-total" id="bonusFinalTotal"></div>
+    <button class="bonus-close-btn" id="bonusCloseBtn" onclick="closeBonus()">COLLECT 🪙</button>
+</div>
+
 <script>
-// ==================== INIT ====================
-const tg = window.Telegram.WebApp;
-tg.ready();
-tg.expand();
+const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+const P = new URLSearchParams(window.location.search);
+const API_URL = P.get('api') || "https://lucky-slots-production.up.railway.app";
+const BOT_NAME = P.get('bot') || "testplcas_bot";
+const LANG = P.get('lang') || 'pl';
+const UID = P.get('uid') || '';
+const TOKEN = P.get('token') || '';
 
-const urlParams = new URLSearchParams(window.location.search);
-const API_URL  = urlParams.get('api')   || "https://lucky-slots-production.up.railway.app";
-const BOT_NAME = urlParams.get('bot')   || "testplcas_bot";
-const LANG     = urlParams.get('lang')  || 'pl';
-const UID      = urlParams.get('uid')   || '';     // user_id от бота
-const TOKEN    = urlParams.get('token') || '';     // HMAC-подпись от бота
-
-console.log('[Init] API_URL:', API_URL);
-console.log('[Init] UID:', UID, 'TOKEN:', TOKEN ? TOKEN.substring(0,8) + '...' : 'none');
-console.log('[Init] tg.initData length:', (tg.initData || '').length);
-
-const LOCALES = {
-    pl: { spin: "ZAKRĘĆ", deposit: "DEPOZYT", bbTitle: "BUY BONUS", bbDesc: "10 darmowych spinów", hist: "OSTATNIE SPINY", pt: "TABELA WYPŁAT", win: "WYGRANA", lose: "Brak wygranej", noMoney: "Doładuj konto!", error: "Błąd połączenia" },
-    ua: { spin: "ГРАТИ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТИ БОНУС", bbDesc: "10 безкоштовних спінів", hist: "ОСТАННІ СПІНИ", pt: "ТАБЛИЦЯ ВИПЛАТ", win: "ВИГРАШ", lose: "Без виграшу", noMoney: "Поповніть рахунок!", error: "Помилка з'єднання" },
-    ru: { spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", bbTitle: "КУПИТЬ БОНУС", bbDesc: "10 бесплатных спинов", hist: "ПОСЛЕДНИЕ СПИНЫ", pt: "ТАБЛИЦА ВЫПЛАТ", win: "ВЫИГРЫШ", lose: "Нет выигрыша", noMoney: "Пополните счет!", error: "Ошибка соединения" },
-    en: { spin: "SPIN", deposit: "DEPOSIT", bbTitle: "BUY BONUS", bbDesc: "10 free spins", hist: "LAST SPINS", pt: "PAYTABLE", win: "WIN", lose: "No win", noMoney: "Deposit coins!", error: "Connection error" }
+const L = {
+    pl:{spin:"ZAKRĘĆ",deposit:"DEPOZYT",bbTitle:"🔥 KUP BONUS",bbDesc:"10+ darmowych spinów",hist:"OSTATNIE SPINY",pt:"TABELA WYPŁAT",win:"WYGRANA",lose:"Brak wygranej",noMoney:"Doładuj konto!",error:"Błąd",bonusTitle:"🎰 RUNDA BONUSOWA 🎰",bonusSpin:"SPIN",bonusTotal:"WYGRANA",bonusTrigger:"BONUS!",bonusRetrigger:"+5 SPINÓW!",collect:"ODBIERZ",bombHit:"💣 MNOŻNIK"},
+    ua:{spin:"ГРАТИ",deposit:"ДЕПОЗИТ",bbTitle:"🔥 КУПИТИ БОНУС",bbDesc:"10+ безкоштовних спінів",hist:"ОСТАННІ СПІНИ",pt:"ТАБЛИЦЯ ВИПЛАТ",win:"ВИГРАШ",lose:"Без виграшу",noMoney:"Поповніть!",error:"Помилка",bonusTitle:"🎰 БОНУС РАУНД 🎰",bonusSpin:"СПІН",bonusTotal:"ВИГРАШ",bonusTrigger:"БОНУС!",bonusRetrigger:"+5 СПІНІВ!",collect:"ЗАБРАТИ",bombHit:"💣 МНОЖНИК"},
+    ru:{spin:"ИГРАТЬ",deposit:"ДЕПОЗИТ",bbTitle:"🔥 КУПИТЬ БОНУС",bbDesc:"10+ бесплатных спинов",hist:"ПОСЛЕДНИЕ СПИНЫ",pt:"ТАБЛИЦА ВЫПЛАТ",win:"ВЫИГРЫШ",lose:"Нет выигрыша",noMoney:"Пополните!",error:"Ошибка",bonusTitle:"🎰 БОНУС РАУНД 🎰",bonusSpin:"СПИН",bonusTotal:"ВЫИГРЫШ",bonusTrigger:"БОНУС!",bonusRetrigger:"+5 СПИНОВ!",collect:"ЗАБРАТЬ",bombHit:"💣 МНОЖИТЕЛЬ"},
+    en:{spin:"SPIN",deposit:"DEPOSIT",bbTitle:"🔥 BUY BONUS",bbDesc:"10+ free spins",hist:"LAST SPINS",pt:"PAYTABLE",win:"WIN",lose:"No win",noMoney:"Deposit!",error:"Error",bonusTitle:"🎰 BONUS ROUND 🎰",bonusSpin:"SPIN",bonusTotal:"TOTAL WIN",bonusTrigger:"BONUS!",bonusRetrigger:"+5 SPINS!",collect:"COLLECT",bombHit:"💣 MULTIPLIER"}
 };
+const T = L[LANG] || L.pl;
+const BASE_SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
+const BONUS_SYMS = ['👑','💎','⭐','❤️','🍀','🧲','💰','🌈'];
+const SCATTER = '🎰';
+const BOMB = '💣';
 
-const T = LOCALES[LANG] || LOCALES.pl;
-const SYMS = ['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
-let balance = null;
-let bet = 5;
-let spinning = false;
+let balance=null, bet=5, spinning=false;
 
-// ==================== AUTH PARAMS ====================
-function authParams() {
-    // Строим параметры авторизации для каждого API-запроса
-    const p = {};
-    const initData = tg.initData || '';
-    if (initData) p.init_data = initData;
-    if (UID)   p.uid = UID;
-    if (TOKEN) p.token = TOKEN;
-    return p;
-}
-
-function authQueryString() {
-    const p = authParams();
-    return new URLSearchParams(p).toString();
-}
+function authParams(){const p={};if(tg.initData)p.init_data=tg.initData;if(UID)p.uid=UID;if(TOKEN)p.token=TOKEN;return p}
+function authQS(){return new URLSearchParams(authParams()).toString()}
 
 // ==================== UI ====================
-function updateUI() {
-    const balEl = document.getElementById('balVal');
-    const btn = document.getElementById('spinBtn');
-    const btnText = document.getElementById('spinBtnText');
-    const balBox = document.getElementById('balanceBox');
-
-    balEl.innerText = (balance !== null) ? balance : '...';
-
-    // Сброс классов
-    btn.className = 'spin-btn';
-    balBox.classList.remove('low');
-
-    if (balance === null) {
-        // Загрузка
-        btn.classList.add('mode-loading');
-        btnText.innerText = '...';
-        btn.disabled = true;
-    } else if (balance < bet) {
-        // === РЕЖИМ ДЕПОЗИТА — зелёная мигающая кнопка, АКТИВНА ===
-        btn.classList.add('mode-deposit');
-        btnText.innerText = T.deposit;
-        btn.disabled = false;
-        balBox.classList.add('low');
-    } else {
-        // Можно крутить
-        btn.classList.add('mode-spin');
-        btnText.innerText = T.spin;
-        btn.disabled = false;
-    }
+function updateUI(){
+    const balEl=document.getElementById('balVal'),btn=document.getElementById('spinBtn'),btnText=document.getElementById('spinBtnText'),balBox=document.getElementById('balanceBox');
+    balEl.innerText=(balance!==null)?balance:'...';
+    btn.className='spin-btn';balBox.classList.remove('low');
+    if(balance===null){btn.classList.add('mode-loading');btnText.innerText='...';btn.disabled=true}
+    else if(balance<bet){btn.classList.add('mode-deposit');btnText.innerText=T.deposit;btn.disabled=false;balBox.classList.add('low')}
+    else{btn.classList.add('mode-spin');btnText.innerText=T.spin;btn.disabled=false}
 }
-
-function showError(msg) {
-    const banner = document.getElementById('errorBanner');
-    banner.innerText = msg || T.error;
-    banner.style.display = 'block';
-    setTimeout(() => { banner.style.display = 'none'; }, 4000);
-}
+function showError(m){const b=document.getElementById('errorBanner');b.innerText=m||T.error;b.style.display='block';setTimeout(()=>b.style.display='none',4000)}
 
 // ==================== BALANCE ====================
-let balRetries = 0;
-async function fetchBalance() {
-    try {
-        const qs = authQueryString();
-        console.log('[Balance] Fetching with:', qs.substring(0, 100));
-
-        const r = await fetch(`${API_URL}/api/balance?${qs}`);
-        const d = await r.json();
-        console.log('[Balance] Response:', JSON.stringify(d));
-
-        if (d.ok) {
-            balance = d.balance;
-            balRetries = 0;
-            updateUI();
-            return;
-        }
-        console.error('[Balance] Error:', d.error);
-    } catch(e) {
-        console.error('[Balance] Fetch failed:', e);
-    }
-
-    // Retry
-    balRetries++;
-    if (balRetries <= 5) {
-        const delay = Math.min(1000 * Math.pow(2, balRetries - 1), 8000);
-        console.log(`[Balance] Retry ${balRetries}/5 in ${delay}ms`);
-        setTimeout(fetchBalance, delay);
-    } else {
-        showError(T.error);
-        balance = 0;
-        updateUI();
-    }
+let balR=0;
+async function fetchBalance(){
+    try{const r=await fetch(`${API_URL}/api/balance?${authQS()}`);const d=await r.json();if(d.ok){balance=d.balance;balR=0;updateUI();return}}catch(e){}
+    if(++balR<=5)setTimeout(fetchBalance,Math.min(1000*Math.pow(2,balR-1),8000));else{balance=0;updateUI()}
 }
 
 // ==================== ACTIONS ====================
-function handleMainAction() {
-    if (balance === null) return;
-
-    if (balance < bet) {
-        // === ПЕРЕХОД НА ДЕПОЗИТ В БОТЕ ===
-        console.log('[Deposit] Redirecting to bot:', BOT_NAME);
-        tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);
-        tg.close();
-        return;
-    }
+function handleMainAction(){
+    if(balance===null)return;
+    if(balance<bet){tg.openTelegramLink(`https://t.me/${BOT_NAME}?start=deposit`);tg.close();return}
     spin();
 }
-
-function selectBet(v) {
-    if (spinning) return;
-    bet = v;
-    document.querySelectorAll('.bet-btn').forEach(b =>
-        b.classList.toggle('active', parseInt(b.innerText) === v)
-    );
-    document.getElementById('bbPrice').innerText = (v * 100) + " 🪙";
-    updateUI();
+function selectBet(v){
+    if(spinning)return;bet=v;
+    document.querySelectorAll('.bet-btn').forEach(b=>b.classList.toggle('active',parseInt(b.innerText)===v));
+    document.getElementById('bbPrice').innerText=(v*100)+' 🪙';updateUI();
 }
 
-// ==================== SPIN (SERVER-SIDE) ====================
-async function spin() {
-    if (spinning || balance === null || balance < bet) return;
-    spinning = true;
-    const btn = document.getElementById('spinBtn');
-    btn.disabled = true;
-    document.getElementById('resultText').innerHTML = '';
-    document.querySelectorAll('.cell.win-cell').forEach(c => c.classList.remove('win-cell'));
+// ==================== BASE SPIN ====================
+async function spin(){
+    if(spinning||balance===null||balance<bet)return;
+    spinning=true;const btn=document.getElementById('spinBtn');btn.disabled=true;
+    document.getElementById('resultText').innerHTML='';
+    document.querySelectorAll('.cell').forEach(c=>{c.className='cell'});
+    const cells=document.querySelectorAll('.cell');
+    const anim=setInterval(()=>cells.forEach(c=>c.innerText=BASE_SYMS[Math.floor(Math.random()*BASE_SYMS.length)]),80);
 
-    const cells = document.querySelectorAll('.cell');
-    const animInterval = setInterval(() => {
-        cells.forEach(c => c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)]);
-    }, 80);
+    try{
+        const r=await fetch(`${API_URL}/api/spin`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...authParams(),bet})});
+        const d=await r.json();clearInterval(anim);
+        if(!d.ok){if(d.error==='insufficient_funds'&&d.balance!==undefined)balance=d.balance;showError(d.error==='insufficient_funds'?T.noMoney:T.error);spinning=false;btn.disabled=false;updateUI();return}
 
-    try {
-        const body = { ...authParams(), bet: bet };
-        const r = await fetch(`${API_URL}/api/spin`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(body)
+        balance=d.balance;const win=d.winnings;
+        d.grid.forEach((s,i)=>{cells[i].innerText=s;
+            if(s===SCATTER)cells[i].classList.add('scatter-cell');
         });
-        const d = await r.json();
-        clearInterval(animInterval);
 
-        if (!d.ok) {
-            if (d.error === 'insufficient_funds' && d.balance !== undefined) balance = d.balance;
-            showError(d.error === 'insufficient_funds' ? T.noMoney : T.error);
-            spinning = false;
-            btn.disabled = false;
-            updateUI();
-            return;
+        // Подсветка выигрышных
+        if(win>0){const co={};d.grid.forEach(s=>{if(s!==SCATTER)co[s]=(co[s]||0)+1});
+            const ws=new Set(Object.entries(co).filter(([,c])=>c>=8).map(([s])=>s));
+            cells.forEach(c=>{if(ws.has(c.innerText))c.classList.add('win-cell')});
         }
 
-        balance = d.balance;
-        const winnings = d.winnings;
+        const resEl=document.getElementById('resultText');
+        if(d.triggered_bonus){
+            resEl.innerHTML=`<span style="color:var(--pink);font-size:22px;animation:bonus-title-pop .5s">${T.bonusTrigger} ${d.scatter_count}x ${SCATTER}</span>`;
+            addHistory(win,false);updateUI();
+            // Запускаем бонус через 1.5с
+            setTimeout(()=>startBonusRound('triggered'),1500);
+        }else{
+            resEl.innerHTML=win>0?`<span style="color:var(--win)">${T.win}: +${win} 🪙</span>`:`<span style="color:rgba(255,255,255,.4)">${T.lose}</span>`;
+            addHistory(win,false);updateUI();
+        }
+    }catch(e){clearInterval(anim);showError(T.error);fetchBalance()}
+    spinning=false;btn.disabled=false;
+}
 
-        // Показываем серверную сетку
-        d.grid.forEach((s, i) => cells[i].innerText = s);
+// ==================== BONUS ROUND ====================
+async function startBonusRound(mode){
+    spinning=true;
+    const overlay=document.getElementById('bonusOverlay');
+    overlay.classList.add('active');
+    document.getElementById('bonusTitle').innerText=T.bonusTitle;
+    document.getElementById('bonusSpinLabel').innerText=T.bonusSpin;
+    document.getElementById('bonusTotalLabel').innerText=T.bonusTotal;
+    document.getElementById('bonusCloseBtn').style.display='none';
+    document.getElementById('bonusFinalTotal').innerText='';
+    document.getElementById('bonusSpinResult').innerText='';
+    document.getElementById('bonusSpinCounter').innerText='0/10';
+    document.getElementById('bonusRunningTotal').innerText='0';
+    document.getElementById('gridOuter').classList.add('bonus-active');
 
-        // Подсвечиваем выигрышные
-        if (winnings > 0) {
-            const counts = {};
-            d.grid.forEach(s => counts[s] = (counts[s] || 0) + 1);
-            const winSyms = new Set(Object.entries(counts).filter(([s,c]) => c >= 8).map(([s]) => s));
-            cells.forEach(c => { if (winSyms.has(c.innerText)) c.classList.add('win-cell'); });
+    // Создаём бонусную сетку
+    const bg=document.getElementById('bonusGrid');
+    bg.innerHTML='';
+    for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.innerText=BONUS_SYMS[Math.floor(Math.random()*BONUS_SYMS.length)];bg.appendChild(c)}
+
+    try{
+        const r=await fetch(`${API_URL}/api/bonus`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...authParams(),bet,mode})});
+        const d=await r.json();
+        if(!d.ok){showError(T.error);closeBonus();return}
+
+        // Проигрываем каждый спин с анимацией
+        const bonusCells=bg.querySelectorAll('.cell');
+        for(let i=0;i<d.spins.length;i++){
+            const sp=d.spins[i];
+            document.getElementById('bonusSpinCounter').innerText=`${sp.spin_number}/${sp.total_spins}`;
+
+            // Анимация вращения
+            for(let t=0;t<8;t++){
+                bonusCells.forEach(c=>c.innerText=BONUS_SYMS[Math.floor(Math.random()*BONUS_SYMS.length)]);
+                await sleep(60);
+            }
+
+            // Показываем результат
+            sp.grid.forEach((s,idx)=>{
+                bonusCells[idx].innerText=s;
+                bonusCells[idx].className='cell';
+                if(s===SCATTER)bonusCells[idx].classList.add('scatter-cell');
+                else if(s===BOMB)bonusCells[idx].classList.add('bomb-cell');
+            });
+
+            // Подсветка выигрышных
+            if(sp.winning_symbols){
+                const ws=new Set(Object.keys(sp.winning_symbols));
+                bonusCells.forEach(c=>{if(ws.has(c.innerText))c.classList.add('win-cell')});
+            }
+
+            await sleep(300);
+
+            // Бомбы — показываем попап
+            if(sp.bombs&&sp.bombs.length>0&&sp.base_win>0){
+                for(const bomb of sp.bombs){
+                    showBombPopup(bomb.mult);
+                    await sleep(500);
+                }
+            }
+
+            // Результат спина
+            const resEl=document.getElementById('bonusSpinResult');
+            if(sp.winnings>0){
+                let txt=`+${sp.winnings} 🪙`;
+                if(sp.total_bomb_mult>1)txt+=` (${T.bombHit} x${sp.total_bomb_mult})`;
+                resEl.innerHTML=`<span style="color:var(--win)">${txt}</span>`;
+            }else{
+                resEl.innerHTML=`<span style="opacity:.4">—</span>`;
+            }
+
+            // Ретриггер
+            if(sp.retrigger){
+                resEl.innerHTML+=`<br><span style="color:var(--pink);font-size:16px">${T.bonusRetrigger}</span>`;
+                await sleep(800);
+            }
+
+            // Running total
+            document.getElementById('bonusRunningTotal').innerText=sp.running_total;
+            await sleep(600);
         }
 
-        document.getElementById('resultText').innerHTML = winnings > 0
-            ? `<span style="color:var(--win)">${T.win}: +${winnings} 🪙</span>`
-            : `<span style="color:rgba(255,255,255,0.4)">${T.lose}</span>`;
+        // Финал!
+        balance=d.balance;
+        document.getElementById('bonusSpinResult').innerHTML='';
+        document.getElementById('bonusFinalTotal').innerHTML=`🏆 ${T.bonusTotal}: <span style="color:var(--win)">${d.total_win} 🪙</span>`;
+        document.getElementById('bonusCloseBtn').innerText=`${T.collect} ${d.total_win} 🪙`;
+        document.getElementById('bonusCloseBtn').style.display='block';
+        addHistory(d.total_win,true);
 
-        addHistory(winnings);
-        updateUI();
+    }catch(e){console.error('Bonus error:',e);showError(T.error);closeBonus()}
+}
 
-    } catch(e) {
-        clearInterval(animInterval);
-        console.error('[Spin] Error:', e);
-        showError(T.error);
-        fetchBalance();
-    }
+function closeBonus(){
+    document.getElementById('bonusOverlay').classList.remove('active');
+    document.getElementById('gridOuter').classList.remove('bonus-active');
+    spinning=false;updateUI();
+}
 
-    spinning = false;
-    btn.disabled = false;
+function showBombPopup(mult){
+    const el=document.createElement('div');
+    el.className='bomb-popup';
+    el.innerText=`💣 x${mult}`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),900);
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ==================== BUY BONUS ====================
+async function buyBonus(){
+    if(balance===null)return;
+    const cost=bet*100;
+    if(balance<cost){tg.showAlert(T.noMoney);return}
+    startBonusRound('bought');
 }
 
 // ==================== HISTORY ====================
-function addHistory(win) {
-    const list = document.getElementById('histList');
-    const div = document.createElement('div');
-    div.className = 'h-item';
-    const sign = win > 0 ? '+' : '-';
-    const val = win > 0 ? win : bet;
-    const color = win > 0 ? 'var(--win)' : '#ff6b6b';
-    div.innerHTML = `<span>🎰 Spin (${bet})</span><span style="color:${color}">${sign}${val}</span>`;
-    list.prepend(div);
-    if (list.children.length > 10) list.lastChild.remove();
-}
-
-// ==================== BUY BONUS ====================
-function openBuyBonus() {
-    if (balance === null || balance < bet * 100) {
-        tg.showAlert(T.noMoney);
-        return;
-    }
-    tg.showAlert("Coming soon!");
+function addHistory(win,isBonus){
+    const list=document.getElementById('histList');
+    const div=document.createElement('div');
+    div.className='h-item'+(isBonus?' bonus-item':'');
+    const icon=isBonus?'🎁':'🎰';
+    const label=isBonus?'Bonus':'Spin';
+    const sign=win>0?'+':'-';
+    const val=win>0?win:bet;
+    const color=win>0?'var(--win)':'#ff6b6b';
+    div.innerHTML=`<span>${icon} ${label} (${bet})</span><span style="color:${color}">${sign}${val}</span>`;
+    list.prepend(div);if(list.children.length>10)list.lastChild.remove();
 }
 
 // ==================== INIT ====================
-function init() {
-    const g = document.getElementById('grid');
-    for (let i = 0; i < 30; i++) {
-        const c = document.createElement('div');
-        c.className = 'cell';
-        c.innerText = SYMS[Math.floor(Math.random() * SYMS.length)];
-        g.appendChild(c);
-    }
-    const pt = document.getElementById('pt');
-    SYMS.forEach(s => {
-        const item = document.createElement('div');
-        item.className = 'pt-item';
-        item.innerHTML = `<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;
-        pt.appendChild(item);
-    });
-    document.getElementById('bbTitle').innerText = T.bbTitle;
-    document.getElementById('bbDesc').innerText = T.bbDesc;
-    document.getElementById('histTitle').innerText = T.hist;
-    document.getElementById('ptTitle').innerText = T.pt;
-    updateUI();
+function init(){
+    const g=document.getElementById('grid');
+    for(let i=0;i<30;i++){const c=document.createElement('div');c.className='cell';c.innerText=BASE_SYMS[Math.floor(Math.random()*BASE_SYMS.length)];g.appendChild(c)}
+    const pt=document.getElementById('pt');
+    // Показываем и базовые и бонусные символы в paytable
+    BASE_SYMS.forEach(s=>{const it=document.createElement('div');it.className='pt-item';it.innerHTML=`<div style="font-size:16px">${s}</div>8+ x1.5<br>12+ x5`;pt.appendChild(it)});
 
-    // Загружаем баланс
-    setTimeout(fetchBalance, 200);
+    document.getElementById('bbTitle').innerText=T.bbTitle;
+    document.getElementById('bbDesc').innerText=T.bbDesc;
+    document.getElementById('histTitle').innerText=T.hist;
+    document.getElementById('ptTitle').innerText=T.pt;
+    updateUI();setTimeout(fetchBalance,200);
 }
-
 init();
 </script>
 </body>
