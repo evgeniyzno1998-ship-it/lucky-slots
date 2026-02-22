@@ -3,259 +3,673 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Lucky Bonanza</title>
+<title>RubyBet</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap');
-:root{--bg:#0a0a14;--card:#151525;--card2:#1a1a30;--accent:#c8ff2e;--pink:#ff3d8a;--gold:#ffd700;--blue:#4d7cff;--text:#e8e8f0;--dim:#6b6b8d;--green:#00e676;--red:#ff4444;--nav:#0d0d1a;--radius:16px}
+:root{
+  --bg:#121212;--surface:#1E1E1E;--surface2:#2A2A2A;--surface3:#333;
+  --red:#E31E24;--red-dark:#B91820;--red-glow:rgba(227,30,36,0.4);
+  --text:#F5F5F5;--dim:#9CA3AF;--dim2:#6B7280;--border:#333;
+  --green:#22C55E;--green-dim:#166534;--gold:#FFD700;--blue:#3B82F6;
+  --radius:12px;--radius-lg:16px;--radius-xl:20px;
+  --nav-h:68px;--header-h:56px;
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:70px}
-::-webkit-scrollbar{display:none}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:calc(var(--nav-h) + 12px)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
+::selection{background:var(--red);color:#fff}
 
 /* === SCREENS === */
-.screen{display:none;opacity:0;transition:opacity .2s}.screen.active{display:block;opacity:1}
+.screen{display:none;opacity:0;transition:opacity .15s ease}.screen.active{display:block;opacity:1}
 
-/* === TOP BAR === */
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;position:sticky;top:0;z-index:50;background:var(--bg)}
-.topbar-logo{font-weight:900;font-size:20px;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar-balance{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid rgba(200,255,46,.2);border-radius:30px;padding:6px 14px 6px 10px;font-weight:700;font-size:14px;color:var(--accent);cursor:pointer}
-.topbar-balance .coin-icon{width:18px;height:18px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:900}
-
-/* === PROMO BANNER === */
-.promo-banner{margin:0 16px 12px;border-radius:var(--radius);background:linear-gradient(135deg,#1a0a3e,#3d1266 50%,#0a2a5e);padding:20px;position:relative;overflow:hidden;min-height:100px}
-.promo-banner::after{content:'';position:absolute;top:-50%;right:-30%;width:200px;height:200px;background:radial-gradient(circle,rgba(200,255,46,.15),transparent 70%);border-radius:50%}
-.promo-tag{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent);letter-spacing:2px;margin-bottom:6px}
-.promo-title{font-size:22px;font-weight:900;line-height:1.2;margin-bottom:4px}
-.promo-sub{font-size:12px;color:var(--dim)}
-
-/* === WHEEL BANNER === */
-.wheel-banner{margin:0 16px 12px;border-radius:var(--radius);background:linear-gradient(135deg,#1a2a0a,#0a3a1a);border:1px solid rgba(0,230,118,.2);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s}
-.wheel-banner:active{transform:scale(.97)}
-.wheel-icon{font-size:36px;animation:wheel-rotate 3s linear infinite}
-@keyframes wheel-rotate{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-.wheel-banner.done{opacity:.5;pointer-events:none}
-.wheel-banner.done .wheel-icon{animation:none}
-.wheel-info h3{font-size:14px;font-weight:700;color:var(--green)}.wheel-info p{font-size:11px;color:var(--dim)}
-
-/* === SECTION === */
-.section{padding:0 16px;margin-bottom:16px}
-.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.section-title{font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)}
-.section-more{font-size:11px;color:var(--accent);cursor:pointer}
-
-/* === GAME CARDS === */
-.games-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
-.game-card{min-width:130px;border-radius:var(--radius);overflow:hidden;background:var(--card);cursor:pointer;transition:transform .15s;scroll-snap-align:start;flex-shrink:0}
-.game-card:active{transform:scale(.95)}
-.game-card-img{width:130px;height:130px;display:flex;align-items:center;justify-content:center;font-size:48px;position:relative}
-.game-card-img.slots-bg{background:linear-gradient(135deg,#2d0060,#0d001f)}
-.game-card-img.coming-bg{background:linear-gradient(135deg,#1a1a30,#0a0a20)}
-.game-card-info{padding:8px 10px}
-.game-card-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.game-card-tag{font-size:9px;color:var(--accent);font-weight:600;text-transform:uppercase;margin-top:2px}
-.game-card .coming-label{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(0,0,0,.7);border-radius:8px;padding:4px;text-align:center;font-size:9px;font-weight:700;color:var(--dim)}
-
-/* === VIP CARD === */
-.vip-card{margin:0 16px 16px;border-radius:var(--radius);background:var(--card);padding:16px;display:flex;align-items:center;gap:14px}
-.vip-icon{font-size:36px}
-.vip-info{flex:1}
-.vip-name{font-size:14px;font-weight:800}.vip-cb{font-size:11px;color:var(--dim)}
-.vip-bar{height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:6px;overflow:hidden}
-.vip-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--pink));border-radius:2px;transition:width .5s}
+/* === HEADER === */
+.header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid rgba(255,255,255,.05);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);backdrop-filter:blur(12px)}
+.logo{display:flex;align-items:center;gap:6px}
+.logo-icon{width:32px;height:32px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px var(--red-glow)}
+.logo-icon .material-symbols-outlined{color:#fff;font-size:18px}
+.logo-text{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;letter-spacing:.5px;color:#fff}
+.logo-text span{color:var(--red)}
+.header-right{display:flex;align-items:center;gap:8px}
+.header-bal{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 8px;font-weight:600;font-size:13px;color:#fff;cursor:pointer}
+.header-bal .amt{color:var(--red);font-weight:700;font-family:'Montserrat',sans-serif;font-size:11px;margin-left:2px}
+.header-notif{position:relative;width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.header-notif .material-symbols-outlined{font-size:18px;color:var(--dim)}
+.header-notif .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--red);border-radius:50%;box-shadow:0 0 6px var(--red)}
 
 /* === BOTTOM NAV === */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:64px;background:var(--nav);border-top:1px solid rgba(255,255,255,.06);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--dim);transition:color .2s;position:relative}
-.nav-item.active{color:var(--accent)}
-.nav-item .nav-icon{font-size:20px;line-height:1}.nav-item .nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.nav-item .nav-dot{position:absolute;top:6px;right:calc(50% - 16px);width:6px;height:6px;background:var(--pink);border-radius:50%;display:none}
-.nav-item .nav-dot.show{display:block}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--surface);border-top:1px solid rgba(255,255,255,.05);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 20px rgba(0,0,0,.4)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--dim);transition:color .2s;position:relative}
+.nav-item.active{color:var(--red)}
+.nav-item .material-symbols-outlined{font-size:22px;transition:all .2s}
+.nav-item.active .material-symbols-outlined{filter:drop-shadow(0 0 6px var(--red-glow))}
+.nav-item .nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-family:'Montserrat',sans-serif}
 
+/* === SHARED UI === */
+.section{padding:0 16px;margin-bottom:20px}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.section-title{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim)}
+.section-more{font-size:11px;font-weight:700;color:var(--red);cursor:pointer;text-transform:uppercase;letter-spacing:.5px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.btn-primary{width:100%;height:48px;border-radius:var(--radius);border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;letter-spacing:.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px var(--red-glow);transition:all .15s;text-transform:uppercase}
+.btn-primary:active{transform:scale(.97);filter:brightness(.9)}
+.btn-outline{width:100%;height:48px;border-radius:var(--radius);border:1.5px solid var(--red);background:transparent;color:var(--red);font-family:'Montserrat',sans-serif;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;text-transform:uppercase}
+.btn-outline:active{background:rgba(227,30,36,.08);transform:scale(.97)}
+.pill-row{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;-ms-overflow-style:none;scrollbar-width:none}
+.pill-row::-webkit-scrollbar{display:none}
+.pill{height:34px;padding:0 16px;border-radius:17px;border:1px solid var(--border);background:var(--surface);color:var(--dim);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;display:flex;align-items:center;transition:all .15s;flex-shrink:0}
+.pill.active{background:var(--red);color:#fff;border-color:var(--red);box-shadow:0 2px 10px var(--red-glow)}
+.pill:active{transform:scale(.95)}
+.divider{height:1px;background:var(--border);margin:0 16px}
+
+/* ======================== */
+/* === LOBBY SCREEN === */
+/* ======================== */
+.lobby-search{margin:12px 16px;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;cursor:pointer}
+.lobby-search .material-symbols-outlined{color:var(--dim);font-size:20px}
+.lobby-search span{color:var(--dim2);font-size:13px;font-weight:500}
+
+/* Hero Banner */
+.hero-banner{margin:0 16px 16px;border-radius:var(--radius-xl);background:linear-gradient(135deg,#1a0000,#3a0a0a 50%,#0a0000);border:1.5px solid rgba(227,30,36,.3);padding:24px 20px;position:relative;overflow:hidden;min-height:140px;box-shadow:0 0 20px rgba(227,30,36,.1)}
+.hero-banner::after{content:'';position:absolute;top:-50%;right:-20%;width:200px;height:200px;background:radial-gradient(circle,rgba(227,30,36,.15),transparent 70%);border-radius:50%}
+.hero-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:800;text-transform:uppercase;color:#fff;background:var(--red);padding:3px 8px;border-radius:4px;margin-bottom:10px;letter-spacing:1px}
+.hero-tag .material-symbols-outlined{font-size:12px}
+.hero-title{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;line-height:1.15;margin-bottom:4px;letter-spacing:-.5px}
+.hero-title .accent{color:var(--red);text-shadow:0 0 20px var(--red-glow)}
+.hero-sub{font-size:12px;color:var(--dim);margin-bottom:16px}
+.hero-actions{display:flex;gap:10px;position:relative;z-index:1}
+.hero-actions .hero-btn{height:38px;padding:0 20px;border-radius:10px;border:none;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.hero-actions .hero-btn:active{transform:scale(.95)}
+.hero-btn.filled{background:var(--red);color:#fff;box-shadow:0 2px 12px var(--red-glow)}
+.hero-btn.ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12)}
+
+/* Wheel Banner */
+.wheel-banner{margin:0 16px 16px;border-radius:var(--radius-lg);background:linear-gradient(135deg,#0a1a0a,#0a2a1a);border:1px solid rgba(34,197,94,.2);padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .15s}
+.wheel-banner:active{transform:scale(.97)}
+.wheel-icon{font-size:32px;animation:wrot 3s linear infinite}
+@keyframes wrot{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+.wheel-banner.done{opacity:.4;pointer-events:none}.wheel-banner.done .wheel-icon{animation:none}
+.wheel-info h3{font-size:13px;font-weight:700;color:var(--green);font-family:'Montserrat',sans-serif}
+.wheel-info p{font-size:11px;color:var(--dim)}
+
+/* VIP Progress */
+.vip-strip{margin:0 16px 16px;display:flex;align-items:center;gap:12px}
+.vip-strip-info{flex:1}
+.vip-strip-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.vip-strip-name{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif}
+.vip-strip-pct{font-size:10px;font-weight:700;color:var(--red)}
+.vip-bar{height:6px;background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.vip-bar-fill{height:100%;background:var(--red);border-radius:3px;transition:width .6s;box-shadow:0 0 8px var(--red-glow)}
+
+/* Categories */
+.cat-row{display:flex;gap:12px;padding:0 16px;margin-bottom:20px;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none}
+.cat-row::-webkit-scrollbar{display:none}
+.cat-item{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;flex-shrink:0}
+.cat-icon{width:56px;height:56px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cat-icon .material-symbols-outlined{font-size:24px;color:var(--red)}
+.cat-item:active .cat-icon{border-color:var(--red);background:rgba(227,30,36,.08)}
+.cat-label{font-size:10px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+
+/* Game Grid */
+.game-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0 16px;margin-bottom:20px}
+.game-tile{border-radius:var(--radius-lg);overflow:hidden;background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all .15s;position:relative}
+.game-tile:active{transform:scale(.96)}
+.game-tile-img{width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:42px;position:relative}
+.game-tile-img .badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:4px;letter-spacing:.5px}
+.badge.hot{background:var(--red);color:#fff}
+.badge.new{background:var(--green);color:#fff}
+.badge.soon{background:var(--surface2);color:var(--dim)}
+.game-tile-info{padding:10px 12px}
+.game-tile-name{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+.game-tile-tag{font-size:10px;color:var(--dim);font-weight:500;margin-top:2px}
+
+/* ======================== */
 /* === GAME SCREEN === */
-.game-topbar{display:flex;justify-content:space-between;align-items:center;padding:8px 16px}
-.game-back{font-size:24px;cursor:pointer;padding:4px 8px}
-.game-balance{font-weight:700;color:var(--accent);font-size:14px}
-.game-area{padding:0 10px}
-.grid-frame{background:rgba(0,0,0,.5);border:2px solid rgba(200,255,46,.1);border-radius:var(--radius);padding:6px;position:relative;overflow:hidden}
-.grid-frame.bonus-mode{border-color:var(--pink);box-shadow:0 0 30px rgba(255,61,138,.2)}
+/* ======================== */
+.game-header{display:flex;justify-content:space-between;align-items:center;padding:8px 16px}
+.game-back{display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--dim);font-size:13px;font-weight:600}
+.game-back .material-symbols-outlined{font-size:20px}
+.game-title-bar{font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.5px}
+.game-bal{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-weight:700;font-size:13px}
+.game-bal .material-symbols-outlined{font-size:14px;color:var(--red)}
+
+/* Jackpot display */
+.jackpot-display{text-align:center;padding:8px 0 4px}
+.jackpot-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--red)}
+.jackpot-amount{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px}
+.jackpot-amount span{color:var(--dim);font-size:16px;font-weight:600;margin-left:4px}
+
+/* Grid */
+.grid-frame{margin:0 10px;background:rgba(0,0,0,.4);border:2px solid rgba(227,30,36,.15);border-radius:var(--radius-lg);padding:6px;position:relative;overflow:hidden}
+.grid-frame.bonus-mode{border-color:var(--red);box-shadow:0 0 30px var(--red-glow)}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
-.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:8px;background:rgba(255,255,255,.04);transition:all .2s}
-.cell.win{background:rgba(200,255,46,.15);transform:scale(1.08)}.cell.scatter{background:rgba(255,61,138,.2);animation:sc-p .5s infinite}
+.cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:8px;background:rgba(255,255,255,.03);transition:all .2s}
+.cell.win{background:rgba(227,30,36,.15);transform:scale(1.08)}.cell.scatter{background:rgba(227,30,36,.2);animation:sc-p .5s infinite}
 .cell.bomb{background:rgba(255,61,0,.2);animation:bm-s .3s infinite}
 @keyframes sc-p{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 @keyframes bm-s{0%,100%{transform:rotate(0)}25%{transform:rotate(-2deg)}75%{transform:rotate(2deg)}}
-.game-result{text-align:center;height:28px;font-weight:800;font-size:16px;padding:4px 0}
-.game-controls{display:flex;gap:8px;align-items:center;padding:0 6px}
+
+.game-result{text-align:center;height:32px;font-weight:800;font-size:16px;padding:6px 0;display:flex;align-items:center;justify-content:center}
+.game-result .win-text{color:var(--green);display:flex;align-items:center;gap:4px}
+.game-result .lose-text{color:var(--dim)}
+.free-spin-badge{text-align:center;padding:2px;font-size:11px;color:var(--red);font-weight:700}
+
+/* Controls */
+.game-controls{display:flex;gap:6px;align-items:center;padding:0 10px;margin-top:4px}
 .bet-group{flex:1;display:flex;gap:4px}
-.bet-btn{flex:1;padding:10px 0;border-radius:12px;border:1.5px solid rgba(200,255,46,.15);background:transparent;color:var(--accent);font-family:'Outfit';font-weight:700;cursor:pointer;font-size:13px;transition:all .15s}
-.bet-btn.on{border-color:var(--accent);background:rgba(200,255,46,.12)}
-.spin-btn{width:100px;height:68px;border-radius:16px;border:none;color:#000;font-family:'Outfit';font-weight:900;cursor:pointer;font-size:14px;transition:all .2s}
-.spin-btn.m-spin{background:linear-gradient(135deg,var(--accent),#a0ff00)}
-.spin-btn.m-deposit{background:linear-gradient(135deg,var(--green),#00c853);color:#fff;animation:glow-g 1.5s infinite}
-.spin-btn.m-load{background:var(--card);color:var(--dim)}
-@keyframes glow-g{0%,100%{box-shadow:0 0 10px rgba(0,230,118,.3)}50%{box-shadow:0 0 25px rgba(0,230,118,.5)}}
+.bet-btn{flex:1;padding:10px 0;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--dim);font-family:'Montserrat',sans-serif;font-weight:700;cursor:pointer;font-size:13px;transition:all .15s}
+.bet-btn.on{border-color:var(--red);color:var(--red);background:rgba(227,30,36,.08)}
+.spin-btn{width:100px;height:64px;border-radius:var(--radius);border:none;font-family:'Montserrat',sans-serif;font-weight:900;cursor:pointer;font-size:13px;transition:all .2s;text-transform:uppercase;letter-spacing:.5px}
+.spin-btn.m-spin{background:var(--red);color:#fff;box-shadow:0 4px 16px var(--red-glow)}
+.spin-btn.m-deposit{background:var(--green);color:#fff;animation:glow-g 1.5s infinite}
+.spin-btn.m-load{background:var(--surface);color:var(--dim)}
+@keyframes glow-g{0%,100%{box-shadow:0 0 8px rgba(34,197,94,.3)}50%{box-shadow:0 0 20px rgba(34,197,94,.5)}}
 .spin-btn:disabled{opacity:.4;cursor:not-allowed}
-.free-spin-badge{text-align:center;padding:4px;font-size:11px;color:var(--pink);font-weight:700}
-.buy-bonus{width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1.5px solid rgba(255,61,138,.3);background:transparent;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:'Outfit';font-size:13px;transition:all .15s}
-.buy-bonus:active{transform:scale(.97)}
-.bb-left{font-weight:700}.bb-right{font-weight:800;color:var(--pink)}
 
+.buy-bonus{width:calc(100% - 20px);margin:8px 10px 0;padding:12px 14px;border-radius:var(--radius);border:1.5px solid rgba(227,30,36,.2);background:transparent;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;transition:all .15s}
+.buy-bonus:active{transform:scale(.97);background:rgba(227,30,36,.05)}
+.bb-left{font-weight:700;display:flex;align-items:center;gap:6px}.bb-right{font-weight:800;color:var(--red)}
+
+.speed-row{display:flex;gap:6px;align-items:center;padding:4px 10px;margin-top:4px}
+.speed-label{font-size:10px;color:var(--dim);font-weight:700;min-width:20px}
+.speed-btns{display:flex;gap:4px;flex:1}
+.speed-btn{flex:1;padding:6px 0;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--dim);font-family:'Inter',sans-serif;font-weight:700;font-size:11px;cursor:pointer;transition:all .15s}
+.speed-btn.on{border-color:var(--red);color:var(--red);background:rgba(227,30,36,.08)}
+
+/* ======================== */
+/* === BONUSES SCREEN === */
+/* ======================== */
+.bonus-featured{margin:0 16px 16px;border-radius:var(--radius-xl);background:linear-gradient(180deg,rgba(227,30,36,.08),var(--surface) 60%);border:1.5px solid rgba(227,30,36,.25);overflow:hidden;min-height:200px;display:flex;flex-direction:column;justify-content:flex-end;position:relative;box-shadow:0 0 16px rgba(227,30,36,.08)}
+.bonus-featured-content{padding:20px;position:relative;z-index:1}
+.bonus-featured .bf-tags{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bf-tag{font-size:9px;font-weight:800;text-transform:uppercase;padding:3px 8px;border-radius:4px;letter-spacing:1px;background:rgba(227,30,36,.15);color:var(--red);border:1px solid rgba(227,30,36,.2)}
+.bf-timer{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--dim);font-weight:500}
+.bf-timer .material-symbols-outlined{font-size:12px}
+.bf-title{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#fff;margin-bottom:4px;letter-spacing:-.3px}
+.bf-desc{font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:16px}
+.bf-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.bf-wager-label{font-size:9px;text-transform:uppercase;font-weight:800;color:var(--dim2);letter-spacing:1px}
+.bf-wager-val{font-weight:800;color:#fff;font-size:14px}
+.bf-activate{height:38px;padding:0 20px;border-radius:20px;border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 12px var(--red-glow);transition:all .15s;text-transform:uppercase}
+.bf-activate:active{transform:scale(.95)}
+.bf-activate .material-symbols-outlined{font-size:16px}
+
+/* Bonus list card */
+.bonus-card{margin:0 16px 12px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);overflow:hidden;display:flex;transition:border-color .2s}
+.bonus-card:active{border-color:rgba(227,30,36,.3)}
+.bonus-card-img{width:33%;min-height:110px;display:flex;align-items:center;justify-content:center;font-size:36px;position:relative}
+.bonus-card-img::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,transparent,var(--surface))}
+.bonus-card-body{flex:1;padding:14px 14px 14px 8px;display:flex;flex-direction:column;justify-content:center}
+.bonus-card-title{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:#fff;margin-bottom:4px}
+.bonus-card-desc{font-size:11px;color:var(--dim);line-height:1.4;margin-bottom:10px}
+.bonus-card-btn{height:32px;padding:0 16px;border-radius:16px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-family:'Montserrat',sans-serif;font-weight:700;font-size:11px;cursor:pointer;transition:all .15s;text-transform:uppercase;align-self:flex-start}
+.bonus-card-btn:active{background:rgba(227,30,36,.08)}
+
+/* Locked bonus */
+.bonus-locked{margin:0 16px 12px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);overflow:hidden;display:flex;opacity:.5}
+.bonus-locked .lock-icon{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.bonus-locked .lock-icon .material-symbols-outlined{font-size:14px;color:var(--dim)}
+.bonus-locked-body{flex:1;padding:14px;position:relative}
+.bonus-locked .bl-title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:var(--dim)}
+.bonus-locked .bl-desc{font-size:10px;color:var(--dim2);margin-bottom:8px}
+.bl-progress{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.bl-progress-fill{height:100%;background:var(--dim);border-radius:2px}
+.bl-progress-label{font-size:9px;color:var(--dim2);text-align:right;margin-top:3px}
+
+/* ======================== */
+/* === WALLET SCREEN === */
+/* ======================== */
+.wallet-balance{text-align:center;padding:24px 16px 16px}
+.wallet-balance-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:4px}
+.wallet-balance-amount{display:flex;align-items:baseline;justify-content:center;gap:8px}
+.wallet-balance-amount h1{font-family:'Montserrat',sans-serif;font-size:48px;font-weight:900;color:#fff;letter-spacing:-2px}
+.wallet-balance-amount .unit{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;color:var(--red)}
+.wallet-balance-usd{font-size:13px;color:var(--dim);margin-top:2px}
+
+.wallet-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px;margin-bottom:16px}
+.wallet-actions .btn-primary{height:50px;font-size:13px}
+.wallet-actions .btn-outline{height:50px;font-size:13px}
+.wallet-history-btn{margin:0 16px 16px;height:44px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--dim);font-family:'Inter',sans-serif;font-weight:500;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;width:calc(100% - 32px)}
+.wallet-history-btn:active{background:var(--surface2)}
+.wallet-history-btn .material-symbols-outlined{font-size:18px}
+
+.wallet-assets{padding:0 16px;margin-bottom:16px}
+.wallet-assets-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:10px}
+.asset-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.asset-btn{height:42px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--dim);font-family:'Montserrat',sans-serif;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s}
+.asset-btn.active{border:2px solid var(--red);color:#fff;background:rgba(227,30,36,.06);box-shadow:0 0 8px var(--red-glow)}
+
+/* Deposit info card */
+.deposit-card{margin:0 16px 16px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl)}
+.deposit-card .dc-network{display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:16px}
+.dc-network-left{display:flex;align-items:center;gap:8px}
+.dc-network .dc-dot{width:8px;height:8px;background:var(--red);border-radius:50%;box-shadow:0 0 6px var(--red);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
+.dc-network .dc-name{font-size:13px;font-weight:600}
+.dc-network .dc-status{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--red);letter-spacing:1px;border:1px solid rgba(227,30,36,.2);background:rgba(227,30,36,.05);padding:2px 8px;border-radius:4px}
+.dc-info{text-align:center;padding:8px 0;font-size:12px;color:var(--dim);margin-bottom:12px}
+.dc-info span{color:#fff;font-weight:700}
+.dc-address-box{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 6px 6px 14px}
+.dc-address{flex:1;font-family:monospace;font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-copy{width:36px;height:36px;border-radius:8px;border:none;background:var(--surface2);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.dc-copy:active{background:var(--red);color:#fff}
+.dc-copy .material-symbols-outlined{font-size:16px}
+.dc-note{display:flex;align-items:flex-start;gap:8px;background:rgba(227,30,36,.04);border:1px solid rgba(227,30,36,.12);border-radius:var(--radius);padding:12px;margin-top:12px}
+.dc-note .material-symbols-outlined{font-size:16px;color:var(--red);margin-top:1px;flex-shrink:0}
+.dc-note p{font-size:11px;color:var(--dim);line-height:1.5}
+.dc-note p span{color:var(--red);font-weight:700}
+
+/* ======================== */
+/* === REFERRAL SCREEN === */
+/* ======================== */
+.ref-hero{margin:16px;border-radius:var(--radius-xl);background:var(--surface);border:1px solid var(--border);padding:28px 20px;text-align:center;position:relative;overflow:hidden}
+.ref-hero::before{content:'';position:absolute;top:-60px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(227,30,36,.12),transparent 70%);border-radius:50%}
+.ref-hero::after{content:'';position:absolute;bottom:-40px;left:-40px;width:150px;height:150px;background:radial-gradient(circle,rgba(227,30,36,.08),transparent 70%);border-radius:50%}
+.ref-hero-icon{margin-bottom:12px;position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
+.ref-hero h1{font-family:'Montserrat',sans-serif;font-size:26px;font-weight:900;margin-bottom:6px;position:relative;z-index:1;letter-spacing:-.5px}
+.ref-hero h1 span{color:var(--red)}
+.ref-hero p{font-size:13px;color:var(--dim);line-height:1.5;position:relative;z-index:1}
+.ref-hero p b{color:#fff}
+
+.ref-link-card{margin:0 16px 16px;padding:2px;border-radius:var(--radius-lg);background:linear-gradient(90deg,rgba(227,30,36,.3),var(--red),rgba(227,30,36,.3));box-shadow:0 0 12px rgba(227,30,36,.15)}
+.ref-link-inner{background:var(--surface);border-radius:calc(var(--radius-lg) - 2px);padding:16px}
+.ref-link-label{text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);margin-bottom:12px}
+.ref-link-box{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:4px 4px 4px 12px}
+.ref-link-box .ref-url{flex:1;font-size:12px;font-weight:500;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ref-link-box .ref-copy{height:38px;padding:0 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.ref-link-box .ref-copy:active{transform:scale(.95)}
+.ref-link-box .ref-copy .material-symbols-outlined{font-size:16px}
+
+.ref-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px;margin-bottom:16px}
+.ref-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s}
+.ref-stat-card:hover{border-color:rgba(227,30,36,.2)}
+.ref-stat-top{display:flex;justify-content:space-between;align-items:center}
+.ref-stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.ref-stat-icon .material-symbols-outlined{font-size:18px}
+.ref-stat-icon.people{background:rgba(227,30,36,.08);color:var(--red)}
+.ref-stat-icon.money{background:rgba(59,130,246,.08);color:var(--blue)}
+.ref-stat-badge{font-size:10px;font-weight:700;color:var(--green);background:rgba(34,197,94,.08);padding:2px 8px;border-radius:10px}
+.ref-stat-label{font-size:10px;font-weight:600;color:var(--dim)}
+.ref-stat-val{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#fff}
+
+.ref-how{margin:0 16px 16px}
+.ref-how-title{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;margin-bottom:12px}
+.ref-steps{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
+.ref-step{display:flex;gap:14px;margin-bottom:20px}
+.ref-step:last-child{margin-bottom:0}
+.ref-step-line{display:flex;flex-direction:column;align-items:center}
+.ref-step-num{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
+.ref-step:last-child .ref-step-num{background:var(--red);color:#fff;border:none;box-shadow:0 0 10px var(--red-glow)}
+.ref-step-connector{width:1px;flex:1;background:var(--border);margin:4px 0}
+.ref-step-content h3{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.ref-step-content p{font-size:11px;color:var(--dim);line-height:1.5}
+
+.ref-share-btn{position:fixed;bottom:calc(var(--nav-h) + 16px);left:50%;transform:translateX(-50%);height:46px;padding:0 28px;border-radius:23px;border:none;background:#fff;color:var(--red);font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:40;transition:all .15s}
+.ref-share-btn:active{transform:translateX(-50%) scale(.95)}
+.ref-share-btn .material-symbols-outlined{font-size:18px}
+
+/* ======================== */
 /* === PROFILE SCREEN === */
-.profile-header{text-align:center;padding:30px 16px 20px}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--pink));display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 10px}
-.profile-name{font-size:18px;font-weight:800}.profile-vip{font-size:12px;color:var(--accent);font-weight:700}
-.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 16px;margin-bottom:16px}
-.stat-card{background:var(--card);border-radius:var(--radius);padding:14px;text-align:center}
-.stat-val{font-size:20px;font-weight:900;color:var(--accent)}.stat-label{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;margin-top:2px}
-.profile-actions{padding:0 16px;display:flex;flex-direction:column;gap:8px}
-.profile-btn{padding:14px 16px;border-radius:var(--radius);background:var(--card);border:none;color:var(--text);display:flex;align-items:center;gap:10px;font-family:'Outfit';font-size:14px;font-weight:600;cursor:pointer;text-align:left}
-.profile-btn:active{opacity:.7}
-.profile-btn .pb-icon{font-size:18px}
+/* ======================== */
+.prof-header{text-align:center;padding:24px 16px 16px}
+.prof-avatar{width:80px;height:80px;border-radius:50%;padding:3px;background:var(--red);box-shadow:0 0 16px var(--red-glow);margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.prof-avatar-inner{width:100%;height:100%;border-radius:50%;background:var(--surface);border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden}
+.prof-name{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:-.3px}
+.prof-meta{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px}
+.prof-id{font-size:11px;color:var(--dim);font-family:monospace;letter-spacing:.5px}
+.prof-vip-badge{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--red);font-weight:700}
+.prof-vip-badge .material-symbols-outlined{font-size:14px}
 
-/* === BONUS OVERLAY === */
-.bonus-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
+.prof-level{padding:0 16px;margin-bottom:20px}
+.prof-level-top{display:flex;justify-content:space-between;margin-bottom:6px}
+.prof-level-name{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-family:'Montserrat',sans-serif}
+.prof-level-val{font-size:11px;font-weight:600;color:var(--red)}
+.prof-level .vip-bar{margin-bottom:4px}
+.prof-level-xp{display:flex;justify-content:space-between;font-size:9px;color:var(--dim2)}
+
+.prof-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.prof-stat{padding:14px;text-align:center;border-right:1px solid var(--border)}
+.prof-stat:last-child{border-right:none}
+.prof-stat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:4px}
+.prof-stat-val{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff}
+
+.prof-referral-btn{margin:0 16px 12px;padding:14px 16px;background:var(--surface);border:1.5px solid rgba(227,30,36,.25);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .15s;box-shadow:0 0 8px rgba(227,30,36,.05)}
+.prof-referral-btn:active{background:rgba(227,30,36,.04)}
+.prof-ref-left{display:flex;align-items:center;gap:12px}
+.prof-ref-icon{width:36px;height:36px;border-radius:50%;background:rgba(227,30,36,.08);border:1px solid rgba(227,30,36,.15);display:flex;align-items:center;justify-content:center}
+.prof-ref-icon .material-symbols-outlined{font-size:18px;color:var(--red)}
+.prof-ref-text h3{font-size:13px;font-weight:700;color:#fff}
+.prof-ref-text p{font-size:10px;color:var(--dim)}
+.prof-referral-btn .material-symbols-outlined{color:var(--red);font-size:18px;transition:transform .15s}
+.prof-referral-btn:active .material-symbols-outlined:last-child{transform:translateX(2px)}
+
+.prof-menu{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.prof-menu-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.prof-menu-item:last-child{border-bottom:none}
+.prof-menu-item:active{background:var(--surface2)}
+.prof-menu-left{display:flex;align-items:center;gap:12px}
+.prof-menu-left .material-symbols-outlined{font-size:20px;color:var(--red)}
+.prof-menu-left span:last-child{font-size:13px;font-weight:500}
+.prof-menu-item .material-symbols-outlined:last-child{font-size:18px;color:var(--dim2)}
+
+.prof-signout{display:block;margin:0 auto;padding:12px 24px;border:none;background:none;color:var(--dim);font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:color .15s}
+.prof-signout:active{color:var(--red)}
+
+/* ======================== */
+/* === OVERLAYS === */
+/* ======================== */
+.bonus-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px}
 .bonus-overlay.show{display:flex}
-.bo-title{font-size:24px;font-weight:900;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:bo-pop .5s ease-out}
+.bo-title{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:var(--red);text-shadow:0 0 20px var(--red-glow);animation:bo-pop .5s ease-out}
 @keyframes bo-pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
-.bo-info{display:flex;gap:16px}.bo-info-item{text-align:center;background:var(--card);border-radius:12px;padding:8px 16px}
-.bo-info-item .label{font-size:10px;color:var(--dim)}.bo-info-item .val{font-size:18px;font-weight:900;color:var(--gold)}
-.bo-grid-wrap{width:100%;max-width:380px;background:rgba(0,0,0,.5);border:2px solid var(--pink);border-radius:var(--radius);padding:6px}
+.bo-info{display:flex;gap:16px}.bo-info-item{text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 16px}
+.bo-info-item .label{font-size:10px;color:var(--dim)}.bo-info-item .val{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:var(--gold)}
+.bo-grid-wrap{width:100%;max-width:380px;background:rgba(0,0,0,.5);border:2px solid var(--red);border-radius:var(--radius-lg);padding:6px}
 .bo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
 .bo-result{font-weight:800;font-size:18px;color:var(--green);text-align:center;min-height:24px}
-.bo-total{font-size:28px;font-weight:900;color:var(--gold);text-align:center}
-.bo-close{padding:12px 36px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent),#a0ff00);color:#000;font-family:'Outfit';font-weight:900;font-size:15px;cursor:pointer;display:none}
+.bo-total{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:var(--gold);text-align:center}
+.bo-close{padding:12px 36px;border-radius:var(--radius);border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:900;font-size:15px;cursor:pointer;display:none;box-shadow:0 4px 16px var(--red-glow)}
 
 /* Wheel overlay */
 .wheel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px}
 .wheel-overlay.show{display:flex}
-.wo-title{font-size:22px;font-weight:900;color:var(--green)}
-.wo-wheel{width:200px;height:200px;border-radius:50%;border:4px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:48px;transition:transform 3s cubic-bezier(.17,.67,.12,.99)}
-.wo-prize{font-size:28px;font-weight:900;color:var(--accent);min-height:40px}
-.wo-btn{padding:14px 40px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--green),#00c853);color:#fff;font-family:'Outfit';font-weight:900;font-size:16px;cursor:pointer}
+.wo-title{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:var(--green)}
+.wheel-container{position:relative;width:260px;height:260px;margin:0 auto}
+.wheel-canvas{width:260px;height:260px;border-radius:50%;transition:transform 4s cubic-bezier(.17,.67,.05,.99)}
+.wheel-pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:28px;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:900;font-size:14px;color:#fff;box-shadow:0 0 20px var(--red-glow);z-index:5}
+.wo-prize{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:var(--red);min-height:40px}
+.wo-btn{padding:14px 40px;border-radius:var(--radius);border:none;background:var(--green);color:#fff;font-family:'Montserrat',sans-serif;font-weight:900;font-size:16px;cursor:pointer}
 
-.bomb-pop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:900;font-size:44px;color:var(--red);z-index:300;pointer-events:none;animation:bp .7s ease-out forwards}
-@keyframes bp{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.4);opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
-
-/* === SPEED TOGGLE === */
-.speed-row{display:flex;gap:6px;align-items:center;padding:4px 6px;margin-top:4px}
-.speed-label{font-size:10px;color:var(--dim);font-weight:700;min-width:24px}
-.speed-btns{display:flex;gap:4px;flex:1}
-.speed-btn{flex:1;padding:6px 0;border-radius:8px;border:1.5px solid rgba(255,255,255,.08);background:transparent;color:var(--dim);font-family:'Outfit';font-weight:700;font-size:11px;cursor:pointer;transition:all .15s}
-.speed-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(200,255,46,.08)}
-
-/* === TOAST POPUP === */
-.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--card);border:1.5px solid var(--pink);border-radius:20px;padding:24px 28px;text-align:center;z-index:500;transition:transform .25s cubic-bezier(.34,1.56,.64,1);max-width:300px;width:85%}
+/* Toast */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:var(--surface);border:1.5px solid var(--red);border-radius:var(--radius-xl);padding:24px 28px;text-align:center;z-index:500;transition:transform .25s cubic-bezier(.34,1.56,.64,1);max-width:300px;width:85%}
 .toast.show{transform:translate(-50%,-50%) scale(1)}
 .toast-icon{font-size:40px;margin-bottom:8px}
 .toast-text{font-size:14px;font-weight:700;margin-bottom:14px;line-height:1.4}
 .toast-btns{display:flex;gap:8px}
-.toast-btn{flex:1;padding:10px;border-radius:12px;border:none;font-family:'Outfit';font-weight:800;font-size:13px;cursor:pointer;transition:transform .1s}
+.toast-btn{flex:1;padding:10px;border-radius:var(--radius);border:none;font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;cursor:pointer;transition:transform .1s}
 .toast-btn:active{transform:scale(.95)}
-.toast-btn.primary{background:linear-gradient(135deg,var(--green),#00c853);color:#fff}
-.toast-btn.secondary{background:rgba(255,255,255,.08);color:var(--dim)}
+.toast-btn.primary{background:var(--red);color:#fff;box-shadow:0 2px 10px var(--red-glow)}
+.toast-btn.secondary{background:var(--surface2);color:var(--dim)}
 
-/* === REAL WHEEL === */
-.wheel-container{position:relative;width:260px;height:260px;margin:0 auto}
-.wheel-canvas{width:260px;height:260px;border-radius:50%;transition:transform 4s cubic-bezier(.17,.67,.05,.99)}
-.wheel-pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:28px;z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
-.wheel-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#a0ff00);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:#000;box-shadow:0 0 20px rgba(200,255,46,.3);z-index:5}
+.bomb-pop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:900;font-size:44px;color:var(--red);z-index:300;pointer-events:none;animation:bp .7s ease-out forwards}
+@keyframes bp{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.4);opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
 </style>
 </head>
 <body>
 
+<!-- ===== HEADER (shared) ===== -->
+<div class="header" id="mainHeader">
+    <div class="logo">
+        <div class="logo-icon"><span class="material-symbols-outlined">diamond</span></div>
+        <div class="logo-text">RUBY<span>BET</span></div>
+    </div>
+    <div class="header-right">
+        <div class="header-bal" onclick="nav('wallet')"><span id="headerBal">...</span><span class="amt" id="headerUnit">coins</span></div>
+        <div class="header-notif"><span class="material-symbols-outlined">notifications</span><div class="dot"></div></div>
+    </div>
+</div>
+
 <!-- ===== SCREEN: LOBBY ===== -->
 <div class="screen active" id="scrLobby">
-    <div class="topbar">
-        <div class="topbar-logo">Lucky Bonanza</div>
-        <div class="topbar-balance" onclick="nav('deposit')"><div class="coin-icon">$</div><span id="lobbyBal">...</span></div>
+    <div class="lobby-search" onclick="/* future search */"><span class="material-symbols-outlined">search</span><span id="searchPlaceholder">Search games...</span></div>
+
+    <div class="hero-banner">
+        <div class="hero-tag"><span class="material-symbols-outlined">local_fire_department</span><span id="heroTag">HOT</span></div>
+        <div class="hero-title" id="heroTitle">RUBY <span class="accent">JACKPOT</span></div>
+        <div class="hero-sub" id="heroSub">5,000 coins prize pool</div>
+        <div class="hero-actions">
+            <button class="hero-btn filled" onclick="nav('game')"><span class="material-symbols-outlined" style="font-size:16px">play_arrow</span><span id="heroPlay">PLAY NOW</span></button>
+        </div>
     </div>
-    <div class="promo-banner">
-        <div class="promo-tag" id="promoTag">Welcome Bonus</div>
-        <div class="promo-title" id="promoTitle">Lucky Bonanza 🍭</div>
-        <div class="promo-sub" id="promoSub">Spin & win up to x100!</div>
-    </div>
+
     <div class="wheel-banner" id="wheelBanner" onclick="openWheel()">
         <div class="wheel-icon">🎡</div>
         <div class="wheel-info"><h3 id="wheelTitle">Daily Wheel</h3><p id="wheelSub">Spin for free coins!</p></div>
     </div>
-    <div class="vip-card" id="vipCard">
-        <div class="vip-icon" id="vipIcon">🥉</div>
-        <div class="vip-info">
-            <div class="vip-name" id="vipName">Bronze</div>
-            <div class="vip-cb" id="vipCb">1% cashback</div>
+
+    <div class="vip-strip" id="vipStrip">
+        <div class="vip-strip-info">
+            <div class="vip-strip-top">
+                <div class="vip-strip-name"><span id="vipIcon">🥉</span> <span id="vipName">Bronze</span></div>
+                <div class="vip-strip-pct" id="vipPct"></div>
+            </div>
             <div class="vip-bar"><div class="vip-bar-fill" id="vipBar" style="width:0%"></div></div>
         </div>
     </div>
-    <div class="section">
-        <div class="section-header"><div class="section-title" id="secGames">Games</div></div>
-        <div class="games-row" id="gamesRow"></div>
+
+    <div class="section"><div class="section-head"><div class="section-title" id="secCat">CATEGORIES</div><div class="section-more" id="secCatMore">VIEW ALL</div></div></div>
+    <div class="cat-row" id="catRow"></div>
+
+    <div class="section"><div class="section-head"><div class="section-title"><span style="color:var(--red)">🔥</span> <span id="secTrending">TRENDING NOW</span></div></div></div>
+    <div class="game-grid" id="gameGrid"></div>
+</div>
+
+<!-- ===== SCREEN: GAME (Ruby Slots) ===== -->
+<div class="screen" id="scrGame">
+    <div class="game-header">
+        <div class="game-back" onclick="nav('lobby')"><span class="material-symbols-outlined">arrow_back</span></div>
+        <div class="game-title-bar">RUBY SLOTS</div>
+        <div class="game-bal"><span class="material-symbols-outlined">toll</span><span id="gameBal">0</span></div>
     </div>
-    <div class="section">
-        <div class="section-header"><div class="section-title" id="secComing">Coming Soon</div></div>
-        <div class="games-row" id="comingRow"></div>
+    <div class="jackpot-display">
+        <div class="jackpot-label" id="jackpotLabel">GRAND JACKPOT</div>
+        <div class="jackpot-amount">50,000<span>coins</span></div>
+    </div>
+    <div class="grid-frame" id="gridFrame"><div class="grid" id="grid"></div></div>
+    <div class="game-result" id="gameResult"></div>
+    <div class="free-spin-badge" id="freeBadge"></div>
+    <div class="game-controls">
+        <div class="bet-group">
+            <button class="bet-btn on" onclick="setBet(5)">5</button>
+            <button class="bet-btn" onclick="setBet(10)">10</button>
+            <button class="bet-btn" onclick="setBet(25)">25</button>
+            <button class="bet-btn" onclick="setBet(50)">50</button>
+        </div>
+        <button class="spin-btn m-load" id="spinBtn" onclick="doSpin()"><span id="spinTxt">...</span></button>
+    </div>
+    <button class="buy-bonus" onclick="buyBonus()">
+        <div class="bb-left">🔥 <span id="bbLabel">Buy Bonus</span></div>
+        <div class="bb-right"><span id="bbPrice">500</span> 🪙</div>
+    </button>
+    <div class="speed-row">
+        <div class="speed-label">⚡</div>
+        <div class="speed-btns">
+            <button class="speed-btn" onclick="setSpeed(0)" id="spd0">🐢</button>
+            <button class="speed-btn on" onclick="setSpeed(1)" id="spd1">▶️</button>
+            <button class="speed-btn" onclick="setSpeed(2)" id="spd2">⚡</button>
+        </div>
     </div>
 </div>
 
-<!-- ===== SCREEN: GAME ===== -->
-<div class="screen" id="scrGame">
-    <div class="game-topbar">
-        <div class="game-back" onclick="nav('lobby')">←</div>
-        <div style="font-weight:800;font-size:16px">🍭 Lucky Bonanza</div>
-        <div class="game-balance">🪙 <span id="gameBal">0</span></div>
-    </div>
-    <div class="game-area">
-        <div class="grid-frame" id="gridFrame"><div class="grid" id="grid"></div></div>
-        <div class="game-result" id="gameResult"></div>
-        <div class="free-spin-badge" id="freeBadge"></div>
-        <div class="game-controls">
-            <div class="bet-group">
-                <button class="bet-btn on" onclick="setBet(5)">5</button>
-                <button class="bet-btn" onclick="setBet(10)">10</button>
-                <button class="bet-btn" onclick="setBet(25)">25</button>
-                <button class="bet-btn" onclick="setBet(50)">50</button>
+<!-- ===== SCREEN: BONUSES ===== -->
+<div class="screen" id="scrBonuses">
+    <div style="padding:16px 16px 8px"><h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900" id="bonusTitle">Bonuses</h2></div>
+    <div class="pill-row" id="bonusPills"></div>
+
+    <div class="bonus-featured">
+        <div style="position:absolute;inset:0;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover;opacity:.4"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)"></div>
+        <div class="bonus-featured-content">
+            <div class="bf-tags">
+                <div class="bf-tag" id="bfTag">EXCLUSIVE</div>
+                <div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span id="bfTimer">Expires in 24h</span></div>
             </div>
-            <button class="spin-btn m-load" id="spinBtn" onclick="doSpin()"><span id="spinTxt">...</span></button>
-        </div>
-        <button class="buy-bonus" onclick="buyBonus()">
-            <div class="bb-left">🔥 <span id="bbLabel">Buy Bonus</span></div>
-            <div class="bb-right"><span id="bbPrice">500</span> 🪙</div>
-        </button>
-        <div class="speed-row">
-            <div class="speed-label">⚡</div>
-            <div class="speed-btns">
-                <button class="speed-btn" onclick="setSpeed(0)" id="spd0">🐢</button>
-                <button class="speed-btn on" onclick="setSpeed(1)" id="spd1">▶️</button>
-                <button class="speed-btn" onclick="setSpeed(2)" id="spd2">⚡</button>
+            <div class="bf-title" id="bfTitle">100% Deposit Match</div>
+            <div class="bf-desc" id="bfDesc">Get up to 1 BTC on your first deposit. Double your playing money instantly.</div>
+            <div class="bf-bottom">
+                <div><div class="bf-wager-label" id="bfWagerL">WAGER</div><div class="bf-wager-val">x30</div></div>
+                <button class="bf-activate" onclick="nav('wallet')"><span id="bfActivate">Activate</span><span class="material-symbols-outlined">arrow_forward</span></button>
             </div>
         </div>
     </div>
+
+    <div class="bonus-card" id="bonusCard1">
+        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0') center/cover"></div>
+        <div class="bonus-card-body">
+            <div class="bonus-card-title" id="bc1Title">50 Free Spins</div>
+            <div class="bonus-card-desc" id="bc1Desc">Valid for Ruby Slots. No deposit required for new players.</div>
+            <button class="bonus-card-btn" id="bc1Btn">Claim Now</button>
+        </div>
+    </div>
+
+    <div class="bonus-card" id="bonusCard2">
+        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw') center/cover"></div>
+        <div class="bonus-card-body">
+            <div class="bonus-card-title" id="bc2Title">Weekly Cashback</div>
+            <div class="bonus-card-desc" id="bc2Desc">Get 10% back on all losses every Monday. VIP tiers get up to 20%.</div>
+            <button class="bonus-card-btn" id="bc2Btn">Join Club</button>
+        </div>
+    </div>
+
+    <div class="bonus-locked" style="position:relative">
+        <div style="width:33%;min-height:100px;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y') center/cover;filter:grayscale(1);flex-shrink:0"></div>
+        <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
+        <div class="bonus-locked-body">
+            <div class="bl-title" id="blTitle">Diamond VIP Status</div>
+            <div class="bl-desc" id="blDesc">Unlock exclusive tournaments.</div>
+            <div class="bl-progress"><div class="bl-progress-fill" style="width:45%"></div></div>
+            <div class="bl-progress-label">Level 4/10</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SCREEN: WALLET ===== -->
+<div class="screen" id="scrWallet">
+    <div class="wallet-balance">
+        <div class="wallet-balance-label" id="wBalLabel">TOTAL BALANCE</div>
+        <div class="wallet-balance-amount">
+            <h1 id="wBalAmount">0</h1>
+            <div class="unit" id="wBalUnit">coins</div>
+        </div>
+    </div>
+
+    <div class="wallet-actions">
+        <button class="btn-primary" onclick="nav('deposit')"><span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span><span id="wDeposit">DEPOSIT</span></button>
+        <button class="btn-outline" style="color:var(--red)"><span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span><span id="wWithdraw">WITHDRAW</span></button>
+    </div>
+
+    <button class="wallet-history-btn"><span class="material-symbols-outlined">history</span><span id="wHistory">View Transaction History</span></button>
+
+    <div class="wallet-assets">
+        <div class="wallet-assets-label" id="wAssetLabel">SELECT PACKAGE</div>
+        <div class="asset-row" id="assetRow"></div>
+    </div>
+
+    <div class="deposit-card">
+        <div class="dc-network">
+            <div class="dc-network-left"><div class="dc-dot"></div><div class="dc-name">CryptoBot</div></div>
+            <div class="dc-status">ACTIVE</div>
+        </div>
+        <div class="dc-info" id="dcInfo">Pay with <span>USDT</span> via CryptoBot. Instant delivery.</div>
+        <div class="dc-note">
+            <span class="material-symbols-outlined">info</span>
+            <p id="dcNote">Minimum deposit is <span>$0.50</span>. Coins are added instantly after payment.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SCREEN: REFERRAL ===== -->
+<div class="screen" id="scrReferral">
+    <div class="ref-hero">
+        <div class="ref-hero-icon"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpCm-In3qaads4-907wOGoyxZRtNhNrOWD-U1kAC57uAA0oO3DnPwchxZ4EraGR6QuJgvoSYkYmuPig3Bi5g-ROCe5cnWc_zg4Jis0UHe8n3saeShVPK2gJ4DXrXcOK-M2IjhFYujSo3fc2HFsdKyGllktDw2yiUFcLx0VlGohAFPIZdJjzEn-_bw47k35CYqzdnl6tKITBGL_Jdj7BNOqIkQ5uK71RWcXAWNxEJtmUIMLeNmbVOuLBo45VWiYk9VAWFqJvWBhpeY" alt="Coins" style="width:100px;height:100px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(227,30,36,.3))"></div>
+        <h1 id="refHeroTitle">Invite & <span>Earn</span></h1>
+        <p id="refHeroDesc">Share your link and earn <b>10 coins</b> for every friend who plays.</p>
+    </div>
+
+    <div class="ref-link-card">
+        <div class="ref-link-inner">
+            <div class="ref-link-label" id="refLinkLabel">TAP COPY TO SHARE</div>
+            <div class="ref-link-box">
+                <div class="ref-url" id="refUrl">https://t.me/bot?start=ref...</div>
+                <button class="ref-copy" onclick="copyRefLink()"><span class="material-symbols-outlined">content_copy</span><span id="refCopyText">Copy</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ref-stats">
+        <div class="ref-stat-card">
+            <div class="ref-stat-top">
+                <div class="ref-stat-icon people"><span class="material-symbols-outlined">group_add</span></div>
+                <div class="ref-stat-badge" id="refNewBadge"></div>
+            </div>
+            <div class="ref-stat-label" id="refTotalLabel">Total Referrals</div>
+            <div class="ref-stat-val" id="refTotalVal">0</div>
+        </div>
+        <div class="ref-stat-card">
+            <div class="ref-stat-top">
+                <div class="ref-stat-icon money"><span class="material-symbols-outlined">account_balance_wallet</span></div>
+            </div>
+            <div class="ref-stat-label" id="refEarnedLabel">Earned Coins</div>
+            <div class="ref-stat-val" id="refEarnedVal">0</div>
+        </div>
+    </div>
+
+    <div class="ref-how">
+        <div class="ref-how-title" id="refHowTitle">How it Works</div>
+        <div class="ref-steps">
+            <div class="ref-step"><div class="ref-step-line"><div class="ref-step-num">1</div><div class="ref-step-connector"></div></div><div class="ref-step-content"><h3 id="refStep1T">Share with friends</h3><p id="refStep1D">Send your unique link via Telegram or social media.</p></div></div>
+            <div class="ref-step"><div class="ref-step-line"><div class="ref-step-num">2</div><div class="ref-step-connector"></div></div><div class="ref-step-content"><h3 id="refStep2T">Friends start playing</h3><p id="refStep2D">When they register, you both get bonus coins.</p></div></div>
+            <div class="ref-step"><div class="ref-step-line"><div class="ref-step-num">3</div></div><div class="ref-step-content"><h3 id="refStep3T">Earn Rewards</h3><p id="refStep3D">Get 10 coins for every friend who joins.</p></div></div>
+        </div>
+    </div>
+
+    <button class="ref-share-btn" onclick="shareRef()"><span class="material-symbols-outlined">ios_share</span><span id="refShareBtn">Share Link Now</span></button>
 </div>
 
 <!-- ===== SCREEN: PROFILE ===== -->
 <div class="screen" id="scrProfile">
-    <div class="profile-header">
-        <div class="profile-avatar" id="profAvatar">😎</div>
-        <div class="profile-name" id="profName">Player</div>
-        <div class="profile-vip" id="profVip">🥉 Bronze</div>
+    <div class="prof-header">
+        <div class="prof-avatar"><div class="prof-avatar-inner" id="profAvatarInner"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr3zsmMzZoKQBmXyKeYm7wjdUyCdTgqgmWcGFJrHZ1j04p23PyhyC-veLVchduXKVpILhD8OvgoBIY1kOdWCDOIZgRURbE4kJTa5KugjgI2XTZ2f-Atab5Y1nG3egXh_6wk1yFwzjlyBkkbJ3ID-hqkVSJfimD4Exhl70tk5RZYzwUAQXuY1t0RWIhqsrPPWPeni-TFGVUKHJ7X0JKR0ANZAZXV9wWgMeBNnOzlApLWWe8wo3HJ13XCqJvvsTxAsyt3XT5UdULBhM" alt="Avatar" style="width:100%;height:100%;object-fit:cover"></div></div>
+        <div class="prof-name" id="profName">Player</div>
+        <div class="prof-meta">
+            <span class="prof-id" id="profId">ID: ...</span>
+            <span style="width:1px;height:14px;background:var(--surface2)"></span>
+            <span class="prof-vip-badge"><span class="material-symbols-outlined">stars</span><span id="profVipBadge">VIP</span></span>
+        </div>
     </div>
-    <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val" id="stSpins">0</div><div class="stat-label" id="stSpinsL">Spins</div></div>
-        <div class="stat-card"><div class="stat-val" id="stWon">0</div><div class="stat-label" id="stWonL">Won</div></div>
-        <div class="stat-card"><div class="stat-val" id="stBiggest">0</div><div class="stat-label" id="stBigL">Best Win</div></div>
-        <div class="stat-card"><div class="stat-val" id="stProfit">0</div><div class="stat-label" id="stProfL">Profit</div></div>
+
+    <div class="prof-level">
+        <div class="prof-level-top">
+            <div class="prof-level-name" id="profLevelName">Bronze</div>
+            <div class="prof-level-val" id="profLevelVal">Level 1</div>
+        </div>
+        <div class="vip-bar"><div class="vip-bar-fill" id="profVipBar" style="width:0%"></div></div>
+        <div class="prof-level-xp"><span id="profXpLabel">Current XP</span><span id="profXpVal">0 / 1000</span></div>
     </div>
-    <div class="profile-actions">
-        <button class="profile-btn" onclick="nav('deposit')"><span class="pb-icon">💳</span><span id="profBuy">Buy Coins</span></button>
-        <button class="profile-btn" onclick="shareRef()"><span class="pb-icon">👥</span><span id="profRef">Invite Friends</span> <span id="profRefCnt" style="margin-left:auto;color:var(--accent)"></span></button>
-        <button class="profile-btn" onclick="changeLang()"><span class="pb-icon">🌐</span><span id="profLang">Language</span></button>
+
+    <div class="prof-stats">
+        <div class="prof-stat"><div class="prof-stat-label" id="stWinsL">WINS</div><div class="prof-stat-val" id="stWins">0</div></div>
+        <div class="prof-stat"><div class="prof-stat-label" id="stLossesL">LOSSES</div><div class="prof-stat-val" id="stLosses">0</div></div>
+        <div class="prof-stat"><div class="prof-stat-label" id="stTotalL">TOTAL</div><div class="prof-stat-val" id="stTotal">0</div></div>
     </div>
+
+    <div class="prof-referral-btn" onclick="nav('referral')">
+        <div class="prof-ref-left">
+            <div class="prof-ref-icon"><span class="material-symbols-outlined">diversity_3</span></div>
+            <div class="prof-ref-text"><h3 id="profRefTitle">Referral Program</h3><p id="profRefSub">Invite friends & earn rewards</p></div>
+        </div>
+        <span class="material-symbols-outlined">arrow_forward</span>
+    </div>
+
+    <div class="prof-menu">
+        <div class="prof-menu-item" onclick="changeLang()"><div class="prof-menu-left"><span class="material-symbols-outlined">settings</span><span id="profSettings">Settings</span></div><span class="material-symbols-outlined">chevron_right</span></div>
+        <div class="prof-menu-item"><div class="prof-menu-left"><span class="material-symbols-outlined">security</span><span id="profSecurity">Security</span></div><span class="material-symbols-outlined">chevron_right</span></div>
+        <div class="prof-menu-item"><div class="prof-menu-left"><span class="material-symbols-outlined">headset_mic</span><span id="profSupport">Support</span></div><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <button class="prof-signout" id="profSignout">Sign Out</button>
 </div>
 
 <!-- ===== BOTTOM NAV ===== -->
 <div class="bottom-nav">
-    <div class="nav-item active" data-screen="lobby" onclick="nav('lobby')"><div class="nav-icon">🏠</div><div class="nav-label" id="navLobby">Lobby</div></div>
-    <div class="nav-item" data-screen="game" onclick="nav('game')"><div class="nav-icon">🎰</div><div class="nav-label" id="navPlay">Play</div></div>
-    <div class="nav-item" data-screen="profile" onclick="nav('profile')"><div class="nav-icon">👤</div><div class="nav-label" id="navProfile">Profile</div><div class="nav-dot" id="wheelDot"></div></div>
+    <div class="nav-item active" data-screen="lobby" onclick="nav('lobby')"><span class="material-symbols-outlined">home</span><div class="nav-label" id="navLobby">Home</div></div>
+    <div class="nav-item" data-screen="game" onclick="nav('game')"><span class="material-symbols-outlined">casino</span><div class="nav-label" id="navGame">Games</div></div>
+    <div class="nav-item" data-screen="bonuses" onclick="nav('bonuses')"><span class="material-symbols-outlined">redeem</span><div class="nav-label" id="navBonuses">Bonuses</div></div>
+    <div class="nav-item" data-screen="wallet" onclick="nav('wallet')"><span class="material-symbols-outlined">account_balance_wallet</span><div class="nav-label" id="navWallet">Wallet</div></div>
+    <div class="nav-item" data-screen="profile" onclick="nav('profile')"><span class="material-symbols-outlined">person</span><div class="nav-label" id="navProfile">Profile</div></div>
 </div>
 
 <!-- ===== BONUS OVERLAY ===== -->
@@ -268,7 +682,7 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
     <button class="bo-close" id="boClose" onclick="closeBonus()">COLLECT 🪙</button>
 </div>
 
-<!-- ===== TOAST POPUP ===== -->
+<!-- ===== TOAST ===== -->
 <div class="toast" id="toast">
     <div class="toast-icon" id="toastIcon">💰</div>
     <div class="toast-text" id="toastText">Not enough coins!</div>
@@ -291,27 +705,31 @@ body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-
 </div>
 
 <script>
+/* ================================================================
+   RubyBet Mini App — Full JS (preserving all original game logic)
+   ================================================================ */
 const tg=window.Telegram.WebApp;tg.ready();tg.expand();
-try{tg.setHeaderColor('#0a0a14');tg.setBackgroundColor('#0a0a14')}catch(e){}
+try{tg.setHeaderColor('#121212');tg.setBackgroundColor('#121212')}catch(e){}
 const P=new URLSearchParams(location.search);
 const API=P.get('api')||"https://lucky-slots-production.up.railway.app";
 const BOT=P.get('bot')||"testplcas_bot";
-const LANG=P.get('lang')||'pl';
+const LANG=P.get('lang')||'en';
 const UID=P.get('uid')||'';
 const TOK=P.get('token')||'';
 
+/* === LOCALIZATION === */
 const LC={
-pl:{lobby:"Lobby",play:"Graj",profile:"Profil",spin:"ZAKRĘĆ",deposit:"DEPOZYT",games:"Gry",coming:"Wkrótce",buyBonus:"Kup Bonus",buyCoins:"Kup Żetony",invite:"Zaproś Znajomych",language:"Język",spins:"Spiny",won:"Wygrane",best:"Najlepsza",profit:"Zysk",wheel:"Koło Dnia",wheelSub:"Kręć za darmowe monety!",wheelSpin:"KRĘĆ!",collect:"ODBIERZ",bonusRound:"🎰 RUNDA BONUSOWA 🎰",spinL:"SPIN",winL:"WYGRANA",promo:"Bonus Powitalny",promoT:"Lucky Bonanza 🍭",promoS:"Kręć i wygrywaj do x100!",noMoney:"Brak środków!",noMoneyDesc:"Doładuj konto żeby kontynuować grę",depositBtn:"Doładuj",cancelBtn:"Anuluj",lose:"Brak wygranej",win:"WYGRANA",slotName:"Lucky Bonanza",slotTag:"GORĄCE",crashName:"Crash",diceName:"Kości",mineName:"Miny",coinName:"Coin Flip",comingTag:"WKRÓTCE",freeSpins:"Darmowe spiny"},
-ua:{lobby:"Лобі",play:"Грати",profile:"Профіль",spin:"ГРАТИ",deposit:"ДЕПОЗИТ",games:"Ігри",coming:"Незабаром",buyBonus:"Купити Бонус",buyCoins:"Купити Жетони",invite:"Запросити Друзів",language:"Мова",spins:"Спіни",won:"Виграно",best:"Найбільший",profit:"Прибуток",wheel:"Колесо Дня",wheelSub:"Крути за безкоштовні монети!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТИ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПІН",winL:"ВИГРАШ",promo:"Вітальний Бонус",promoT:"Lucky Bonanza 🍭",promoS:"Крути та вигравай до x100!",noMoney:"Недостатньо коштів!",noMoneyDesc:"Поповніть рахунок щоб продовжити гру",depositBtn:"Поповнити",cancelBtn:"Скасувати",lose:"Без виграшу",win:"ВИГРАШ",slotName:"Lucky Bonanza",slotTag:"ГАРЯЧЕ",crashName:"Crash",diceName:"Кості",mineName:"Міни",coinName:"Монетка",comingTag:"НЕЗАБАРОМ",freeSpins:"Безкоштовні спіни"},
-ru:{lobby:"Лобби",play:"Играть",profile:"Профиль",spin:"ИГРАТЬ",deposit:"ДЕПОЗИТ",games:"Игры",coming:"Скоро",buyBonus:"Купить Бонус",buyCoins:"Купить Жетоны",invite:"Пригласить Друзей",language:"Язык",spins:"Спины",won:"Выиграно",best:"Лучший",profit:"Профит",wheel:"Колесо Дня",wheelSub:"Крути за бесплатные монеты!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТЬ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПИН",winL:"ВЫИГРЫШ",promo:"Приветственный Бонус",promoT:"Lucky Bonanza 🍭",promoS:"Крути и выигрывай до x100!",noMoney:"Недостаточно средств!",noMoneyDesc:"Пополните баланс чтобы продолжить игру",depositBtn:"Пополнить",cancelBtn:"Отмена",lose:"Нет выигрыша",win:"ВЫИГРЫШ",slotName:"Lucky Bonanza",slotTag:"ГОРЯЧЕЕ",crashName:"Crash",diceName:"Кости",mineName:"Мины",coinName:"Монетка",comingTag:"СКОРО",freeSpins:"Бесплатные спины"},
-en:{lobby:"Lobby",play:"Play",profile:"Profile",spin:"SPIN",deposit:"DEPOSIT",games:"Games",coming:"Coming Soon",buyBonus:"Buy Bonus",buyCoins:"Buy Coins",invite:"Invite Friends",language:"Language",spins:"Spins",won:"Won",best:"Best Win",profit:"Profit",wheel:"Daily Wheel",wheelSub:"Spin for free coins!",wheelSpin:"SPIN!",collect:"COLLECT",bonusRound:"🎰 BONUS ROUND 🎰",spinL:"SPIN",winL:"WIN",promo:"Welcome Bonus",promoT:"Lucky Bonanza 🍭",promoS:"Spin & win up to x100!",noMoney:"Not enough coins!",noMoneyDesc:"Top up your balance to keep playing",depositBtn:"Deposit",cancelBtn:"Cancel",lose:"No win",win:"WIN",slotName:"Lucky Bonanza",slotTag:"HOT",crashName:"Crash",diceName:"Dice",mineName:"Mines",coinName:"Coin Flip",comingTag:"SOON",freeSpins:"Free spins"}
+pl:{home:"Home",games:"Gry",bonuses:"Bonusy",wallet:"Portfel",profile:"Profil",spin:"ZAKRĘĆ",deposit:"DEPOZYT",searchPlaceholder:"Szukaj gier...",categories:"KATEGORIE",viewAll:"ZOBACZ WSZYSTKO",trending:"NA TOPIE",playNow:"GRAJ TERAZ",hot:"GORĄCE",heroTitle:"RUBY JACKPOT",heroSub:"5,000 żetonów w puli nagród",wheel:"Koło Dnia",wheelSub:"Kręć za darmowe monety!",wheelSpin:"KRĘĆ!",collect:"ODBIERZ",bonusRound:"🎰 RUNDA BONUSOWA 🎰",spinL:"SPIN",winL:"WYGRANA",buyBonus:"Kup Bonus",slotName:"Ruby Slots",slotTag:"GORĄCE",crashName:"Crash",diceName:"Kości",mineName:"Miny",coinName:"Coin Flip",rouletteName:"Ruletka",blackjackName:"Blackjack",comingTag:"WKRÓTCE",freeSpins:"Darmowe spiny",noMoney:"Brak środków!",noMoneyDesc:"Doładuj konto żeby kontynuować grę",depositBtn:"Doładuj",cancelBtn:"Anuluj",lose:"Brak wygranej",win:"WYGRANA",totalBalance:"ŁĄCZNY BALANS",withdraw:"WYPŁATA",transHistory:"Historia transakcji",selectPkg:"WYBIERZ PAKIET",bonusTitle:"Bonusy",exclusive:"EKSKLUZYWNE",bfTitle:"100% Bonus od Depozytu",bfDesc:"Podwój swoją pierwszą wpłatę. Natychmiastowe dodanie.",bfTimer:"Wygasa za 24h",wager:"STAWKA",activate:"Aktywuj",freeSpinsTitle:"50 Darmowych Spinów",freeSpinsDesc:"Do Ruby Slots. Bez depozytu dla nowych graczy.",claimNow:"Odbierz",cashbackTitle:"Tygodniowy Cashback",cashbackDesc:"Odbierz 10% zwrotu co poniedziałek. VIP do 20%.",joinClub:"Dołącz",vipTitle:"Diamentowy VIP",vipDesc:"Odblokuj ekskluzywne turnieje.",inviteEarn:"Zaproś i Zarabiaj",inviteDesc:"Podziel się linkiem i zdobądź 10 żetonów za każdego znajomego.",tapCopy:"NACIŚNIJ ABY SKOPIOWAĆ",copy:"Kopiuj",totalRefs:"Zaproszonych",earnedCoins:"Zarobione żetony",howItWorks:"Jak to działa",step1T:"Podziel się ze znajomymi",step1D:"Wyślij link przez Telegram lub social media.",step2T:"Znajomi zaczynają grać",step2D:"Gdy się zarejestrują, obaj dostajecie bonus.",step3T:"Zbieraj Nagrody",step3D:"Otrzymaj 10 żetonów za każdego zaproszonego.",shareNow:"Udostępnij Link",wins:"WYGRANE",losses:"PRZEGRANE",total:"ŁĄCZNIE",referralProgram:"Program Polecający",inviteFriends:"Zaproś znajomych i zarabiaj",settings:"Ustawienia",security:"Bezpieczeństwo",support:"Pomoc",signOut:"Wyloguj",currentXp:"Aktualne XP",level:"Poziom",slots:"Sloty",live:"Na żywo",crash:"Crash",table:"Stołowe",jackpotLabel:"WIELKA JACKPOT",grandJackpot:"GRAND JACKPOT",coins:"żetonów"},
+ua:{home:"Домiв",games:"Ігри",bonuses:"Бонуси",wallet:"Гаманець",profile:"Профіль",spin:"ГРАТИ",deposit:"ДЕПОЗИТ",searchPlaceholder:"Пошук ігор...",categories:"КАТЕГОРІЇ",viewAll:"БАЧИТИ ВСЕ",trending:"В ТРЕНДІ",playNow:"ГРАТИ ЗАРАЗ",hot:"ГАРЯЧЕ",heroTitle:"RUBY JACKPOT",heroSub:"5,000 жетонів у призовому пулі",wheel:"Колесо Дня",wheelSub:"Крути за безкоштовні монети!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТИ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПІН",winL:"ВИГРАШ",buyBonus:"Купити Бонус",slotName:"Ruby Slots",slotTag:"ГАРЯЧЕ",crashName:"Crash",diceName:"Кості",mineName:"Міни",coinName:"Монетка",rouletteName:"Рулетка",blackjackName:"Блекджек",comingTag:"НЕЗАБАРОМ",freeSpins:"Безкоштовні спіни",noMoney:"Недостатньо коштів!",noMoneyDesc:"Поповніть рахунок",depositBtn:"Поповнити",cancelBtn:"Скасувати",lose:"Без виграшу",win:"ВИГРАШ",totalBalance:"ЗАГАЛЬНИЙ БАЛАНС",withdraw:"ВИВЕСТИ",transHistory:"Історія транзакцій",selectPkg:"ОБЕРІТЬ ПАКЕТ",bonusTitle:"Бонуси",exclusive:"ЕКСКЛЮЗИВНО",bfTitle:"100% Бонус на Депозит",bfDesc:"Подвійте свій перший депозит.",bfTimer:"Закінчується через 24г",wager:"СТАВКА",activate:"Активувати",freeSpinsTitle:"50 Безкоштовних Спінів",freeSpinsDesc:"Для Ruby Slots. Без депозиту для нових гравців.",claimNow:"Отримати",cashbackTitle:"Щотижневий Кешбек",cashbackDesc:"Отримайте 10% повернення щопонеділка.",joinClub:"Приєднатися",vipTitle:"Діамантовий VIP",vipDesc:"Розблокуйте ексклюзивні турніри.",inviteEarn:"Запрошуй та Заробляй",inviteDesc:"Поділись посиланням та отримай 10 жетонів за кожного друга.",tapCopy:"НАТИСНІТЬ ЩОБИ СКОПІЮВАТИ",copy:"Скопіювати",totalRefs:"Запрошено",earnedCoins:"Зароблено жетонів",howItWorks:"Як це працює",step1T:"Поділись з друзями",step1D:"Відправ посилання через Telegram.",step2T:"Друзі починають грати",step2D:"Коли вони зареєструються, обидва отримають бонус.",step3T:"Збирай Нагороди",step3D:"Отримай 10 жетонів за кожного.",shareNow:"Поділитися",wins:"ВИГРАШІ",losses:"ПРОГРАШІ",total:"ВСЬОГО",referralProgram:"Реферальна Програма",inviteFriends:"Запрошуй друзів та заробляй",settings:"Налаштування",security:"Безпека",support:"Підтримка",signOut:"Вийти",currentXp:"Поточний XP",level:"Рівень",slots:"Слоти",live:"Лайв",crash:"Crash",table:"Столи",jackpotLabel:"ВЕЛИКИЙ ДЖЕКПОТ",grandJackpot:"GRAND JACKPOT",coins:"жетонів"},
+ru:{home:"Главная",games:"Игры",bonuses:"Бонусы",wallet:"Кошелёк",profile:"Профиль",spin:"ИГРАТЬ",deposit:"ДЕПОЗИТ",searchPlaceholder:"Поиск игр...",categories:"КАТЕГОРИИ",viewAll:"ВСЕ",trending:"В ТРЕНДЕ",playNow:"ИГРАТЬ",hot:"ГОРЯЧЕЕ",heroTitle:"RUBY JACKPOT",heroSub:"5,000 жетонов в призовом пуле",wheel:"Колесо Дня",wheelSub:"Крути за бесплатные монеты!",wheelSpin:"КРУТИ!",collect:"ЗАБРАТЬ",bonusRound:"🎰 БОНУС РАУНД 🎰",spinL:"СПИН",winL:"ВЫИГРЫШ",buyBonus:"Купить Бонус",slotName:"Ruby Slots",slotTag:"ГОРЯЧЕЕ",crashName:"Crash",diceName:"Кости",mineName:"Мины",coinName:"Монетка",rouletteName:"Рулетка",blackjackName:"Блекджек",comingTag:"СКОРО",freeSpins:"Бесплатные спины",noMoney:"Недостаточно средств!",noMoneyDesc:"Пополните баланс чтобы продолжить",depositBtn:"Пополнить",cancelBtn:"Отмена",lose:"Нет выигрыша",win:"ВЫИГРЫШ",totalBalance:"ОБЩИЙ БАЛАНС",withdraw:"ВЫВЕСТИ",transHistory:"История транзакций",selectPkg:"ВЫБЕРИТЕ ПАКЕТ",bonusTitle:"Бонусы",exclusive:"ЭКСКЛЮЗИВНО",bfTitle:"100% Бонус на Депозит",bfDesc:"Удвойте свой первый депозит. Мгновенное начисление.",bfTimer:"Истекает через 24ч",wager:"СТАВКА",activate:"Активировать",freeSpinsTitle:"50 Бесплатных Спинов",freeSpinsDesc:"Для Ruby Slots. Без депозита для новых игроков.",claimNow:"Получить",cashbackTitle:"Еженедельный Кэшбек",cashbackDesc:"Получите 10% возврат каждый понедельник. VIP до 20%.",joinClub:"Вступить",vipTitle:"Бриллиантовый VIP",vipDesc:"Разблокируйте эксклюзивные турниры.",inviteEarn:"Приглашай и Зарабатывай",inviteDesc:"Поделись ссылкой и получи 10 жетонов за каждого друга.",tapCopy:"НАЖМИТЕ ЧТОБЫ СКОПИРОВАТЬ",copy:"Скопировать",totalRefs:"Приглашено",earnedCoins:"Заработано жетонов",howItWorks:"Как это работает",step1T:"Поделись с друзьями",step1D:"Отправь ссылку через Telegram или соцсети.",step2T:"Друзья начинают играть",step2D:"Когда они зарегистрируются, оба получат бонус.",step3T:"Собирай Награды",step3D:"Получи 10 жетонов за каждого приглашённого.",shareNow:"Поделиться",wins:"ПОБЕДЫ",losses:"ПОРАЖЕНИЯ",total:"ВСЕГО",referralProgram:"Реферальная Программа",inviteFriends:"Приглашай друзей и зарабатывай",settings:"Настройки",security:"Безопасность",support:"Поддержка",signOut:"Выйти",currentXp:"Текущий XP",level:"Уровень",slots:"Слоты",live:"Лайв",crash:"Crash",table:"Столы",jackpotLabel:"ВЕЛИКИЙ ДЖЕКПОТ",grandJackpot:"GRAND JACKPOT",coins:"жетонов"},
+en:{home:"Home",games:"Games",bonuses:"Bonuses",wallet:"Wallet",profile:"Profile",spin:"SPIN",deposit:"DEPOSIT",searchPlaceholder:"Search games...",categories:"CATEGORIES",viewAll:"VIEW ALL",trending:"TRENDING NOW",playNow:"PLAY NOW",hot:"HOT",heroTitle:"RUBY JACKPOT",heroSub:"5,000 coins prize pool",wheel:"Daily Wheel",wheelSub:"Spin for free coins!",wheelSpin:"SPIN!",collect:"COLLECT",bonusRound:"🎰 BONUS ROUND 🎰",spinL:"SPIN",winL:"WIN",buyBonus:"Buy Bonus",slotName:"Ruby Slots",slotTag:"HOT",crashName:"Crash",diceName:"Dice",mineName:"Mines",coinName:"Coin Flip",rouletteName:"Roulette",blackjackName:"Blackjack",comingTag:"SOON",freeSpins:"Free spins",noMoney:"Not enough coins!",noMoneyDesc:"Top up your balance to keep playing",depositBtn:"Deposit",cancelBtn:"Cancel",lose:"No win",win:"WIN",totalBalance:"TOTAL BALANCE",withdraw:"WITHDRAW",transHistory:"View Transaction History",selectPkg:"SELECT PACKAGE",bonusTitle:"Bonuses",exclusive:"EXCLUSIVE",bfTitle:"100% Deposit Match",bfDesc:"Get up to 1 BTC on your first deposit. Double your playing money instantly.",bfTimer:"Expires in 24h",wager:"WAGER",activate:"Activate",freeSpinsTitle:"50 Free Spins",freeSpinsDesc:"Valid for Ruby Slots. No deposit required for new players.",claimNow:"Claim Now",cashbackTitle:"Weekly Cashback",cashbackDesc:"Get 10% back on all losses every Monday. VIP tiers get up to 20%.",joinClub:"Join Club",vipTitle:"Diamond VIP Status",vipDesc:"Unlock exclusive tournaments.",inviteEarn:"Invite & Earn",inviteDesc:"Share your link and earn <b>10 coins</b> for every friend who plays.",tapCopy:"TAP COPY TO SHARE",copy:"Copy",totalRefs:"Total Referrals",earnedCoins:"Earned Coins",howItWorks:"How it Works",step1T:"Share with friends",step1D:"Send your unique link via Telegram or social media.",step2T:"Friends start playing",step2D:"When they register, you both get bonus coins.",step3T:"Earn Rewards",step3D:"Get 10 coins for every friend who joins.",shareNow:"Share Link Now",wins:"WINS",losses:"LOSSES",total:"TOTAL",referralProgram:"Referral Program",inviteFriends:"Invite friends & earn rewards",settings:"Settings",security:"Security",support:"Support",signOut:"Sign Out",currentXp:"Current XP",level:"Level",slots:"Slots",live:"Live",crash:"Crash",table:"Table",jackpotLabel:"GRAND JACKPOT",grandJackpot:"GRAND JACKPOT",coins:"coins"}
 };
 const T=LC[LANG]||LC.en;
 const BSYM=['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
 const BONSYM=['👑','💎','⭐','❤️','🍀','🧲','💰','🌈'];
 let balance=null,freeSpins=0,bet=5,spinning=false,currentScreen='lobby';
 
-// === SPEED SYSTEM: 0=slow, 1=normal, 2=turbo ===
+/* === SPEED SYSTEM === */
 let speedMode=1;
 const SPEED={
     0:{ai:120,af:12,rd:800,bf:10,bp:600,bmp:500},
@@ -319,56 +737,64 @@ const SPEED={
     2:{ai:30,af:4,rd:100,bf:3,bp:80,bmp:100}
 };
 function S(){return SPEED[speedMode]}
-function setSpeed(s){speedMode=s;document.querySelectorAll('.speed-btn').forEach((b,i)=>b.classList.toggle('on',i===s))}
+function setSpeed(s){speedMode=s;document.querySelectorAll('.speed-btn').forEach(function(b,i){b.classList.toggle('on',i===s)})}
 
-function auth(){const p={};if(tg.initData)p.init_data=tg.initData;if(UID)p.uid=UID;if(TOK)p.token=TOK;return p}
+function auth(){var p={};if(tg.initData)p.init_data=tg.initData;if(UID)p.uid=UID;if(TOK)p.token=TOK;return p}
 function qs(){return new URLSearchParams(auth()).toString()}
-function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 
-// === TOAST ===
-let toastCb=null;
+/* === TOAST === */
+var toastCb=null;
 function showToast(icon,text,ok,cancel,onOk){
-    document.getElementById('toastIcon').textContent=icon;
-    document.getElementById('toastText').textContent=text;
-    document.getElementById('toastOk').textContent=ok;
-    document.getElementById('toastCancel').textContent=cancel||'✕';
+    document.getElementById('toastIcon').textContent=icon;document.getElementById('toastText').textContent=text;
+    document.getElementById('toastOk').textContent=ok;document.getElementById('toastCancel').textContent=cancel||'✕';
     toastCb=onOk;document.getElementById('toast').classList.add('show');
 }
 function closeToast(){document.getElementById('toast').classList.remove('show');toastCb=null}
-function toastAction(){const c=toastCb;closeToast();if(c)c()}
+function toastAction(){var c=toastCb;closeToast();if(c)c()}
 
-// === NAV ===
+/* === NAVIGATION === */
 function nav(s){
     if(s==='deposit'){tg.openTelegramLink('https://t.me/'+BOT+'?start=deposit');tg.close();return}
-    document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
-    const scr=document.getElementById('scr'+s.charAt(0).toUpperCase()+s.slice(1));
-    if(scr)scr.classList.add('active');
-    const ni=document.querySelector('.nav-item[data-screen="'+s+'"]');
-    if(ni)ni.classList.add('active');
-    currentScreen=s;if(s==='game')initGame();if(s==='profile')loadProfile();
+    document.querySelectorAll('.screen').forEach(function(e){e.classList.remove('active')});
+    document.querySelectorAll('.nav-item').forEach(function(e){e.classList.remove('active')});
+    var map={lobby:'scrLobby',game:'scrGame',bonuses:'scrBonuses',wallet:'scrWallet',referral:'scrReferral',profile:'scrProfile'};
+    var scr=document.getElementById(map[s]);if(scr)scr.classList.add('active');
+    var ni=document.querySelector('.nav-item[data-screen="'+s+'"]');if(ni)ni.classList.add('active');
+    currentScreen=s;
+    if(s==='game')initGame();
+    if(s==='profile')loadProfile();
+    if(s==='referral')loadReferral();
+    if(s==='wallet')updateWallet();
+    window.scrollTo(0,0);
 }
 
-// === DATA ===
+/* === DATA === */
 async function loadBalance(){
-    try{const r=await fetch(API+'/api/balance?'+qs());const d=await r.json();
+    try{var r=await fetch(API+'/api/balance?'+qs());var d=await r.json();
         if(d.ok){balance=d.balance;freeSpins=d.free_spins||0;updateBalanceUI();if(d.vip)updateVIP(d.vip);return}}catch(e){}
     setTimeout(loadBalance,2000);
 }
 function updateBalanceUI(){
-    document.getElementById('lobbyBal').textContent=balance!==null?balance:'...';
+    var b=balance!==null?balance:'...';
+    document.getElementById('headerBal').textContent=b;
     var gb=document.getElementById('gameBal');if(gb)gb.textContent=balance||0;
     var fb=document.getElementById('freeBadge');if(fb)fb.textContent=freeSpins>0?'⚡ '+freeSpins+' '+T.freeSpins:'';
     updateSpinBtn();
 }
 function updateVIP(v){
-    document.getElementById('vipIcon').textContent=v.icon;document.getElementById('vipName').textContent=v.name;
-    document.getElementById('vipCb').textContent=v.cb+'% cashback';
-    var bar=document.getElementById('vipBar');
-    if(v.next_at){bar.style.width=Math.min(100,v.wagered/v.next_at*100)+'%'}else bar.style.width='100%';
+    document.getElementById('vipIcon').textContent=v.icon;
+    document.getElementById('vipName').textContent=v.name;
+    var pct=0;
+    if(v.next_at){pct=Math.min(100,Math.round(v.wagered/v.next_at*100))}else{pct=100}
+    document.getElementById('vipBar').style.width=pct+'%';
+    document.getElementById('vipPct').textContent=pct+'%';
+}
+function updateWallet(){
+    document.getElementById('wBalAmount').textContent=balance!==null?balance:'0';
 }
 
-// === GAME ===
+/* === GAME === */
 function initGame(){
     var g=document.getElementById('grid');
     if(!g.children.length){for(var i=0;i<30;i++){var c=document.createElement('div');c.className='cell';c.textContent=BSYM[Math.floor(Math.random()*BSYM.length)];g.appendChild(c)}}
@@ -388,7 +814,7 @@ function doSpin(){
     spin();
 }
 
-// === SPIN with speed ===
+/* === SPIN === */
 async function spin(){
     if(spinning)return;spinning=true;var btn=document.getElementById('spinBtn');btn.disabled=true;
     document.getElementById('gameResult').innerHTML='';
@@ -406,14 +832,14 @@ async function spin(){
             var ws=new Set(Object.entries(co).filter(function(e){return e[1]>=8}).map(function(e){return e[0]}));
             cells.forEach(function(c){if(ws.has(c.textContent))c.classList.add('win')})}
         await sleep(sp.rd);var res=document.getElementById('gameResult');
-        if(d.triggered_bonus){res.innerHTML='<span style="color:var(--pink)">🎰 BONUS! '+d.scatter_count+'x</span>';
+        if(d.triggered_bonus){res.innerHTML='<span style="color:var(--red)">🎰 BONUS! '+d.scatter_count+'x</span>';
             updateBalanceUI();setTimeout(function(){startBonus('triggered')},speedMode===2?400:1200)}
-        else{res.innerHTML=d.winnings>0?'<span style="color:var(--green)">'+T.win+': +'+d.winnings+' 🪙</span>':'<span style="color:var(--dim)">'+T.lose+'</span>';updateBalanceUI()}
+        else{res.innerHTML=d.winnings>0?'<span class="win-text">'+T.win+': +'+d.winnings+' 🪙</span>':'<span class="lose-text">'+T.lose+'</span>';updateBalanceUI()}
     }catch(e){clearInterval(anim)}
     spinning=false;btn.disabled=false;
 }
 
-// === BONUS with speed ===
+/* === BONUS === */
 async function startBonus(mode){
     spinning=true;document.getElementById('bonusOL').classList.add('show');
     document.getElementById('boTitle').textContent=T.bonusRound;
@@ -434,7 +860,7 @@ async function startBonus(mode){
             await sleep(sp.bp/2);
             if(sn.bombs&&sn.bombs.length>0&&sn.base_win>0){for(var k=0;k<sn.bombs.length;k++){showBombPop(sn.bombs[k].mult);await sleep(sp.bmp)}}
             document.getElementById('boRes').innerHTML=sn.winnings>0?'<span style="color:var(--green)">+'+sn.winnings+(sn.total_bomb_mult>1?' 💣x'+sn.total_bomb_mult:'')+'</span>':'—';
-            if(sn.retrigger){document.getElementById('boRes').innerHTML+='<br><span style="color:var(--pink)">+5!</span>';await sleep(sp.bp)}
+            if(sn.retrigger){document.getElementById('boRes').innerHTML+='<br><span style="color:var(--red)">+5!</span>';await sleep(sp.bp)}
             document.getElementById('boRunT').textContent=sn.running_total;await sleep(sp.bp);
         }
         balance=d.balance;document.getElementById('boRes').textContent='';
@@ -446,8 +872,8 @@ function closeBonus(){document.getElementById('bonusOL').classList.remove('show'
 function showBombPop(m){var e=document.createElement('div');e.className='bomb-pop';e.textContent='💣 x'+m;document.body.appendChild(e);setTimeout(function(){e.remove()},800)}
 function buyBonus(){if(!balance||balance<bet*100){showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('deposit')});return}startBonus('bought')}
 
-// === WHEEL — Canvas ===
-var WSEG=[{l:'5 🪙',c:'#1a3a0a'},{l:'10 🪙',c:'#2a1a4a'},{l:'25 🪙',c:'#0a2a3a'},{l:'50 🪙',c:'#3a1a2a'},{l:'100 🪙',c:'#1a3a2a'},{l:'3 ⚡',c:'#3a2a0a'},{l:'5 ⚡',c:'#2a0a3a'},{l:'250 🪙',c:'#0a3a1a'},{l:'500 🪙',c:'#3a0a0a'}];
+/* === WHEEL === */
+var WSEG=[{l:'5 🪙',c:'#1a0a0a'},{l:'10 🪙',c:'#2a1a1a'},{l:'25 🪙',c:'#1a0a0a'},{l:'50 🪙',c:'#2a1a1a'},{l:'100 🪙',c:'#1a0a0a'},{l:'3 ⚡',c:'#2a1a1a'},{l:'5 ⚡',c:'#1a0a0a'},{l:'250 🪙',c:'#2a1a1a'},{l:'500 🪙',c:'#1a0a0a'}];
 var wAngle=0;
 function drawWheel(){
     var cv=document.getElementById('wheelCanvas');if(!cv)return;
@@ -455,12 +881,12 @@ function drawWheel(){
     ctx.clearRect(0,0,260,260);
     for(var i=0;i<n;i++){var a=i*arc-Math.PI/2;
         ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+arc);ctx.closePath();
-        ctx.fillStyle=WSEG[i].c;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1.5;ctx.stroke();
+        ctx.fillStyle=WSEG[i].c;ctx.fill();ctx.strokeStyle='rgba(227,30,36,0.2)';ctx.lineWidth=1.5;ctx.stroke();
         ctx.save();ctx.translate(cx,cy);ctx.rotate(a+arc/2);
-        ctx.fillStyle='#fff';ctx.font='bold 12px Outfit';ctx.textAlign='center';ctx.fillText(WSEG[i].l,r*0.62,4);
+        ctx.fillStyle='#fff';ctx.font='bold 12px Montserrat,sans-serif';ctx.textAlign='center';ctx.fillText(WSEG[i].l,r*0.62,4);
         ctx.restore();
     }
-    ctx.beginPath();ctx.arc(cx,cy,r,0,2*Math.PI);ctx.strokeStyle='rgba(200,255,46,0.3)';ctx.lineWidth=3;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy,r,0,2*Math.PI);ctx.strokeStyle='rgba(227,30,36,0.3)';ctx.lineWidth=3;ctx.stroke();
 }
 function openWheel(){
     document.getElementById('wheelOL').classList.add('show');
@@ -487,37 +913,185 @@ async function spinWheel(){
     }catch(e){await sleep(4200);document.getElementById('wheelOL').classList.remove('show');setTimeout(function(){cv.style.transition='none'},100)}
 }
 
-// === PROFILE ===
+/* === PROFILE === */
 async function loadProfile(){
     try{var r=await fetch(API+'/api/profile?'+qs());var d=await r.json();if(!d.ok)return;
         document.getElementById('profName').textContent=d.first_name||d.username||'Player';
-        document.getElementById('profVip').textContent=d.vip.icon+' '+d.vip.name;
-        document.getElementById('stSpins').textContent=d.stats.spins;document.getElementById('stWon').textContent=d.stats.won;
-        document.getElementById('stBiggest').textContent=d.stats.biggest;
-        var p=d.stats.profit;var pe=document.getElementById('stProfit');pe.textContent=(p>=0?'+':'')+p;pe.style.color=p>=0?'var(--green)':'var(--red)';
-        document.getElementById('profRefCnt').textContent=d.refs>0?d.refs:'';
+        document.getElementById('profId').textContent='ID: '+(UID?UID.toString().slice(-8):'...');
+        document.getElementById('profVipBadge').textContent=d.vip.name;
+        document.getElementById('profLevelName').textContent=d.vip.icon+' '+d.vip.name;
+        var pct=0;
+        if(d.vip.next_at){pct=Math.min(100,Math.round(d.vip.wagered/d.vip.next_at*100))}else{pct=100}
+        document.getElementById('profVipBar').style.width=pct+'%';
+        document.getElementById('profLevelVal').textContent=T.level+' '+(['Bronze','Silver','Gold','Platinum','Diamond'].indexOf(d.vip.name)+1);
+        document.getElementById('profXpVal').textContent=d.stats.wagered+' / '+(d.vip.next_at||'MAX');
+        /* Stats: wins = bets with positive profit, losses = bets with zero/negative */
+        var wins=0,losses=0;
+        if(d.recent_bets){d.recent_bets.forEach(function(b){if(b.profit>0)wins++;else losses++})}
+        document.getElementById('stWins').textContent=d.stats.won>0?wins:0;
+        document.getElementById('stLosses').textContent=losses;
+        document.getElementById('stTotal').textContent=d.stats.spins;
     }catch(e){}}
+
+/* === REFERRAL === */
+function loadReferral(){
+    var refUrl='https://t.me/'+BOT+'?start=ref'+UID;
+    document.getElementById('refUrl').textContent=refUrl;
+}
+function copyRefLink(){
+    var url='https://t.me/'+BOT+'?start=ref'+UID;
+    if(navigator.clipboard){navigator.clipboard.writeText(url).then(function(){
+        var btn=document.querySelector('.ref-copy');btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">check</span> OK';
+        setTimeout(function(){btn.innerHTML='<span class="material-symbols-outlined" style="font-size:16px">content_copy</span>'+T.copy},2000);
+    })}
+}
 function shareRef(){tg.openTelegramLink('https://t.me/share/url?url=https://t.me/'+BOT+'?start=ref'+UID+'&text=🎰')}
 function changeLang(){tg.openTelegramLink('https://t.me/'+BOT);tg.close()}
 async function checkWheel(){try{var r=await fetch(API+'/api/wheel-status?'+qs());var d=await r.json();if(d.ok&&!d.available)document.getElementById('wheelBanner').classList.add('done')}catch(e){}}
 
-// === INIT ===
+/* === INIT LOCALE === */
 function initLocale(){
-    document.getElementById('navLobby').textContent=T.lobby;document.getElementById('navPlay').textContent=T.play;document.getElementById('navProfile').textContent=T.profile;
-    document.getElementById('secGames').textContent=T.games;document.getElementById('secComing').textContent=T.coming;
-    document.getElementById('promoTag').textContent=T.promo;document.getElementById('promoTitle').textContent=T.promoT;document.getElementById('promoSub').textContent=T.promoS;
-    document.getElementById('wheelTitle').textContent=T.wheel;document.getElementById('wheelSub').textContent=T.wheelSub;
-    document.getElementById('bbLabel').textContent=T.buyBonus;document.getElementById('profBuy').textContent=T.buyCoins;
-    document.getElementById('profRef').textContent=T.invite;document.getElementById('profLang').textContent=T.language;
-    document.getElementById('stSpinsL').textContent=T.spins;document.getElementById('stWonL').textContent=T.won;
-    document.getElementById('stBigL').textContent=T.best;document.getElementById('stProfL').textContent=T.profit;
+    /* Nav */
+    document.getElementById('navLobby').textContent=T.home;
+    document.getElementById('navGame').textContent=T.games;
+    document.getElementById('navBonuses').textContent=T.bonuses;
+    document.getElementById('navWallet').textContent=T.wallet;
+    document.getElementById('navProfile').textContent=T.profile;
+    /* Header */
+    document.getElementById('headerUnit').textContent=T.coins;
+    /* Lobby */
+    document.getElementById('searchPlaceholder').textContent=T.searchPlaceholder;
+    document.getElementById('heroTag').textContent=T.hot;
+    document.getElementById('heroTitle').innerHTML='RUBY <span class="accent">JACKPOT</span>';
+    document.getElementById('heroSub').textContent=T.heroSub;
+    document.getElementById('heroPlay').textContent=T.playNow;
+    document.getElementById('wheelTitle').textContent=T.wheel;
+    document.getElementById('wheelSub').textContent=T.wheelSub;
+    document.getElementById('secCat').textContent=T.categories;
+    document.getElementById('secCatMore').textContent=T.viewAll;
+    document.getElementById('secTrending').textContent=T.trending;
+    /* Game */
+    document.getElementById('bbLabel').textContent=T.buyBonus;
+    document.getElementById('jackpotLabel').textContent=T.grandJackpot;
+    /* Bonuses */
+    document.getElementById('bonusTitle').textContent=T.bonusTitle;
+    document.getElementById('bfTag').textContent=T.exclusive;
+    document.getElementById('bfTimer').textContent=T.bfTimer;
+    document.getElementById('bfTitle').textContent=T.bfTitle;
+    document.getElementById('bfDesc').textContent=T.bfDesc;
+    document.getElementById('bfWagerL').textContent=T.wager;
+    document.getElementById('bfActivate').textContent=T.activate;
+    document.getElementById('bc1Title').textContent=T.freeSpinsTitle;
+    document.getElementById('bc1Desc').textContent=T.freeSpinsDesc;
+    document.getElementById('bc1Btn').textContent=T.claimNow;
+    document.getElementById('bc2Title').textContent=T.cashbackTitle;
+    document.getElementById('bc2Desc').textContent=T.cashbackDesc;
+    document.getElementById('bc2Btn').textContent=T.joinClub;
+    document.getElementById('blTitle').textContent=T.vipTitle;
+    document.getElementById('blDesc').textContent=T.vipDesc;
+    /* Wallet */
+    document.getElementById('wBalLabel').textContent=T.totalBalance;
+    document.getElementById('wBalUnit').textContent=T.coins;
+    document.getElementById('wDeposit').textContent=T.deposit;
+    document.getElementById('wWithdraw').textContent=T.withdraw;
+    document.getElementById('wHistory').textContent=T.transHistory;
+    document.getElementById('wAssetLabel').textContent=T.selectPkg;
+    /* Referral */
+    document.getElementById('refHeroTitle').innerHTML=T.inviteEarn.replace('&','&amp;').replace(/(Earn|Zarabiaj|Зарабатывай|Заробляй)/,'<span>$1</span>');
+    document.getElementById('refHeroDesc').innerHTML=T.inviteDesc;
+    document.getElementById('refLinkLabel').textContent=T.tapCopy;
+    document.getElementById('refCopyText').textContent=T.copy;
+    document.getElementById('refTotalLabel').textContent=T.totalRefs;
+    document.getElementById('refEarnedLabel').textContent=T.earnedCoins;
+    document.getElementById('refHowTitle').textContent=T.howItWorks;
+    document.getElementById('refStep1T').textContent=T.step1T;document.getElementById('refStep1D').textContent=T.step1D;
+    document.getElementById('refStep2T').textContent=T.step2T;document.getElementById('refStep2D').textContent=T.step2D;
+    document.getElementById('refStep3T').textContent=T.step3T;document.getElementById('refStep3D').textContent=T.step3D;
+    document.getElementById('refShareBtn').textContent=T.shareNow;
+    /* Profile */
+    document.getElementById('stWinsL').textContent=T.wins;
+    document.getElementById('stLossesL').textContent=T.losses;
+    document.getElementById('stTotalL').textContent=T.total;
+    document.getElementById('profRefTitle').textContent=T.referralProgram;
+    document.getElementById('profRefSub').textContent=T.inviteFriends;
+    document.getElementById('profSettings').textContent=T.settings;
+    document.getElementById('profSecurity').textContent=T.security;
+    document.getElementById('profSupport').textContent=T.support;
+    document.getElementById('profSignout').textContent=T.signOut;
+    document.getElementById('profXpLabel').textContent=T.currentXp;
 }
-function buildGameCards(){
-    document.getElementById('gamesRow').innerHTML='<div class="game-card" onclick="nav(\'game\')"><div class="game-card-img slots-bg">🍭</div><div class="game-card-info"><div class="game-card-name">'+T.slotName+'</div><div class="game-card-tag">'+T.slotTag+'</div></div></div>';
-    var coming=[{e:'📈',n:T.crashName},{e:'🎲',n:T.diceName},{e:'💣',n:T.mineName},{e:'🪙',n:T.coinName}];
-    document.getElementById('comingRow').innerHTML=coming.map(function(g){return '<div class="game-card"><div class="game-card-img coming-bg">'+g.e+'<div class="coming-label">'+T.comingTag+'</div></div><div class="game-card-info"><div class="game-card-name">'+g.n+'</div><div class="game-card-tag" style="color:var(--dim)">'+T.comingTag+'</div></div></div>'}).join('');
+
+/* === BUILD DYNAMIC CONTENT === */
+function buildCategories(){
+    var cats=[
+        {icon:'casino',label:T.slots,screen:'game'},
+        {icon:'stream',label:T.live,screen:null},
+        {icon:'trending_up',label:T.crash,screen:null},
+        {icon:'playing_cards',label:T.table,screen:null}
+    ];
+    document.getElementById('catRow').innerHTML=cats.map(function(c){
+        return '<div class="cat-item" onclick="'+(c.screen?'nav(\''+c.screen+'\')':'')+'">'
+            +'<div class="cat-icon"><span class="material-symbols-outlined">'+c.icon+'</span></div>'
+            +'<div class="cat-label">'+c.label+'</div></div>';
+    }).join('');
 }
-initLocale();buildGameCards();loadBalance();checkWheel();
+
+function buildGameGrid(){
+    var IMG={
+        slots:'https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0',
+        cubes:'https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw',
+        chips:'https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ',
+        diamond:'https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y'
+    };
+    var games=[
+        {emoji:'🍭',name:T.slotName,tag:T.slotTag,badge:'hot',bg:"url('"+IMG.slots+"') center/cover",screen:'game'},
+        {emoji:'📈',name:T.crashName,tag:T.comingTag,badge:'soon',bg:"url('"+IMG.cubes+"') center/cover",screen:null},
+        {emoji:'🎲',name:T.diceName,tag:T.comingTag,badge:'soon',bg:"url('"+IMG.chips+"') center/cover",screen:null},
+        {emoji:'💣',name:T.mineName,tag:T.comingTag,badge:'soon',bg:"url('"+IMG.diamond+"') center/cover",screen:null},
+        {emoji:'🪙',name:T.coinName,tag:T.comingTag,badge:'soon',bg:'linear-gradient(135deg,#1a0a1a,#0a001a)',screen:null},
+        {emoji:'🎯',name:T.rouletteName,tag:T.comingTag,badge:'soon',bg:'linear-gradient(135deg,#2a1a0a,#1a0a00)',screen:null}
+    ];
+    document.getElementById('gameGrid').innerHTML=games.map(function(g){
+        var hasImg=g.bg.indexOf('url')===0;
+        return '<div class="game-tile" onclick="'+(g.screen?'nav(\''+g.screen+'\')':'')+'">'
+            +'<div class="game-tile-img" style="background:'+g.bg+'">'
+            +(hasImg?'<div style="position:absolute;inset:0;background:linear-gradient(to top,var(--surface),transparent 60%)"></div>':'')
+            +'<div style="position:relative;z-index:1;font-size:'+(hasImg?'32':'42')+'px;'+(hasImg?'opacity:.8;text-shadow:0 2px 8px rgba(0,0,0,.6)':'')+'">'+g.emoji+'</div>'
+            +'<div class="badge '+g.badge+'" style="position:relative;z-index:1">'+g.tag+'</div></div>'
+            +'<div class="game-tile-info"><div class="game-tile-name">'+g.name+'</div>'
+            +'<div class="game-tile-tag">'+(g.screen?T.slotTag:T.comingTag)+'</div></div></div>';
+    }).join('');
+}
+
+function buildBonusPills(){
+    var pills=[{l:T.home.charAt(0).toUpperCase()+T.home.slice(1)==='Home'?'All':T.categories==='КАТЕГОРИИ'?'Все':'All',active:true},{l:T.deposit,active:false},{l:T.freeSpins,active:false},{l:'VIP',active:false}];
+    /* simplify to All, Deposit, Free Spins, VIP */
+    var pillLabels=['All','Deposit','Free Spins','VIP','Cashback'];
+    if(LANG==='ru')pillLabels=['Все','Депозит','Фриспины','VIP','Кэшбек'];
+    if(LANG==='ua')pillLabels=['Все','Депозит','Фріспіни','VIP','Кешбек'];
+    if(LANG==='pl')pillLabels=['Wszystkie','Depozyt','Darmowe Spiny','VIP','Cashback'];
+    document.getElementById('bonusPills').innerHTML=pillLabels.map(function(p,i){
+        return '<div class="pill'+(i===0?' active':'')+'" onclick="this.parentNode.querySelectorAll(\'.pill\').forEach(function(e){e.classList.remove(\'active\')});this.classList.add(\'active\')">'+p+'</div>';
+    }).join('');
+}
+
+function buildWalletPackages(){
+    var pkgs=[{amount:'50',price:'0.50'},{amount:'100',price:'0.90'},{amount:'500',price:'4.00'}];
+    document.getElementById('assetRow').innerHTML=pkgs.map(function(p,i){
+        return '<button class="asset-btn'+(i===0?' active':'')+'" onclick="selectPkg(this)">'+p.amount+'<br><span style="font-size:10px;color:var(--dim)">$'+p.price+'</span></button>';
+    }).join('');
+}
+function selectPkg(el){document.querySelectorAll('.asset-btn').forEach(function(b){b.classList.remove('active')});el.classList.add('active')}
+
+/* === INIT === */
+initLocale();
+buildCategories();
+buildGameGrid();
+buildBonusPills();
+buildWalletPackages();
+loadBalance();
+checkWheel();
+loadReferral();
 </script>
 </body>
 </html>
