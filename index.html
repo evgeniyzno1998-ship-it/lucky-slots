@@ -141,7 +141,11 @@ function addHistory(win) {
 }
 
 function openBuyBonus() {
-    if (balance < bet * 100) { tg.showAlert(T.noMoney); return; }
+    // ВЕРНУЛ ПРОВЕРКУ БАЛАНСА И ПОП-АП
+    if (balance < bet * 100) {
+        tg.showAlert(T.noMoney);
+        return;
+    }
     tg.showAlert("Coming soon!");
 }
 
