@@ -195,6 +195,30 @@ def init_db():
         try: c.execute("CREATE INDEX IF NOT EXISTS idx_bonuses_user ON user_bonuses(user_id)")
         except: pass
 
+        # === BONUS_TEMPLATES ===
+        c.execute('''CREATE TABLE IF NOT EXISTS bonus_templates(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            bonus_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            description TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )''')
+
+        # === BONUS_CAMPAIGNS ===
+        c.execute('''CREATE TABLE IF NOT EXISTS bonus_campaigns(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            bonus_type TEXT NOT NULL,
+            template_id INTEGER,
+            target_segment TEXT NOT NULL,
+            total_players INTEGER DEFAULT 0,
+            claimed_players INTEGER DEFAULT 0,
+            notification_sent INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'active',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )''')
+
         # === ADMIN_USERS — dashboard operators ===
         c.execute('''CREATE TABLE IF NOT EXISTS admin_users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,6 +232,14 @@ def init_db():
             last_login TEXT DEFAULT '',
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
+        
+        # Add sample templates if none exist
+        if not c.execute("SELECT COUNT(*) FROM bonus_templates").fetchone()[0]:
+            c.executemany("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES(?,?,?,?)", [
+                ("Welcome Pack 100%", "deposit_bonus", 100.0, "100% bonus on first deposit up to $100"),
+                ("VIP Weekly Cashback", "cashback", 50.0, "Weekly 10% cashback for VIP players"),
+                ("Reactivation Spins", "free_spins", 20.0, "20 free spins for inactive users")
+            ])
         # Create default owner if no admins exist
         existing = c.execute("SELECT COUNT(*) as cnt FROM admin_users").fetchone()
         if existing and existing[0] == 0:
@@ -926,15 +958,7 @@ async def start_api():
     for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus)]:
         app.router.add_post(path,handler)
     # Admin API routes (JWT protected)
-    for path, handler in [
-        ("/admin/auth/login", admin_auth_login),
-        ("/admin/auth/create", admin_auth_create),
-        ("/admin/auth/update", admin_auth_update),
-        ("/admin/auth/delete", admin_auth_delete),
-        ("/admin/bonus/create-campaign", admin_bonus_create),
-        ("/admin/bonus/assign", admin_bonus_assign),
-    ]:
-        app.router.add_post(path, handler)
+    # Admin API (GET)
     for path, handler in [
         ("/admin/auth/me", admin_auth_me),
         ("/admin/auth/users", admin_auth_list),
@@ -949,8 +973,20 @@ async def start_api():
         ("/admin/live", admin_live),
         ("/admin/affiliates", admin_affiliates),
         ("/admin/bonus-stats", admin_bonus_stats),
+        ("/admin/bonus/templates", admin_bonus_templates_get),
+        ("/admin/bonus/campaigns", admin_bonus_campaigns_get),
     ]:
         app.router.add_get(path, handler)
+    # Admin API (POST)
+    for path, handler in [
+        ("/admin/auth/login", admin_auth_login),
+        ("/admin/auth/create", admin_auth_create),
+        ("/admin/auth/update", admin_auth_update),
+        ("/admin/auth/delete", admin_auth_delete),
+        ("/admin/bonus/templates", admin_bonus_templates_post),
+        ("/admin/bonus/issue", admin_bonus_issue),
+    ]:
+        app.router.add_post(path, handler)
     app.router.add_options("/{tail:.*}",opts)
     app.router.add_get("/health",lambda r:web.json_response({"ok":True}))
     runner=web.AppRunner(app); await runner.setup()
@@ -1334,70 +1370,98 @@ async def admin_affiliates(req):
         "total_referrers": total['referrers'],
     }, headers=H)
 
-async def admin_bonus_stats(req):
-    """GET /admin/bonus-stats — bonus analytics."""
-    admin, err = _require_admin(req, "bonus_analytics")
+async def admin_bonus_templates_get(req):
+    """GET /admin/bonus/templates — list all templates."""
+    admin, err = _require_admin(req, "bonus_management")
     if err: return err
-    by_type = await db("SELECT bonus_type, status, COUNT(*) as cnt, SUM(amount) as total_amount FROM user_bonuses GROUP BY bonus_type, status", fetch=True)
-    active = await db("SELECT COUNT(*) as cnt FROM user_bonuses WHERE status='active'", one=True)
-    claimed = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM user_bonuses WHERE status='completed'", one=True)
-    return web.json_response({"ok": True,
-        "by_type": [dict(r) for r in by_type] if by_type else [],
-        "active_count": active['cnt'],
-        "claimed_count": claimed['cnt'],
-        "claimed_total": claimed['total'],
-    }, headers=H)
+    rows = await db("SELECT * FROM bonus_templates ORDER BY id DESC", fetch=True)
+    return web.json_response({"ok": True, "templates": [dict(r) for r in rows] if rows else []}, headers=H)
 
-async def admin_bonus_create(req):
-    """POST /admin/bonus/create-campaign — create bonus campaign for segment."""
-    if req.method == "OPTIONS": return web.Response(headers=H)
+async def admin_bonus_templates_post(req):
+    """POST /admin/bonus/templates — create a new template."""
     admin, err = _require_admin(req, "bonus_management")
     if err: return err
     data = await req.json()
-    bonus_type = data.get("bonus_type", "free_spins")
-    title = data.get("title", "Bonus")
-    description = data.get("description", "")
+    name = data.get("name")
+    btype = data.get("bonus_type")
     amount = float(data.get("amount", 0))
-    target = data.get("target", "all")  # all, vip, new, specific
-    user_ids = data.get("user_ids", [])
+    desc = data.get("description", "")
+    if not name or not btype: return web.json_response({"ok": False, "error": "missing_fields"}, headers=H)
+    await db("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES(?,?,?,?)", (name, btype, amount, desc))
+    return web.json_response({"ok": True}, headers=H)
 
-    if target == "specific" and user_ids:
-        targets = user_ids
-    elif target == "vip":
-        rows = await db("SELECT user_id FROM users WHERE total_wagered >= 5000", fetch=True)
-        targets = [r['user_id'] for r in rows] if rows else []
-    elif target == "new":
-        rows = await db("SELECT user_id FROM users WHERE created_at >= date('now','-7 days')", fetch=True)
-        targets = [r['user_id'] for r in rows] if rows else []
+async def admin_bonus_campaigns_get(req):
+    """GET /admin/bonus/campaigns — list all active campaigns."""
+    admin, err = _require_admin(req, "bonus_management")
+    if err: return err
+    rows = await db("SELECT * FROM bonus_campaigns ORDER BY id DESC", fetch=True)
+    return web.json_response({"ok": True, "campaigns": [dict(r) for r in rows] if rows else []}, headers=H)
+
+async def admin_bonus_issue(req):
+    """POST /admin/bonus/issue — send bonuses to players with notification support."""
+    admin, err = _require_admin(req, "bonus_management")
+    if err: return err
+    data = await req.json()
+    
+    is_template = data.get("is_template", False)
+    template_id = data.get("template_id")
+    
+    if is_template and template_id:
+        tpl = await db("SELECT * FROM bonus_templates WHERE id=?", (template_id,), one=True)
+        if not tpl: return web.json_response({"ok": False, "error": "template_not_found"}, headers=H)
+        bonus_type = tpl['bonus_type']
+        amount = tpl['amount']
+        title = tpl['name']
+        description = tpl['description']
     else:
-        rows = await db("SELECT user_id FROM users", fetch=True)
-        targets = [r['user_id'] for r in rows] if rows else []
+        bonus_type = data.get("bonus_type", "free_spins")
+        amount = float(data.get("amount", 0))
+        title = data.get("title", "Special Bonus")
+        description = data.get("description", "")
+
+    target = data.get("target_segment", "all")
+    send_notif = data.get("send_notification", False)
+    notif_msg = data.get("notification_message", "You received a bonus!")
+
+    # Find target users
+    if target == "vip":
+        rows = await db("SELECT user_id, first_name FROM users WHERE total_wagered >= 5000", fetch=True)
+    elif target == "new":
+        rows = await db("SELECT user_id, first_name FROM users WHERE created_at >= date('now','-7 days')", fetch=True)
+    elif target == "churn_risk":
+        rows = await db("SELECT user_id, first_name FROM users WHERE last_login <= date('now','-14 days')", fetch=True)
+    else:
+        rows = await db("SELECT user_id, first_name FROM users", fetch=True)
+    
+    targets = rows if rows else []
+    
+    # Create campaign record
+    await db(
+        "INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment, total_players, notification_sent) VALUES(?,?,?,?,?,?)",
+        (title, bonus_type, template_id if is_template else None, target, len(targets), 1 if send_notif else 0)
+    )
 
     count = 0
-    for uid in targets:
+    notif_count = 0
+    for u in targets:
+        uid = u['user_id']
         await db(
             "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
             (uid, bonus_type, title, description, "redeem", amount, "active", bonus_type.upper().replace("_", " "))
         )
         count += 1
-    return web.json_response({"ok": True, "assigned_count": count, "target": target}, headers=H)
-
-async def admin_bonus_assign(req):
-    """POST /admin/bonus/assign — assign bonus to specific user."""
-    if req.method == "OPTIONS": return web.Response(headers=H)
-    admin, err = _require_admin(req, "bonus_management")
-    if err: return err
-    data = await req.json()
-    uid = int(data.get("user_id", 0))
-    bonus_type = data.get("bonus_type", "free_spins")
-    title = data.get("title", "Manual Bonus")
-    amount = float(data.get("amount", 0))
-    if not uid: return web.json_response({"ok": False, "error": "missing_user_id"}, headers=H)
-    await db(
-        "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
-        (uid, bonus_type, title, f"Assigned by {admin['username']}", "redeem", amount, "active", bonus_type.upper().replace("_", " "))
-    )
-    return web.json_response({"ok": True, "assigned_to": uid}, headers=H)
+        
+        if send_notif:
+            try:
+                # Basic personalization
+                personal_msg = notif_msg.replace("{name}", u['first_name'] or "Player")
+                # Try to send via bot if it exists
+                await bot.send_message(uid, personal_msg)
+                notif_count += 1
+            except Exception as e:
+                logging.debug(f"Could not send push to {uid}: {e}")
+            
+    return web.json_response({"ok": True, "assigned_count": count, "notif_sent": notif_count}, headers=H)
 
 async def main():
     init_db()
