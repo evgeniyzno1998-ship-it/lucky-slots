@@ -1,7 +1,7 @@
 import logging, sqlite3, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, LabeledPrice
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 
@@ -430,7 +430,7 @@ async def handle_buy(call: CallbackQuery):
         async with aiohttp.ClientSession() as s:
             r=await s.post("https://pay.crypt.bot/api/createInvoice",json={
                 "currency_type":"fiat","fiat":"USD","amount":str(price),
-                "description":f"Lucky Slots: {coins} {BOT_TEXTS[lang]['token']}",
+                "description":f"RubyBet: {coins} {BOT_TEXTS[lang]['token']}",
                 "payload":json.dumps({"user_id":uid,"coins":coins,"price_usd":price}),
                 "paid_btn_name":"callback",
                 "paid_btn_url":f"https://t.me/{(await bot.get_me()).username}"
@@ -443,6 +443,29 @@ async def handle_buy(call: CallbackQuery):
             kb=InlineKeyboardBuilder(); kb.button(text=f"💳 {price} USDT", url=d["result"]["mini_app_invoice_url"])
             await call.message.edit_text(BOT_TEXTS[lang]['pay_pending'], reply_markup=kb.as_markup())
     except Exception as e: logging.error(f"Pay: {e}"); await call.answer("Unavailable",show_alert=True)
+
+# ==================== TELEGRAM STARS PAYMENTS ====================
+@dp.pre_checkout_query()
+async def process_pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
+    """Always approve pre-checkout for Stars payments."""
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@dp.message(F.successful_payment)
+async def process_successful_payment(msg: Message):
+    """Handle successful Telegram Stars payment."""
+    payment = msg.successful_payment
+    uid = msg.from_user.id
+    try:
+        pl = json.loads(payment.invoice_payload)
+        stars = pl.get("stars", 0)
+        if stars > 0:
+            bal = await add_stars(uid, stars)
+            await record_payment(uid, "deposit", 0, stars, method="telegram_stars", status="completed", details=f"stars={stars},charge_id={payment.telegram_payment_charge_id}")
+            logging.info(f"⭐ Stars payment OK: uid={uid}, +{stars} stars, bal={bal}")
+            u = await get_user(uid); lang = u['language'] if u else 'en'
+            await msg.answer(f"✅ +{stars} ⭐ Stars!\n⭐ Balance: {bal}")
+    except Exception as e:
+        logging.error(f"Stars payment handler error: {e}")
 
 # ==================== API ====================
 H={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"*"}
@@ -702,11 +725,72 @@ async def api_currencies(req):
         "currencies":[{"code":c,"rate":r,"symbol":CURRENCY_SYMBOLS.get(c,c)} for c,r in CURRENCY_RATES.items()]
     },headers=H)
 
+async def api_create_stars_invoice(req):
+    """POST /api/create-stars-invoice — create Telegram Stars invoice for purchase"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data=await req.json(); uid=get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    stars = int(data.get("stars", 50))
+    if stars <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
+    
+    # Create Telegram Stars invoice via Bot API
+    try:
+        from aiogram.types import LabeledPrice
+        prices = [LabeledPrice(label=f"RubyBet {stars} Stars", amount=stars)]
+        # Create invoice link that can be opened via tg.openInvoice()
+        link = await bot.create_invoice_link(
+            title=f"RubyBet: {stars} ⭐ Stars",
+            description=f"Purchase {stars} Stars for RubyBet casino",
+            payload=json.dumps({"user_id": uid, "stars": stars, "type": "stars"}),
+            currency="XTR",  # Telegram Stars currency code
+            prices=prices
+        )
+        return web.json_response({"ok":True,"invoice_link":link,"stars":stars},headers=H)
+    except Exception as e:
+        logging.error(f"Stars invoice error: {e}")
+        return web.json_response({"ok":False,"error":str(e)},headers=H)
+
+async def api_create_crypto_invoice(req):
+    """POST /api/create-invoice — create CryptoBot USDT invoice (legacy endpoint)"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data=await req.json(); uid=get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    coins = int(data.get("coins", 50))
+    amount = float(data.get("amount", PACKAGES.get(str(coins), 0.50)))
+    if amount <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
+    if not CRYPTO_TOKEN: return web.json_response({"ok":False,"error":"not_configured"},headers=H)
+    
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as s:
+            usdt_cents = int(round(amount * 100))
+            r = await s.post("https://pay.crypt.bot/api/createInvoice", json={
+                "currency_type":"fiat","fiat":"USD","amount":str(amount),
+                "description":f"RubyBet: ${amount:.2f} deposit",
+                "payload":json.dumps({"user_id":uid,"usdt_cents":usdt_cents,"coins":coins,"amount_usd":amount}),
+                "paid_btn_name":"callback",
+                "paid_btn_url":f"https://t.me/{(await bot.get_me()).username}"
+            }, headers={"Crypto-Pay-API-Token":CRYPTO_TOKEN})
+            d = await r.json()
+            if not d.get("ok"): return web.json_response({"ok":False,"error":"invoice_failed"},headers=H)
+            inv_id = str(d["result"].get("invoice_id",""))
+            pay_url = d["result"]["mini_app_invoice_url"]
+            await record_payment(uid, "deposit", amount, usdt_cents or coins, method="crypto_bot", status="pending", invoice_id=inv_id)
+            return web.json_response({"ok":True,"pay_url":pay_url,"invoice_id":inv_id},headers=H)
+    except Exception as e:
+        logging.error(f"CryptoBot invoice error: {e}")
+        return web.json_response({"ok":False,"error":"service_unavailable"},headers=H)
+
+async def api_create_card_payment(req):
+    """POST /api/create-card-payment — placeholder for card payments"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    return web.json_response({"ok":False,"error":"card_not_yet_available"},headers=H)
+
 async def start_api():
     app=web.Application()
     for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment)]:
         app.router.add_post(path,handler)
     # Admin API (protected by bot token in query)
     app.router.add_get("/admin/stats",admin_stats)
