@@ -437,13 +437,11 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
             <div style="font-size:11px;color:var(--dim)" id="bpSub">≈ 0.00 USDT</div>
         </div>
         <!-- Currency grid (USDT mode only) -->
-        <div id="bpCurrencies" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">
+        <div id="bpCurrencies" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:14px">
             <button class="pill" data-cur="USD" onclick="setCurrencyPopup('USD')" style="justify-content:center;height:32px;font-size:11px">$ USD</button>
             <button class="pill" data-cur="EUR" onclick="setCurrencyPopup('EUR')" style="justify-content:center;height:32px;font-size:11px">€ EUR</button>
             <button class="pill" data-cur="PLN" onclick="setCurrencyPopup('PLN')" style="justify-content:center;height:32px;font-size:11px">zł PLN</button>
             <button class="pill" data-cur="UAH" onclick="setCurrencyPopup('UAH')" style="justify-content:center;height:32px;font-size:11px">₴ UAH</button>
-            <button class="pill" data-cur="RUB" onclick="setCurrencyPopup('RUB')" style="justify-content:center;height:32px;font-size:11px">₽ RUB</button>
-            <button class="pill" data-cur="GBP" onclick="setCurrencyPopup('GBP')" style="justify-content:center;height:32px;font-size:11px">£ GBP</button>
         </div>
         <!-- Deposit button -->
         <button class="btn-primary" onclick="closeBalancePopup();nav('wallet')" style="height:40px;font-size:12px;border-radius:10px">
@@ -863,7 +861,7 @@ function nav(s){
     if(s==='game')initGame();
     if(s==='profile')loadProfile();
     if(s==='referral')loadReferral();
-    if(s==='wallet')updateWallet();
+    if(s==='wallet'){updateWallet();switchWalletTab(activeWallet)}
     window.scrollTo(0,0);
 }
 
@@ -1258,18 +1256,32 @@ function updateWallet(){
 }
 
 function updateBalanceUI(){
-    /* Header balance shows in selected currency */
     var hb=document.getElementById('headerBal');
-    if(hb){
-        if(usdtBalance!==null&&usdtBalance!==undefined){
-            hb.textContent=displayCurrency==='USDT'?usdtBalance.toFixed(2):formatCurrency(usdtBalance);
+    var hu=document.getElementById('headerUnit');
+    if(activeWallet==='stars'){
+        /* Stars mode — show stars balance */
+        if(hb)hb.textContent=starsBalance;
+        if(hu)hu.textContent='⭐';
+    }else{
+        /* USDT mode — show in selected display currency */
+        if(hb){
+            if(usdtBalance!==null&&usdtBalance!==undefined){
+                hb.textContent=displayCurrency==='USDT'?usdtBalance.toFixed(2):formatCurrency(usdtBalance);
+            }else{
+                hb.textContent='...';
+            }
+        }
+        if(hu)hu.textContent=displayCurrency;
+    }
+    /* Game balance — always show active wallet */
+    var gb=document.getElementById('gameBal');
+    if(gb){
+        if(activeWallet==='stars'){
+            gb.textContent=starsBalance+' ⭐';
         }else{
-            hb.textContent='...';
+            gb.textContent=usdtBalance!==null?usdtBalance.toFixed(2):'0';
         }
     }
-    document.getElementById('headerUnit').textContent=displayCurrency;
-    /* Game balance */
-    var gb=document.getElementById('gameBal');if(gb)gb.textContent=usdtBalance!==null?usdtBalance.toFixed(2):'0';
     var fb=document.getElementById('freeBadge');if(fb)fb.textContent=freeSpins>0?'⚡ '+freeSpins+' '+T.freeSpins:'';
     updateSpinBtn();
 }
@@ -1458,6 +1470,7 @@ function switchBalPopup(type){
     document.getElementById('bpUsdt').classList.toggle('active',type==='usdt');
     document.getElementById('bpStars').classList.toggle('active',type==='stars');
     document.getElementById('bpCurrencies').style.display=type==='usdt'?'grid':'none';
+    document.getElementById('bpDeposit').textContent=type==='stars'?'BUY STARS':'DEPOSIT';
     updateBalPopupContent();
     updateBalanceUI();
 }
