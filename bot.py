@@ -1097,29 +1097,44 @@ async def admin_auth_create(req):
         return web.json_response({"ok": False, "error": "username_exists"}, headers=H)
 
 async def admin_auth_update(req):
-    """POST /admin/auth/update — update admin user (owner only)."""
+    """POST /admin/auth/update — update admin user (owner or self)."""
     if req.method == "OPTIONS": return web.Response(headers=H)
     admin, err = _require_admin(req, "settings")
     if err: return err
-    if admin['role'] != 'owner':
-        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+    
     data = await req.json()
     admin_id = int(data.get("id", 0))
+    is_self = admin_id == int(admin['sub'])
+    
+    if admin['role'] != 'owner' and not is_self:
+        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+        
     updates = []
     params = []
+    
+    # Only owner can change roles or permissions
     if "role" in data and data["role"] in ('admin', 'manager', 'viewer'):
-        updates.append("role=?"); params.append(data["role"])
+        if admin['role'] == 'owner':
+            updates.append("role=?"); params.append(data["role"])
+    
     if "permissions" in data:
-        updates.append("permissions=?"); params.append(json.dumps(data["permissions"]))
+        if admin['role'] == 'owner':
+            updates.append("permissions=?"); params.append(json.dumps(data["permissions"]))
+            
     if "display_name" in data:
         updates.append("display_name=?"); params.append(data["display_name"])
+        
     if "is_active" in data:
-        updates.append("is_active=?"); params.append(1 if data["is_active"] else 0)
+        if admin['role'] == 'owner':
+            updates.append("is_active=?"); params.append(1 if data["is_active"] else 0)
+            
     if "password" in data and data["password"]:
         pw_hash = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()
         updates.append("password_hash=?"); params.append(pw_hash)
+        
     if not updates:
         return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
+        
     params.append(admin_id)
     with _conn() as c:
         c.execute(f"UPDATE admin_users SET {','.join(updates)} WHERE id=?", params)
