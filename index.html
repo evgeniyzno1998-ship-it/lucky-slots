@@ -162,7 +162,7 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
 .ctrl-side-btn:active{transform:scale(.93);background:var(--surface3)}
 .ctrl-side-btn .material-symbols-outlined{font-size:20px}
 
-.spin-btn{width:80px;height:80px;border-radius:50%;border:none;font-family:'Montserrat',sans-serif;font-weight:900;cursor:pointer;font-size:13px;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
+.spin-btn{width:90px;height:70px;border-radius:var(--radius);border:none;font-family:'Montserrat',sans-serif;font-weight:900;cursor:pointer;font-size:11px;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative}
 .spin-btn .material-symbols-outlined{font-size:28px}
 .spin-btn.m-spin{background:var(--red);color:#fff;box-shadow:0 4px 20px var(--red-glow)}
 .spin-btn.m-deposit{background:var(--green);color:#fff;animation:glow-g 1.5s infinite}
@@ -542,35 +542,85 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
 
 <!-- ===== SCREEN: WALLET ===== -->
 <div class="screen" id="scrWallet">
-    <div class="wallet-balance">
-        <div class="wallet-balance-label" id="wBalLabel">TOTAL BALANCE</div>
-        <div class="wallet-balance-amount">
-            <h1 id="wBalAmount">0</h1>
-            <div class="unit" id="wBalUnit">coins</div>
+    <!-- Balance switcher: USDT / Stars -->
+    <div style="display:flex;gap:8px;padding:12px 16px 4px">
+        <button class="pill active" id="walTabUsdt" onclick="switchWalletTab('usdt')" style="flex:1;justify-content:center">💵 USDT</button>
+        <button class="pill" id="walTabStars" onclick="switchWalletTab('stars')" style="flex:1;justify-content:center">⭐ Stars</button>
+    </div>
+
+    <!-- USDT balance -->
+    <div id="walUsdt">
+        <div class="wallet-balance">
+            <div class="wallet-balance-label" id="wBalLabel">TOTAL BALANCE</div>
+            <div class="wallet-balance-amount">
+                <h1 id="wBalAmount">0.00</h1>
+                <div class="unit" id="wBalUnit">USDT</div>
+            </div>
+            <div style="font-size:12px;color:var(--dim);margin-top:2px" id="wBalLocal"></div>
+        </div>
+        <!-- Currency display switcher -->
+        <div style="display:flex;gap:6px;padding:0 16px 12px;justify-content:center;flex-wrap:wrap" id="currencyRow">
+            <button class="pill active" onclick="setCurrency('USDT')" data-cur="USDT" style="font-size:11px;height:28px;padding:0 12px">USDT</button>
+            <button class="pill" onclick="setCurrency('USD')" data-cur="USD" style="font-size:11px;height:28px;padding:0 12px">USD</button>
+            <button class="pill" onclick="setCurrency('PLN')" data-cur="PLN" style="font-size:11px;height:28px;padding:0 12px">PLN</button>
+            <button class="pill" onclick="setCurrency('UAH')" data-cur="UAH" style="font-size:11px;height:28px;padding:0 12px">UAH</button>
+            <button class="pill" onclick="setCurrency('EUR')" data-cur="EUR" style="font-size:11px;height:28px;padding:0 12px">EUR</button>
+        </div>
+
+        <div class="wallet-actions">
+            <button class="btn-primary" onclick="openDepositModal('usdt')"><span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span><span id="wDeposit">DEPOSIT</span></button>
+            <button class="btn-outline" style="color:var(--red)"><span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span><span id="wWithdraw">WITHDRAW</span></button>
+        </div>
+
+        <button class="wallet-history-btn"><span class="material-symbols-outlined">history</span><span id="wHistory">View Transaction History</span></button>
+
+        <!-- Payment methods -->
+        <div class="section" style="margin-top:8px"><div class="section-head"><div class="section-title" id="wMethodLabel">PAYMENT METHOD</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:16px">
+            <button class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:1.5px solid var(--red);transition:all .15s" id="pmCrypto" onclick="selectPayMethod('crypto')">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">💎</span></div>
+                <div style="flex:1"><div style="font-size:13px;font-weight:700">CryptoBot</div><div style="font-size:10px;color:var(--dim)">USDT, BTC, TON</div></div>
+                <span class="material-symbols-outlined" style="color:var(--red);font-size:18px">check_circle</span>
+            </button>
+            <button class="card" style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s" id="pmCard" onclick="selectPayMethod('card')">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">💳</span></div>
+                <div style="flex:1"><div style="font-size:13px;font-weight:700" id="pmCardTitle">Bank Card</div><div style="font-size:10px;color:var(--dim)">Visa, Mastercard</div></div>
+                <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px" id="pmCardCheck">radio_button_unchecked</span>
+            </button>
+        </div>
+
+        <!-- Deposit packages -->
+        <div class="wallet-assets">
+            <div class="wallet-assets-label" id="wPkgLabel">SELECT PACKAGE</div>
+            <div class="asset-row" id="assetRow"></div>
         </div>
     </div>
 
-    <div class="wallet-actions">
-        <button class="btn-primary" onclick="nav('deposit')"><span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span><span id="wDeposit">DEPOSIT</span></button>
-        <button class="btn-outline" style="color:var(--red)"><span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span><span id="wWithdraw">WITHDRAW</span></button>
-    </div>
-
-    <button class="wallet-history-btn"><span class="material-symbols-outlined">history</span><span id="wHistory">View Transaction History</span></button>
-
-    <div class="wallet-assets">
-        <div class="wallet-assets-label" id="wAssetLabel">SELECT PACKAGE</div>
-        <div class="asset-row" id="assetRow"></div>
-    </div>
-
-    <div class="deposit-card">
-        <div class="dc-network">
-            <div class="dc-network-left"><div class="dc-dot"></div><div class="dc-name">CryptoBot</div></div>
-            <div class="dc-status">ACTIVE</div>
+    <!-- Stars balance -->
+    <div id="walStars" style="display:none">
+        <div class="wallet-balance">
+            <div class="wallet-balance-label">⭐ STARS BALANCE</div>
+            <div class="wallet-balance-amount">
+                <h1 id="wStarsAmount">0</h1>
+                <div class="unit" style="color:#FFD700">Stars</div>
+            </div>
         </div>
-        <div class="dc-info" id="dcInfo">Pay with <span>USDT</span> via CryptoBot. Instant delivery.</div>
-        <div class="dc-note">
-            <span class="material-symbols-outlined">info</span>
-            <p id="dcNote">Minimum deposit is <span>$0.50</span>. Coins are added instantly after payment.</p>
+
+        <div class="wallet-actions">
+            <button class="btn-primary" style="background:#FFD700;color:#000;box-shadow:0 4px 16px rgba(255,215,0,.3)" onclick="openDepositModal('stars')"><span class="material-symbols-outlined" style="font-size:18px">star</span><span>BUY STARS</span></button>
+        </div>
+
+        <div style="padding:0 16px;margin-top:8px">
+            <div class="dc-note">
+                <span class="material-symbols-outlined">info</span>
+                <p id="starsNote">Stars are purchased via Telegram and can be used to play separately. Stars balance is independent from USDT.</p>
+            </div>
+        </div>
+
+        <!-- Stars packages -->
+        <div class="wallet-assets" style="margin-top:16px">
+            <div class="wallet-assets-label">SELECT STARS PACKAGE</div>
+            <div class="asset-row" id="starsRow"></div>
         </div>
     </div>
 </div>
@@ -659,9 +709,19 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
     </div>
 
     <div class="prof-menu">
+        <div class="prof-menu-item" onclick="openLangSelector()"><div class="prof-menu-left"><span class="material-symbols-outlined">language</span><span id="profLang">Language</span></div><div style="display:flex;align-items:center;gap:4px"><span id="profLangCurrent" style="font-size:12px;color:var(--dim)"></span><span class="material-symbols-outlined">chevron_right</span></div></div>
         <div class="prof-menu-item" onclick="changeLang()"><div class="prof-menu-left"><span class="material-symbols-outlined">settings</span><span id="profSettings">Settings</span></div><span class="material-symbols-outlined">chevron_right</span></div>
         <div class="prof-menu-item"><div class="prof-menu-left"><span class="material-symbols-outlined">security</span><span id="profSecurity">Security</span></div><span class="material-symbols-outlined">chevron_right</span></div>
         <div class="prof-menu-item"><div class="prof-menu-left"><span class="material-symbols-outlined">headset_mic</span><span id="profSupport">Support</span></div><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <!-- Language selector overlay -->
+    <div id="langOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:300;align-items:flex-end;justify-content:center">
+        <div style="background:var(--surface);border-top-left-radius:var(--radius-xl);border-top-right-radius:var(--radius-xl);width:100%;max-width:480px;padding:20px 16px 32px">
+            <div style="width:40px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px"></div>
+            <h3 style="font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;margin-bottom:16px;text-align:center" id="langTitle">Select Language</h3>
+            <div style="display:flex;flex-direction:column;gap:6px" id="langList"></div>
+        </div>
     </div>
 
     <button class="prof-signout" id="profSignout">Sign Out</button>
@@ -732,6 +792,8 @@ const T=LC[LANG]||LC.en;
 const BSYM=['🍒','🍋','🍊','🍇','🍫','🍭','🍬','💎'];
 const BONSYM=['👑','💎','⭐','❤️','🍀','🧲','💰','🌈'];
 let balance=null,freeSpins=0,bet=5,spinning=false,currentScreen='lobby';
+let currentLang=LANG;
+let activeWallet='usdt'; /* 'usdt' or 'stars' */
 
 /* === SPEED SYSTEM === */
 let speedMode=1;
@@ -759,7 +821,7 @@ function toastAction(){var c=toastCb;closeToast();if(c)c()}
 
 /* === NAVIGATION === */
 function nav(s){
-    if(s==='deposit'){tg.openTelegramLink('https://t.me/'+BOT+'?start=deposit');tg.close();return}
+    if(s==='deposit'){s='wallet'} /* deposit → wallet page */
     document.querySelectorAll('.screen').forEach(function(e){e.classList.remove('active')});
     document.querySelectorAll('.nav-item').forEach(function(e){e.classList.remove('active')});
     var map={lobby:'scrLobby',game:'scrGame',bonuses:'scrBonuses',wallet:'scrWallet',referral:'scrReferral',profile:'scrProfile'};
@@ -774,17 +836,14 @@ function nav(s){
 }
 
 /* === DATA === */
-async function loadBalance(){
-    try{var r=await fetch(API+'/api/balance?'+qs());var d=await r.json();
-        if(d.ok){balance=d.balance;freeSpins=d.free_spins||0;updateBalanceUI();if(d.vip)updateVIP(d.vip);return}}catch(e){}
-    setTimeout(loadBalance,2000);
+/* Balance functions are defined later in the file with full dual-balance support */
+function getActiveBalance(){
+    if(activeWallet==='stars') return balanceStars;
+    return usdtBalance;
 }
-function updateBalanceUI(){
-    var b=balance!==null?balance:'...';
-    document.getElementById('headerBal').textContent=b;
-    var gb=document.getElementById('gameBal');if(gb)gb.textContent=balance||0;
-    var fb=document.getElementById('freeBadge');if(fb)fb.textContent=freeSpins>0?'⚡ '+freeSpins+' '+T.freeSpins:'';
-    updateSpinBtn();
+function getActiveUnit(){
+    if(activeWallet==='stars') return '⭐';
+    return displayCurrency;
 }
 function updateVIP(v){
     document.getElementById('vipIcon').textContent=v.icon;
@@ -793,9 +852,6 @@ function updateVIP(v){
     if(v.next_at){pct=Math.min(100,Math.round(v.wagered/v.next_at*100))}else{pct=100}
     document.getElementById('vipBar').style.width=pct+'%';
     document.getElementById('vipPct').textContent=pct+'%';
-}
-function updateWallet(){
-    document.getElementById('wBalAmount').textContent=balance!==null?balance:'0';
 }
 
 /* === GAME === */
@@ -840,7 +896,7 @@ function toggleAutoSpeed(){
 }
 function doSpin(){
     if(balance===null)return;
-    if(balance<bet&&freeSpins<=0){showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('deposit')});return}
+    if(balance<bet&&freeSpins<=0){nav('wallet');return}
     spin();
 }
 
@@ -880,7 +936,7 @@ async function startBonus(mode){
     for(var i=0;i<30;i++){var c=document.createElement('div');c.className='cell';c.textContent=BONSYM[Math.floor(Math.random()*BONSYM.length)];bg.appendChild(c)}
     try{
         var r=await fetch(API+'/api/bonus',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},auth(),{bet:bet,mode:mode}))});
-        var d=await r.json();if(!d.ok){if(d.error==='funds')showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('deposit')});closeBonus();return}
+        var d=await r.json();if(!d.ok){if(d.error==='funds')showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('wallet')});closeBonus();return}
         var bc=bg.querySelectorAll('.cell');var sp=S();
         for(var j=0;j<d.spins.length;j++){var sn=d.spins[j];
             document.getElementById('boSpinC').textContent=sn.spin_number+'/'+sn.total_spins;
@@ -900,7 +956,7 @@ async function startBonus(mode){
 }
 function closeBonus(){document.getElementById('bonusOL').classList.remove('show');spinning=false;updateBalanceUI()}
 function showBombPop(m){var e=document.createElement('div');e.className='bomb-pop';e.textContent='💣 x'+m;document.body.appendChild(e);setTimeout(function(){e.remove()},800)}
-function buyBonus(){if(!balance||balance<bet*100){showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('deposit')});return}startBonus('bought')}
+function buyBonus(){if(!balance||balance<bet*100){showToast('💰',T.noMoney+'\n'+T.noMoneyDesc,T.depositBtn,T.cancelBtn,function(){nav('wallet')});return}startBonus('bought')}
 
 /* === WHEEL === */
 var WSEG=[{l:'5 🪙',c:'#1a0a0a'},{l:'10 🪙',c:'#2a1a1a'},{l:'25 🪙',c:'#1a0a0a'},{l:'50 🪙',c:'#2a1a1a'},{l:'100 🪙',c:'#1a0a0a'},{l:'3 ⚡',c:'#2a1a1a'},{l:'5 ⚡',c:'#1a0a0a'},{l:'250 🪙',c:'#2a1a1a'},{l:'500 🪙',c:'#1a0a0a'}];
@@ -976,7 +1032,7 @@ function copyRefLink(){
     })}
 }
 function shareRef(){tg.openTelegramLink('https://t.me/share/url?url=https://t.me/'+BOT+'?start=ref'+UID+'&text=🎰')}
-function changeLang(){tg.openTelegramLink('https://t.me/'+BOT);tg.close()}
+function changeLang(){openLangSelector()}
 async function checkWheel(){try{var r=await fetch(API+'/api/wheel-status?'+qs());var d=await r.json();if(d.ok&&!d.available)document.getElementById('wheelBanner').classList.add('done')}catch(e){}}
 
 /* === INIT LOCALE === */
@@ -1023,11 +1079,12 @@ function initLocale(){
     document.getElementById('blDesc').textContent=T.vipDesc;
     /* Wallet */
     document.getElementById('wBalLabel').textContent=T.totalBalance;
-    document.getElementById('wBalUnit').textContent=T.coins;
     document.getElementById('wDeposit').textContent=T.deposit;
     document.getElementById('wWithdraw').textContent=T.withdraw;
     document.getElementById('wHistory').textContent=T.transHistory;
-    document.getElementById('wAssetLabel').textContent=T.selectPkg;
+    var wml=document.getElementById('wMethodLabel');if(wml)wml.textContent=LANG==='ru'?'МЕТОД ОПЛАТЫ':LANG==='ua'?'МЕТОД ОПЛАТИ':LANG==='pl'?'METODA PŁATNOŚCI':'PAYMENT METHOD';
+    var wpl=document.getElementById('wPkgLabel');if(wpl)wpl.textContent=T.selectPkg;
+    var pct=document.getElementById('pmCardTitle');if(pct)pct.textContent=LANG==='ru'?'Банковская карта':LANG==='ua'?'Банківська картка':LANG==='pl'?'Karta bankowa':'Bank Card';
     /* Referral */
     document.getElementById('refHeroTitle').innerHTML=T.inviteEarn.replace('&','&amp;').replace(/(Earn|Zarabiaj|Зарабатывай|Заробляй)/,'<span>$1</span>');
     document.getElementById('refHeroDesc').innerHTML=T.inviteDesc;
@@ -1110,13 +1167,280 @@ function buildBonusPills(){
 function buildWalletPackages(){
     var pkgs=[{amount:'50',price:'0.50'},{amount:'100',price:'0.90'},{amount:'500',price:'4.00'}];
     document.getElementById('assetRow').innerHTML=pkgs.map(function(p,i){
-        return '<button class="asset-btn'+(i===0?' active':'')+'" onclick="selectPkg(this)">'+p.amount+'<br><span style="font-size:10px;color:var(--dim)">$'+p.price+'</span></button>';
+        return '<button class="asset-btn'+(i===0?' active':'')+'" onclick="selectPkg(this,\''+p.amount+'\',\''+p.price+'\')" data-coins="'+p.amount+'" data-price="'+p.price+'">'+p.amount+' coins<br><span style="font-size:10px;color:var(--dim)">$'+p.price+'</span></button>';
+    }).join('');
+    /* Stars packages */
+    var starPkgs=[{stars:50,price:'50'},{stars:150,price:'150'},{stars:500,price:'500'}];
+    var sr=document.getElementById('starsRow');
+    if(sr) sr.innerHTML=starPkgs.map(function(p,i){
+        return '<button class="asset-btn'+(i===0?' active':'')+'" onclick="selectPkg(this,\''+p.stars+'\',\''+p.price+'\')" data-stars="'+p.stars+'" data-price="'+p.price+'">⭐ '+p.stars+'<br><span style="font-size:10px;color:var(--dim)">'+p.price+' ⭐</span></button>';
     }).join('');
 }
-function selectPkg(el){document.querySelectorAll('.asset-btn').forEach(function(b){b.classList.remove('active')});el.classList.add('active')}
+var selectedPkg={coins:'50',price:'0.50'};
+function selectPkg(el,amount,price){
+    el.parentNode.querySelectorAll('.asset-btn').forEach(function(b){b.classList.remove('active')});
+    el.classList.add('active');
+    selectedPkg={coins:amount,price:price};
+}
+
+/* === CURRENCY SYSTEM === */
+var RATES={USDT:1,USD:1,PLN:4.05,UAH:41.2,EUR:0.92,RUB:96.5};
+var displayCurrency='USDT';
+var usdtBalance=0; /* internal USDT balance (cents precision) */
+var starsBalance=0;
+var payMethod='crypto'; /* crypto | card | stars */
+
+function setCurrency(cur){
+    displayCurrency=cur;
+    document.querySelectorAll('#currencyRow .pill').forEach(function(p){p.classList.toggle('active',p.getAttribute('data-cur')===cur)});
+    updateWallet();
+    updateBalanceUI();
+}
+
+function formatCurrency(usdtAmount,cur){
+    if(!cur)cur=displayCurrency;
+    var val=usdtAmount*RATES[cur];
+    var symbols={USDT:'',USD:'$',PLN:'zł',UAH:'₴',EUR:'€',RUB:'₽'};
+    if(cur==='USDT')return val.toFixed(2);
+    return symbols[cur]+val.toFixed(2);
+}
+
+function updateWallet(){
+    var el=document.getElementById('wBalAmount');
+    if(el){
+        if(displayCurrency==='USDT'){
+            el.textContent=usdtBalance.toFixed(2);
+            document.getElementById('wBalUnit').textContent='USDT';
+        }else{
+            el.textContent=formatCurrency(usdtBalance);
+            document.getElementById('wBalUnit').textContent=displayCurrency;
+        }
+    }
+    var loc=document.getElementById('wBalLocal');
+    if(loc){
+        if(displayCurrency!=='USDT')loc.textContent='≈ '+usdtBalance.toFixed(2)+' USDT';
+        else loc.textContent='';
+    }
+    var se=document.getElementById('wStarsAmount');
+    if(se)se.textContent=starsBalance;
+}
+
+function updateBalanceUI(){
+    /* Header balance shows in selected currency */
+    var hb=document.getElementById('headerBal');
+    if(hb){
+        if(usdtBalance!==null&&usdtBalance!==undefined){
+            hb.textContent=displayCurrency==='USDT'?usdtBalance.toFixed(2):formatCurrency(usdtBalance);
+        }else{
+            hb.textContent='...';
+        }
+    }
+    document.getElementById('headerUnit').textContent=displayCurrency;
+    /* Game balance */
+    var gb=document.getElementById('gameBal');if(gb)gb.textContent=usdtBalance!==null?usdtBalance.toFixed(2):'0';
+    var fb=document.getElementById('freeBadge');if(fb)fb.textContent=freeSpins>0?'⚡ '+freeSpins+' '+T.freeSpins:'';
+    updateSpinBtn();
+}
+
+/* Override loadBalance to set usdtBalance */
+async function loadBalance(){
+    try{var r=await fetch(API+'/api/balance?'+qs());var d=await r.json();
+        if(d.ok){
+            balance=d.balance;freeSpins=d.free_spins||0;
+            /* Convert coins to USDT — 100 coins = $1 USDT */
+            usdtBalance=d.balance/100;
+            starsBalance=d.stars_balance||0;
+            updateBalanceUI();updateWallet();
+            if(d.vip)updateVIP(d.vip);
+            return;
+        }}catch(e){}
+    setTimeout(loadBalance,2000);
+}
+
+/* === WALLET TAB SWITCH === */
+function switchWalletTab(tab){
+    document.getElementById('walUsdt').style.display=tab==='usdt'?'block':'none';
+    document.getElementById('walStars').style.display=tab==='stars'?'block':'none';
+    document.getElementById('walTabUsdt').classList.toggle('active',tab==='usdt');
+    document.getElementById('walTabStars').classList.toggle('active',tab==='stars');
+}
+
+/* === PAYMENT METHOD === */
+function selectPayMethod(method){
+    payMethod=method;
+    document.getElementById('pmCrypto').style.borderColor=method==='crypto'?'var(--red)':'var(--border)';
+    document.getElementById('pmCard').style.borderColor=method==='card'?'var(--red)':'var(--border)';
+    document.querySelector('#pmCrypto .material-symbols-outlined:last-child').textContent=method==='crypto'?'check_circle':'radio_button_unchecked';
+    document.querySelector('#pmCrypto .material-symbols-outlined:last-child').style.color=method==='crypto'?'var(--red)':'var(--dim)';
+    document.getElementById('pmCardCheck').textContent=method==='card'?'check_circle':'radio_button_unchecked';
+    document.getElementById('pmCardCheck').style.color=method==='card'?'var(--red)':'var(--dim)';
+}
+
+/* === DEPOSIT FLOW (inside miniapp) === */
+function openDepositModal(type){
+    if(type==='stars'){
+        /* Telegram Stars payment via WebApp invoice */
+        var starsPkg=document.querySelector('#starsRow .asset-btn.active');
+        var amount=starsPkg?starsPkg.getAttribute('data-stars'):'50';
+        buyStars(parseInt(amount));
+        return;
+    }
+    if(payMethod==='crypto'){
+        /* CryptoBot payment — call backend to create invoice, open URL in browser */
+        var pkg=document.querySelector('#assetRow .asset-btn.active');
+        var coins=pkg?pkg.getAttribute('data-coins'):'50';
+        var price=pkg?pkg.getAttribute('data-price'):'0.50';
+        buyCrypto(coins,price);
+    }else if(payMethod==='card'){
+        /* Card payment — call backend to get payment link */
+        var pkg2=document.querySelector('#assetRow .asset-btn.active');
+        var coins2=pkg2?pkg2.getAttribute('data-coins'):'50';
+        var price2=pkg2?pkg2.getAttribute('data-price'):'0.50';
+        buyCard(coins2,price2);
+    }
+}
+
+async function buyStars(amount){
+    /* Request invoice link from backend, then open via Telegram WebApp */
+    try{
+        showToast('⭐',LANG==='ru'?'Создаём счёт...':LANG==='ua'?'Створюємо рахунок...':LANG==='pl'?'Tworzenie faktury...':'Creating invoice...','⏳','',null);
+        var r=await fetch(API+'/api/create-stars-invoice',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(Object.assign({},auth(),{stars:amount}))
+        });
+        var d=await r.json();
+        closeToast();
+        if(d.ok&&d.invoice_link){
+            tg.openInvoice(d.invoice_link,function(status){
+                if(status==='paid'){
+                    showToast('✅',LANG==='ru'?'Оплата прошла! +'+amount+' ⭐':LANG==='ua'?'Оплата пройшла! +'+amount+' ⭐':LANG==='pl'?'Płatność przeszła! +'+amount+' ⭐':'Payment successful! +'+amount+' ⭐','OK','',function(){closeToast()});
+                    loadBalance();
+                }else if(status==='cancelled'){
+                    /* User cancelled, do nothing */
+                }else if(status==='failed'){
+                    showToast('❌',LANG==='ru'?'Ошибка оплаты':LANG==='ua'?'Помилка оплати':LANG==='pl'?'Błąd płatności':'Payment failed','OK','',function(){closeToast()});
+                }
+            });
+        }else{
+            showToast('❌',d.error||'Error creating invoice','OK','',function(){closeToast()});
+        }
+    }catch(e){
+        closeToast();
+        showToast('❌','Network error','OK','',function(){closeToast()});
+    }
+}
+
+async function buyCrypto(coins,price){
+    try{
+        showToast('💎',LANG==='ru'?'Создаём счёт CryptoBot...':LANG==='ua'?'Створюємо рахунок CryptoBot...':LANG==='pl'?'Tworzenie faktury CryptoBot...':'Creating CryptoBot invoice...','⏳','',null);
+        var r=await fetch(API+'/api/create-invoice',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(Object.assign({},auth(),{coins:parseInt(coins),amount:parseFloat(price)}))
+        });
+        var d=await r.json();
+        closeToast();
+        if(d.ok&&d.pay_url){
+            /* Open CryptoBot payment page inside Telegram browser */
+            tg.openLink(d.pay_url);
+            /* Start polling for payment confirmation */
+            pollPayment(d.invoice_id||null);
+        }else{
+            showToast('❌',d.error||'Error creating invoice','OK','',function(){closeToast()});
+        }
+    }catch(e){
+        closeToast();
+        showToast('❌','Network error','OK','',function(){closeToast()});
+    }
+}
+
+async function buyCard(coins,price){
+    try{
+        showToast('💳',LANG==='ru'?'Создаём платёж...':LANG==='ua'?'Створюємо платіж...':LANG==='pl'?'Tworzenie płatności...':'Creating payment...','⏳','',null);
+        var r=await fetch(API+'/api/create-card-payment',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(Object.assign({},auth(),{coins:parseInt(coins),amount:parseFloat(price)}))
+        });
+        var d=await r.json();
+        closeToast();
+        if(d.ok&&d.pay_url){
+            tg.openLink(d.pay_url);
+            pollPayment(d.invoice_id||null);
+        }else{
+            var msg=d.error||(LANG==='ru'?'Оплата картой скоро будет доступна':LANG==='ua'?'Оплата карткою скоро буде доступна':LANG==='pl'?'Płatność kartą wkrótce dostępna':'Card payment coming soon');
+            showToast('💳',msg,'OK','',function(){closeToast()});
+        }
+    }catch(e){
+        closeToast();
+        showToast('❌','Network error','OK','',function(){closeToast()});
+    }
+}
+
+/* Poll backend for payment completion */
+var pollTimer=null;
+function pollPayment(invoiceId){
+    var attempts=0;
+    if(pollTimer)clearInterval(pollTimer);
+    pollTimer=setInterval(async function(){
+        attempts++;
+        if(attempts>60){clearInterval(pollTimer);return} /* stop after 5 min */
+        try{
+            await loadBalance(); /* reload balance — if payment went through, balance will update */
+        }catch(e){}
+    },5000);
+    /* Auto-stop polling after 5 min */
+    setTimeout(function(){if(pollTimer)clearInterval(pollTimer)},300000);
+}
+
+/* === LANGUAGE SELECTOR (in-app) === */
+var LANG_OPTIONS={
+    pl:{flag:'🇵🇱',name:'Polski'},
+    ua:{flag:'🇺🇦',name:'Українська'},
+    ru:{flag:'🇷🇺',name:'Русский'},
+    en:{flag:'🇬🇧',name:'English'}
+};
+
+function openLangSelector(){
+    var ol=document.getElementById('langOverlay');
+    ol.style.display='flex';
+    var list=document.getElementById('langList');
+    list.innerHTML=Object.keys(LANG_OPTIONS).map(function(code){
+        var l=LANG_OPTIONS[code];
+        var isActive=code===LANG;
+        return '<button onclick="setLanguage(\''+code+'\')" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:'+(isActive?'1.5px solid var(--red)':'1px solid var(--border)')+';background:'+(isActive?'rgba(227,30,36,.06)':'var(--surface)')+';color:#fff;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;font-weight:600;transition:all .15s">'
+            +'<span style="font-size:24px">'+l.flag+'</span>'
+            +'<span style="flex:1;text-align:left">'+l.name+'</span>'
+            +(isActive?'<span class="material-symbols-outlined" style="color:var(--red);font-size:20px">check_circle</span>':'')
+            +'</button>';
+    }).join('');
+    ol.onclick=function(e){if(e.target===ol)ol.style.display='none'};
+}
+
+function setLanguage(code){
+    /* Save via API and reload */
+    fetch(API+'/api/set-language',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},auth(),{language:code}))})
+    .then(function(){
+        /* Reload page with new lang */
+        var params=new URLSearchParams(location.search);
+        params.set('lang',code);
+        location.search=params.toString();
+    }).catch(function(){
+        var params=new URLSearchParams(location.search);
+        params.set('lang',code);
+        location.search=params.toString();
+    });
+}
+
+function initLangDisplay(){
+    var cur=LANG_OPTIONS[LANG];
+    var el=document.getElementById('profLangCurrent');
+    if(el&&cur)el.textContent=cur.flag+' '+cur.name;
+    var el2=document.getElementById('profLang');
+    if(el2)el2.textContent=LANG==='ru'?'Язык':LANG==='ua'?'Мова':LANG==='pl'?'Język':'Language';
+}
 
 /* === INIT === */
 initLocale();
+initLangDisplay();
 buildCategories();
 buildGameGrid();
 buildBonusPills();
