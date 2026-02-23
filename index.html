@@ -416,8 +416,40 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
         <div class="logo-text">RUBY<span>BET</span></div>
     </div>
     <div class="header-right">
-        <div class="header-bal" onclick="nav('wallet')"><span id="headerBal">...</span><span class="amt" id="headerUnit">coins</span></div>
+        <div class="header-bal" onclick="openBalancePopup()"><span id="headerBal">...</span><span class="amt" id="headerUnit">coins</span></div>
         <div class="header-notif"><span class="material-symbols-outlined">notifications</span><div class="dot"></div></div>
+    </div>
+</div>
+
+<!-- Balance / Currency Popup -->
+<div id="balPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200">
+    <div id="balPopupBg" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)" onclick="closeBalancePopup()"></div>
+    <div id="balPopupCard" style="position:absolute;top:var(--header-h);right:12px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:0 16px 48px rgba(0,0,0,.6);transform:translateY(-8px) scale(.95);opacity:0;transition:all .2s cubic-bezier(.34,1.56,.64,1)">
+        <!-- Wallet type toggle -->
+        <div style="display:flex;gap:6px;margin-bottom:14px">
+            <button class="pill" id="bpUsdt" onclick="switchBalPopup('usdt')" style="flex:1;justify-content:center;height:36px;font-size:12px">💵 USDT</button>
+            <button class="pill" id="bpStars" onclick="switchBalPopup('stars')" style="flex:1;justify-content:center;height:36px;font-size:12px">⭐ Stars</button>
+        </div>
+        <!-- Balance display -->
+        <div style="text-align:center;margin-bottom:14px">
+            <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif" id="bpLabel">USDT BALANCE</div>
+            <div style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;margin:4px 0" id="bpAmount">$0.00</div>
+            <div style="font-size:11px;color:var(--dim)" id="bpSub">≈ 0.00 USDT</div>
+        </div>
+        <!-- Currency grid (USDT mode only) -->
+        <div id="bpCurrencies" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">
+            <button class="pill" data-cur="USD" onclick="setCurrencyPopup('USD')" style="justify-content:center;height:32px;font-size:11px">$ USD</button>
+            <button class="pill" data-cur="EUR" onclick="setCurrencyPopup('EUR')" style="justify-content:center;height:32px;font-size:11px">€ EUR</button>
+            <button class="pill" data-cur="PLN" onclick="setCurrencyPopup('PLN')" style="justify-content:center;height:32px;font-size:11px">zł PLN</button>
+            <button class="pill" data-cur="UAH" onclick="setCurrencyPopup('UAH')" style="justify-content:center;height:32px;font-size:11px">₴ UAH</button>
+            <button class="pill" data-cur="RUB" onclick="setCurrencyPopup('RUB')" style="justify-content:center;height:32px;font-size:11px">₽ RUB</button>
+            <button class="pill" data-cur="GBP" onclick="setCurrencyPopup('GBP')" style="justify-content:center;height:32px;font-size:11px">£ GBP</button>
+        </div>
+        <!-- Deposit button -->
+        <button class="btn-primary" onclick="closeBalancePopup();nav('wallet')" style="height:40px;font-size:12px;border-radius:10px">
+            <span class="material-symbols-outlined" style="font-size:16px">add</span>
+            <span id="bpDeposit">DEPOSIT</span>
+        </button>
     </div>
 </div>
 
@@ -1340,9 +1372,14 @@ async function buyCrypto(coins,price){
         var d=await r.json();
         closeToast();
         if(d.ok&&d.pay_url){
-            /* Open CryptoBot payment page inside Telegram browser */
-            tg.openLink(d.pay_url);
-            /* Start polling for payment confirmation */
+            /* CryptoBot mini_app_invoice_url is a t.me link — open inside Telegram */
+            var url=d.pay_url;
+            if(url.indexOf('t.me/')!==-1){
+                tg.openTelegramLink(url);
+            }else{
+                /* fallback: open inside Telegram's webview */
+                tg.openLink(url,{try_instant_view:true});
+            }
             pollPayment(d.invoice_id||null);
         }else{
             showToast('❌',d.error||'Error creating invoice','OK','',function(){closeToast()});
@@ -1363,7 +1400,8 @@ async function buyCard(coins,price){
         var d=await r.json();
         closeToast();
         if(d.ok&&d.pay_url){
-            tg.openLink(d.pay_url);
+            /* Open card payment inside Telegram webview */
+            tg.openLink(d.pay_url,{try_instant_view:true});
             pollPayment(d.invoice_id||null);
         }else{
             var msg=d.error||(LANG==='ru'?'Оплата картой скоро будет доступна':LANG==='ua'?'Оплата карткою скоро буде доступна':LANG==='pl'?'Płatność kartą wkrótce dostępna':'Card payment coming soon');
@@ -1389,6 +1427,58 @@ function pollPayment(invoiceId){
     },5000);
     /* Auto-stop polling after 5 min */
     setTimeout(function(){if(pollTimer)clearInterval(pollTimer)},300000);
+}
+
+/* === BALANCE POPUP (header tap) === */
+function openBalancePopup(){
+    var p=document.getElementById('balPopup');
+    p.style.display='block';
+    /* Update active state */
+    document.getElementById('bpUsdt').classList.toggle('active',activeWallet==='usdt');
+    document.getElementById('bpStars').classList.toggle('active',activeWallet==='stars');
+    updateBalPopupContent();
+    /* Update currency pills */
+    document.querySelectorAll('#bpCurrencies .pill').forEach(function(b){
+        b.classList.toggle('active',b.getAttribute('data-cur')===displayCurrency);
+    });
+    document.getElementById('bpCurrencies').style.display=activeWallet==='usdt'?'grid':'none';
+    /* Animate in */
+    requestAnimationFrame(function(){
+        var card=document.getElementById('balPopupCard');
+        card.style.transform='translateY(0) scale(1)';card.style.opacity='1';
+    });
+}
+function closeBalancePopup(){
+    var card=document.getElementById('balPopupCard');
+    card.style.transform='translateY(-8px) scale(.95)';card.style.opacity='0';
+    setTimeout(function(){document.getElementById('balPopup').style.display='none'},200);
+}
+function switchBalPopup(type){
+    activeWallet=type;
+    document.getElementById('bpUsdt').classList.toggle('active',type==='usdt');
+    document.getElementById('bpStars').classList.toggle('active',type==='stars');
+    document.getElementById('bpCurrencies').style.display=type==='usdt'?'grid':'none';
+    updateBalPopupContent();
+    updateBalanceUI();
+}
+function updateBalPopupContent(){
+    if(activeWallet==='stars'){
+        document.getElementById('bpLabel').textContent='⭐ STARS BALANCE';
+        document.getElementById('bpAmount').textContent=starsBalance+' ⭐';
+        document.getElementById('bpSub').textContent='';
+    }else{
+        document.getElementById('bpLabel').textContent=displayCurrency+' BALANCE';
+        var sym=RATES[displayCurrency]?{USDT:'',USD:'$',PLN:'zł',UAH:'₴',EUR:'€',RUB:'₽',GBP:'£'}[displayCurrency]||'':'$';
+        document.getElementById('bpAmount').textContent=formatCurrency(usdtBalance);
+        document.getElementById('bpSub').textContent=displayCurrency!=='USDT'?'≈ '+usdtBalance.toFixed(2)+' USDT':'';
+    }
+}
+function setCurrencyPopup(cur){
+    setCurrency(cur);
+    document.querySelectorAll('#bpCurrencies .pill').forEach(function(b){
+        b.classList.toggle('active',b.getAttribute('data-cur')===cur);
+    });
+    updateBalPopupContent();
 }
 
 /* === LANGUAGE SELECTOR (in-app) === */
