@@ -451,6 +451,7 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
 
 .bomb-pop{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:900;font-size:44px;color:var(--red);z-index:300;pointer-events:none;animation:bp .7s ease-out forwards}
 @keyframes bp{0%{transform:translate(-50%,-50%) scale(0);opacity:1}50%{transform:translate(-50%,-50%) scale(1.4);opacity:1}100%{transform:translate(-50%,-60%) scale(1);opacity:0}}
+.btn-hover-fx:active{background:rgba(255,255,255,.08)!important;}
 </style>
 </head>
 <body>
@@ -564,72 +565,57 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
     <!-- speed is toggled via AUTO button now -->
 </div>
 
-<!-- ===== SCREEN: BONUSES (Personal Bonus Dashboard) ===== -->
+<!-- ===== SCREEN: BONUSES ===== -->
 <div class="screen" id="scrBonuses">
-    <!-- Header -->
-    <div style="padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-        <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.5px" id="bonusTitle">My Bonuses</h2>
-        <div style="position:relative;width:36px;height:36px;border-radius:8px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
-            <span class="material-symbols-outlined" style="color:var(--red);font-size:20px">notifications</span>
-            <div style="position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)"></div>
+    <div style="padding:16px 16px 8px"><h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900" id="bonusTitle">Bonuses</h2></div>
+    <div class="pill-row" id="bonusPills"></div>
+
+    <div class="bonus-featured">
+        <div style="position:absolute;inset:0;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover;opacity:.4"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)"></div>
+        <div class="bonus-featured-content">
+            <div class="bf-tags">
+                <div class="bf-tag" id="bfTag">EXCLUSIVE</div>
+                <div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span id="bfTimer">Expires in 24h</span></div>
+            </div>
+            <div class="bf-title" id="bfTitle">100% Deposit Match</div>
+            <div class="bf-desc" id="bfDesc">Get up to 1 BTC on your first deposit. Double your playing money instantly.</div>
+            <div class="bf-bottom">
+                <div><div class="bf-wager-label" id="bfWagerL">WAGER</div><div class="bf-wager-val">x30</div></div>
+                <button class="bf-activate" onclick="nav('wallet')"><span id="bfActivate">Activate</span><span class="material-symbols-outlined">arrow_forward</span></button>
+            </div>
         </div>
     </div>
 
-    <!-- Hero: Available Bonus Balance -->
-    <div style="text-align:center;padding:24px 16px 32px;position:relative">
-        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(227,30,36,.12) 0%,transparent 70%);pointer-events:none"></div>
-        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:3px;color:rgba(227,30,36,.7);margin-bottom:8px" id="bonusBalLabel">Available Bonus Balance</div>
-        <div style="font-family:'Montserrat',sans-serif;font-size:44px;font-weight:900;color:#fff;text-shadow:0 0 15px rgba(227,30,36,.5);margin-bottom:12px" id="bonusBalAmount">$0.00</div>
-        <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(227,30,36,.15);border:1px solid rgba(227,30,36,.25);border-radius:20px">
-            <span class="material-symbols-outlined" style="font-size:14px;color:var(--red)">info</span>
-            <span style="font-size:10px;font-weight:700;color:rgba(227,30,36,.8);text-transform:uppercase;letter-spacing:1px" id="bonusReadyLabel">Ready to claim</span>
+    <div class="bonus-card" id="bonusCard1">
+        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0') center/cover"></div>
+        <div class="bonus-card-body">
+            <div class="bonus-card-title" id="bc1Title">50 Free Spins</div>
+            <div class="bonus-card-desc" id="bc1Desc">Valid for Ruby Slots. No deposit required for new players.</div>
+            <button class="bonus-card-btn" id="bc1Btn">Claim Now</button>
         </div>
     </div>
 
-    <!-- Segmented Control: Active / History -->
-    <div style="padding:0 16px;margin-bottom:16px">
-        <div style="display:flex;padding:3px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px" id="bonusSegments">
-            <button class="bonus-seg active" id="segActive" onclick="switchBonusTab('active')" style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">Active</button>
-            <button class="bonus-seg" id="segHistory" onclick="switchBonusTab('history')" style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">History</button>
+    <div class="bonus-card" id="bonusCard2">
+        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw') center/cover"></div>
+        <div class="bonus-card-body">
+            <div class="bonus-card-title" id="bc2Title">Weekly Cashback</div>
+            <div class="bonus-card-desc" id="bc2Desc">Get 10% back on all losses every Monday. VIP tiers get up to 20%.</div>
+            <button class="bonus-card-btn" id="bc2Btn">Join Club</button>
         </div>
     </div>
 
-    <!-- Active Bonuses Panel -->
-    <div id="bonusActivePanel">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
-            <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)" id="activeBonusHead">Your Active Bonuses</div>
-            <span style="font-size:10px;color:var(--red);font-weight:800;text-transform:uppercase" id="activeBonusCount">0 Active</span>
-        </div>
-
-        <!-- Active bonus cards rendered by JS -->
-        <div id="activeBonusList" style="padding:0 16px;display:flex;flex-direction:column;gap:12px"></div>
-
-        <!-- View History link -->
-        <div style="padding:24px 0;text-align:center">
-            <button onclick="switchBonusTab('history')" style="background:none;border:none;color:var(--dim2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-                View Bonus History <span class="material-symbols-outlined" style="font-size:14px">history</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- History Panel (hidden by default) -->
-    <div id="bonusHistoryPanel" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
-            <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)">Past Rewards</div>
-            <span style="font-size:10px;color:var(--dim2);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:4px;font-weight:800;text-transform:uppercase;letter-spacing:1px">Last 30 Days</span>
-        </div>
-
-        <!-- History items rendered by JS -->
-        <div id="bonusHistoryList" style="padding:0 16px;display:flex;flex-direction:column;gap:10px"></div>
-
-        <!-- End of history -->
-        <div style="padding:40px 0;text-align:center;opacity:.4">
-            <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:6px">history</span>
-            <span style="font-size:11px">End of history</span>
+    <div class="bonus-locked" style="position:relative">
+        <div style="width:33%;min-height:100px;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y') center/cover;filter:grayscale(1);flex-shrink:0"></div>
+        <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
+        <div class="bonus-locked-body">
+            <div class="bl-title" id="blTitle">Diamond VIP Status</div>
+            <div class="bl-desc" id="blDesc">Unlock exclusive tournaments.</div>
+            <div class="bl-progress"><div class="bl-progress-fill" style="width:45%"></div></div>
+            <div class="bl-progress-label">Level 4/10</div>
         </div>
     </div>
 </div>
-
 <!-- ===== SCREEN: WALLET ===== -->
 <div class="screen" id="scrWallet">
     <!-- Balance switcher: USDT / Stars -->
@@ -682,7 +668,7 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
         <!-- Deposit packages -->
         <div class="wallet-assets">
             <div class="wallet-assets-label" id="wPkgLabel">SELECT PACKAGE</div>
-            <div class="asset-row" id="assetRow"></div>
+            <div class="asset-row" id="assetRow" style="display:grid;"></div>
         </div>
     </div>
 
@@ -710,7 +696,7 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
         <!-- Stars packages -->
         <div class="wallet-assets" style="margin-top:16px">
             <div class="wallet-assets-label">SELECT STARS PACKAGE</div>
-            <div class="asset-row" id="starsRow"></div>
+            <div class="asset-row" id="starsRow" style="display:grid;"></div>
         </div>
     </div>
 </div>
@@ -788,6 +774,21 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
         <div class="prof-stat"><div class="prof-stat-label" id="stWinsL">WINS</div><div class="prof-stat-val" id="stWins">0</div></div>
         <div class="prof-stat"><div class="prof-stat-label" id="stLossesL">LOSSES</div><div class="prof-stat-val" id="stLosses">0</div></div>
         <div class="prof-stat"><div class="prof-stat-label" id="stTotalL">TOTAL</div><div class="prof-stat-val" id="stTotal">0</div></div>
+    </div>
+
+    
+    <!-- MY BONUSES BLOCK IN PROFILE -->
+    <div style="margin: 0 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;">
+        <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,.05); display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-family: 'Montserrat',sans-serif; font-size: 14px; font-weight: 800; color: #fff;">My Bonuses</div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--red);" id="activeBonusCountProf">0 Active</div>
+        </div>
+        <div style="padding: 16px; text-align: center; background: radial-gradient(ellipse at center, rgba(227,30,36,.1) 0%, transparent 80%);">
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--dim2); margin-bottom: 4px;">Bonus Balance</div>
+            <div style="font-family: 'Montserrat',sans-serif; font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 12px;" id="bonusBalAmountProf">$0.00</div>
+            <div id="profBonusList" style="display:flex; flex-direction:column; gap:8px; text-align:left;"></div>
+        </div>
+        <button onclick="nav('bonuses')" style="width:100%; padding:14px; background:rgba(255,255,255,.03); border:none; border-top:1px solid var(--border); color:var(--dim); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; cursor:pointer;" class="btn-hover-fx">View All Bonuses <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">arrow_forward</span></button>
     </div>
 
     <div class="prof-referral-btn" onclick="nav('referral')">
@@ -1201,6 +1202,18 @@ function initLocale(){
 }
 
 /* === BUILD DYNAMIC CONTENT === */
+function buildBonusPills(){
+    var pillLabels=['All','Deposit','Free Spins','VIP','Cashback'];
+    if(LANG==='ru')pillLabels=['Все','Депозит','Фриспины','VIP','Кэшбек'];
+    if(LANG==='ua')pillLabels=['Все','Депозит','Фріспіни','VIP','Кешбек'];
+    if(LANG==='pl')pillLabels=['Wszystkie','Depozyt','Darmowe Spiny','VIP','Cashback'];
+    var bp = document.getElementById('bonusPills');
+    if (bp) {
+        bp.innerHTML=pillLabels.map(function(p,i){
+            return '<div class="pill'+(i===0?' active':'')+'" onclick="this.parentNode.querySelectorAll('.pill').forEach(function(e){e.classList.remove('active')});this.classList.add('active')">'+p+'</div>';
+        }).join('');
+    }
+}
 function buildCategories(){
     var cats=[
         {icon:'casino',label:T.slots,screen:'game'},
@@ -1326,7 +1339,9 @@ function renderActiveBonuses(){
     if(b.active.length===0){
         html+='<div style="text-align:center;padding:40px 0;opacity:.4"><span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:6px">redeem</span><span style="font-size:12px">No active bonuses</span></div>';
     }
-    document.getElementById('activeBonusList').innerHTML=html;
+        if(document.getElementById('profBonusList')) document.getElementById('profBonusList').innerHTML=html;
+    if(document.getElementById('bonusBalAmountProf')) document.getElementById('bonusBalAmountProf').textContent='$'+b.balance.toFixed(2);
+    if(document.getElementById('activeBonusCountProf')) document.getElementById('activeBonusCountProf').textContent=b.active.length+' Active';
 }
 
 function renderBonusHistory(){
@@ -1412,7 +1427,7 @@ function viewBonusDetails(id){
     }
 }
 
-function initBonuses(){loadBonuses()}
+function initBonuses(){loadBonuses(); buildBonusPills();}
 
 function buildWalletPackages(){
     var pkgs=[{amount:'50',price:'0.50'},{amount:'100',price:'0.90'},{amount:'500',price:'4.00'}];
