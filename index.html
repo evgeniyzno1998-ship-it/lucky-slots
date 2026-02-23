@@ -219,6 +219,52 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
 /* Locked bonus */
 .bonus-locked{margin:0 16px 12px;border-radius:var(--radius-lg);background:var(--surface);border:1px solid var(--border);overflow:hidden;display:flex;opacity:.5}
 .bonus-locked .lock-icon{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.6);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+
+/* Bonus Segments */
+.bonus-seg{background:transparent;color:var(--dim)}
+.bonus-seg.active{background:var(--surface2);color:#fff;border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* Glass Bonus Card */
+.glass-card{background:linear-gradient(135deg,var(--surface) 0%,var(--surface2) 100%);border:1px solid rgba(227,30,36,.3);border-radius:14px;padding:20px;position:relative;overflow:hidden}
+.glass-card .gc-bg-icon{position:absolute;top:0;right:0;padding:16px;opacity:.07}
+.glass-card .gc-bg-icon .material-symbols-outlined{font-size:56px;color:var(--red)}
+.gc-title{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:4px;position:relative;z-index:1}
+.gc-desc{font-size:12px;color:var(--dim);line-height:1.4;margin-bottom:14px;position:relative;z-index:1}
+.gc-progress{margin-bottom:16px;position:relative;z-index:1}
+.gc-progress-header{display:flex;justify-content:space-between;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.gc-progress-header .label{color:var(--red)}
+.gc-progress-header .val{color:#fff}
+.gc-progress-bar{width:100%;height:5px;background:rgba(227,30,36,.15);border-radius:3px;overflow:hidden}
+.gc-progress-fill{height:100%;background:var(--red);border-radius:3px;transition:width .5s}
+.gc-btn-primary{width:100%;height:42px;border:none;border-radius:8px;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all .15s;position:relative;z-index:1}
+.gc-btn-primary:active{transform:scale(.97);opacity:.9}
+.gc-btn-outline{width:100%;height:42px;border:1.5px solid rgba(227,30,36,.4);border-radius:8px;background:rgba(227,30,36,.06);color:var(--red);font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;cursor:pointer;transition:all .15s;position:relative;z-index:1}
+.gc-btn-outline:active{transform:scale(.97);background:rgba(227,30,36,.12)}
+.gc-timer{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;position:relative;z-index:1}
+.gc-timer .material-symbols-outlined{color:var(--red);font-size:20px}
+.gc-timer-label{font-size:9px;text-transform:uppercase;font-weight:800;color:var(--dim2);letter-spacing:1px;line-height:1}
+.gc-timer-val{font-size:12px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:2px}
+.gc-vip-tag{padding:3px 8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;background:rgba(227,30,36,.15);color:var(--red);border:1px solid rgba(227,30,36,.25);border-radius:4px}
+
+/* History Item */
+.history-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:14px;transition:all .15s}
+.history-item.expired{opacity:.6}
+.hi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.hi-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hi-icon.active{background:rgba(227,30,36,.08);border:1px solid rgba(227,30,36,.15)}
+.hi-icon.inactive{background:var(--surface2);border:1px solid var(--border)}
+.hi-info{flex:1;margin-left:10px}
+.hi-title{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:800;color:#fff;letter-spacing:.3px}
+.hi-date{font-size:10px;color:var(--dim2);margin-top:2px}
+.hi-amount{text-align:right}
+.hi-val{font-size:13px;font-weight:800;color:#fff}
+.hi-val-label{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--dim2)}
+.hi-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border)}
+.hi-status{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--dim)}
+.hi-status .material-symbols-outlined{font-size:16px}
+.hi-status.completed .material-symbols-outlined{color:var(--red)}
+.hi-status.completed{color:var(--text)}
+.hi-badge{font-size:9px;font-weight:800;padding:4px 8px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--dim2);text-transform:uppercase;letter-spacing:.5px}
 .bonus-locked .lock-icon .material-symbols-outlined{font-size:14px;color:var(--dim)}
 .bonus-locked-body{flex:1;padding:14px;position:relative}
 .bonus-locked .bl-title{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:var(--dim)}
@@ -518,54 +564,68 @@ h1,h2,h3,.font-display{font-family:'Montserrat',sans-serif}
     <!-- speed is toggled via AUTO button now -->
 </div>
 
-<!-- ===== SCREEN: BONUSES ===== -->
+<!-- ===== SCREEN: BONUSES (Personal Bonus Dashboard) ===== -->
 <div class="screen" id="scrBonuses">
-    <div style="padding:16px 16px 8px"><h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900" id="bonusTitle">Bonuses</h2></div>
-    <div class="pill-row" id="bonusPills"></div>
-
-    <div class="bonus-featured">
-        <div style="position:absolute;inset:0;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover;opacity:.4"></div>
-        <div style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)"></div>
-        <div class="bonus-featured-content">
-            <div class="bf-tags">
-                <div class="bf-tag" id="bfTag">EXCLUSIVE</div>
-                <div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span id="bfTimer">Expires in 24h</span></div>
-            </div>
-            <div class="bf-title" id="bfTitle">100% Deposit Match</div>
-            <div class="bf-desc" id="bfDesc">Get up to 1 BTC on your first deposit. Double your playing money instantly.</div>
-            <div class="bf-bottom">
-                <div><div class="bf-wager-label" id="bfWagerL">WAGER</div><div class="bf-wager-val">x30</div></div>
-                <button class="bf-activate" onclick="nav('wallet')"><span id="bfActivate">Activate</span><span class="material-symbols-outlined">arrow_forward</span></button>
-            </div>
+    <!-- Header -->
+    <div style="padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.5px" id="bonusTitle">My Bonuses</h2>
+        <div style="position:relative;width:36px;height:36px;border-radius:8px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
+            <span class="material-symbols-outlined" style="color:var(--red);font-size:20px">notifications</span>
+            <div style="position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)"></div>
         </div>
     </div>
 
-    <div class="bonus-card" id="bonusCard1">
-        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0') center/cover"></div>
-        <div class="bonus-card-body">
-            <div class="bonus-card-title" id="bc1Title">50 Free Spins</div>
-            <div class="bonus-card-desc" id="bc1Desc">Valid for Ruby Slots. No deposit required for new players.</div>
-            <button class="bonus-card-btn" id="bc1Btn">Claim Now</button>
+    <!-- Hero: Available Bonus Balance -->
+    <div style="text-align:center;padding:24px 16px 32px;position:relative">
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(227,30,36,.12) 0%,transparent 70%);pointer-events:none"></div>
+        <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:3px;color:rgba(227,30,36,.7);margin-bottom:8px" id="bonusBalLabel">Available Bonus Balance</div>
+        <div style="font-family:'Montserrat',sans-serif;font-size:44px;font-weight:900;color:#fff;text-shadow:0 0 15px rgba(227,30,36,.5);margin-bottom:12px" id="bonusBalAmount">$0.00</div>
+        <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(227,30,36,.15);border:1px solid rgba(227,30,36,.25);border-radius:20px">
+            <span class="material-symbols-outlined" style="font-size:14px;color:var(--red)">info</span>
+            <span style="font-size:10px;font-weight:700;color:rgba(227,30,36,.8);text-transform:uppercase;letter-spacing:1px" id="bonusReadyLabel">Ready to claim</span>
         </div>
     </div>
 
-    <div class="bonus-card" id="bonusCard2">
-        <div class="bonus-card-img" style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw') center/cover"></div>
-        <div class="bonus-card-body">
-            <div class="bonus-card-title" id="bc2Title">Weekly Cashback</div>
-            <div class="bonus-card-desc" id="bc2Desc">Get 10% back on all losses every Monday. VIP tiers get up to 20%.</div>
-            <button class="bonus-card-btn" id="bc2Btn">Join Club</button>
+    <!-- Segmented Control: Active / History -->
+    <div style="padding:0 16px;margin-bottom:16px">
+        <div style="display:flex;padding:3px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px" id="bonusSegments">
+            <button class="bonus-seg active" id="segActive" onclick="switchBonusTab('active')" style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">Active</button>
+            <button class="bonus-seg" id="segHistory" onclick="switchBonusTab('history')" style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">History</button>
         </div>
     </div>
 
-    <div class="bonus-locked" style="position:relative">
-        <div style="width:33%;min-height:100px;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y') center/cover;filter:grayscale(1);flex-shrink:0"></div>
-        <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
-        <div class="bonus-locked-body">
-            <div class="bl-title" id="blTitle">Diamond VIP Status</div>
-            <div class="bl-desc" id="blDesc">Unlock exclusive tournaments.</div>
-            <div class="bl-progress"><div class="bl-progress-fill" style="width:45%"></div></div>
-            <div class="bl-progress-label">Level 4/10</div>
+    <!-- Active Bonuses Panel -->
+    <div id="bonusActivePanel">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
+            <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)" id="activeBonusHead">Your Active Bonuses</div>
+            <span style="font-size:10px;color:var(--red);font-weight:800;text-transform:uppercase" id="activeBonusCount">0 Active</span>
+        </div>
+
+        <!-- Active bonus cards rendered by JS -->
+        <div id="activeBonusList" style="padding:0 16px;display:flex;flex-direction:column;gap:12px"></div>
+
+        <!-- View History link -->
+        <div style="padding:24px 0;text-align:center">
+            <button onclick="switchBonusTab('history')" style="background:none;border:none;color:var(--dim2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                View Bonus History <span class="material-symbols-outlined" style="font-size:14px">history</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- History Panel (hidden by default) -->
+    <div id="bonusHistoryPanel" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
+            <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)">Past Rewards</div>
+            <span style="font-size:10px;color:var(--dim2);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:4px;font-weight:800;text-transform:uppercase;letter-spacing:1px">Last 30 Days</span>
+        </div>
+
+        <!-- History items rendered by JS -->
+        <div id="bonusHistoryList" style="padding:0 16px;display:flex;flex-direction:column;gap:10px"></div>
+
+        <!-- End of history -->
+        <div style="padding:40px 0;text-align:center;opacity:.4">
+            <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:6px">history</span>
+            <span style="font-size:11px">End of history</span>
         </div>
     </div>
 </div>
@@ -1182,17 +1242,177 @@ function buildGameGrid(){
     }).join('');
 }
 
-function buildBonusPills(){
-    var pills=[{l:T.home.charAt(0).toUpperCase()+T.home.slice(1)==='Home'?'All':T.categories==='КАТЕГОРИИ'?'Все':'All',active:true},{l:T.deposit,active:false},{l:T.freeSpins,active:false},{l:'VIP',active:false}];
-    /* simplify to All, Deposit, Free Spins, VIP */
-    var pillLabels=['All','Deposit','Free Spins','VIP','Cashback'];
-    if(LANG==='ru')pillLabels=['Все','Депозит','Фриспины','VIP','Кэшбек'];
-    if(LANG==='ua')pillLabels=['Все','Депозит','Фріспіни','VIP','Кешбек'];
-    if(LANG==='pl')pillLabels=['Wszystkie','Depozyt','Darmowe Spiny','VIP','Cashback'];
-    document.getElementById('bonusPills').innerHTML=pillLabels.map(function(p,i){
-        return '<div class="pill'+(i===0?' active':'')+'" onclick="this.parentNode.querySelectorAll(\'.pill\').forEach(function(e){e.classList.remove(\'active\')});this.classList.add(\'active\')">'+p+'</div>';
-    }).join('');
+/* === PERSONAL BONUS SYSTEM === */
+function switchBonusTab(tab){
+    document.getElementById('segActive').classList.toggle('active',tab==='active');
+    document.getElementById('segHistory').classList.toggle('active',tab==='history');
+    document.getElementById('bonusActivePanel').style.display=tab==='active'?'block':'none';
+    document.getElementById('bonusHistoryPanel').style.display=tab==='history'?'block':'none';
 }
+
+/* Fallback demo data — used when API is unavailable */
+var userBonuses={
+    balance:150.00,
+    active:[
+        {id:1,bonus_type:'cashback',title:'Weekly Cashback',description:'Earn 10% back on all weekly losses',icon:'payments',progress:85.5,max_progress:100,amount:85.50,vip_tag:'',expires_at:'',status:'active',badge:'CASHBACK'},
+        {id:2,bonus_type:'free_spins',title:'Loyalty Free Spins',description:"50 Spins on 'Ruby Reels' Deluxe",icon:'casino',progress:0,max_progress:0,amount:50,vip_tag:'VIP GOLD',expires_at:'2026-02-24 15:00:00',status:'active',badge:'FREE SPINS'},
+        {id:3,bonus_type:'deposit_match',title:'Deposit Match',description:'Wager $200 more to unlock $50 cash',icon:'trophy',progress:120,max_progress:200,amount:50,vip_tag:'',expires_at:'',status:'active',badge:'DEPOSIT MATCH'}
+    ],
+    history:[
+        {id:10,title:'Welcome Free Bet',claimed_at:'2023-09-28',amount:50.00,status:'completed',badge:'DEPOSIT MATCH',icon:'redeem'},
+        {id:11,title:'Weekly Reload Boost',claimed_at:'2023-10-05',amount:25.00,status:'expired',badge:'RELOAD',icon:'timer_off'},
+        {id:12,title:'UCL Finals Cashback',claimed_at:'2023-09-15',amount:120.50,status:'completed',badge:'CASHBACK',icon:'sports_soccer'},
+        {id:13,title:'Referral Reward',claimed_at:'2023-08-22',amount:10.00,status:'expired',badge:'REFERRAL',icon:'confirmation_number'}
+    ]
+};
+
+async function loadBonuses(){
+    try{
+        var r=await fetch(API+'/api/bonuses?'+qs());var d=await r.json();
+        if(d.ok){
+            userBonuses.balance=d.balance||0;
+            if(d.active&&d.active.length>0)userBonuses.active=d.active;
+            if(d.history&&d.history.length>0)userBonuses.history=d.history;
+        }
+    }catch(e){}
+    renderActiveBonuses();renderBonusHistory();
+}
+
+function renderActiveBonuses(){
+    var b=userBonuses;
+    document.getElementById('bonusBalAmount').textContent='$'+b.balance.toFixed(2);
+    document.getElementById('activeBonusCount').textContent=b.active.length+' Active';
+    var html='';
+    b.active.forEach(function(a){
+        /* Card with left red border accent */
+        html+='<div class="glass-card" style="border-left:3px solid var(--red)">';
+        html+='<div class="gc-bg-icon"><span class="material-symbols-outlined">'+(a.icon||'redeem')+'</span></div>';
+        /* Title + VIP tag */
+        html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1;margin-bottom:2px">';
+        html+='<div class="gc-title">'+a.title+'</div>';
+        if(a.vip_tag)html+='<span class="gc-vip-tag">'+a.vip_tag+'</span>';
+        html+='</div>';
+        html+='<div class="gc-desc">'+(a.description||'')+'</div>';
+
+        /* Timer (if expires_at is set and in the future) */
+        if(a.expires_at){
+            var remaining=getTimeRemaining(a.expires_at);
+            if(remaining)html+='<div class="gc-timer"><span class="material-symbols-outlined">timer</span><div><div class="gc-timer-label">Expires In</div><div class="gc-timer-val">'+remaining+'</div></div></div>';
+        }
+
+        /* Progress bar */
+        if(a.max_progress>0){
+            var pct=Math.min(100,Math.round(a.progress/a.max_progress*100));
+            var label=a.bonus_type==='deposit_match'?'Wagering Requirement':'Progress';
+            html+='<div class="gc-progress"><div class="gc-progress-header"><span class="label">'+label+'</span><span class="val">';
+            if(a.bonus_type==='deposit_match')html+=pct+'%';
+            else html+='$'+a.progress.toFixed(2)+' / $'+a.max_progress.toFixed(2)+' Max';
+            html+='</span></div><div class="gc-progress-bar"><div class="gc-progress-fill" style="width:'+pct+'%"></div></div></div>';
+        }
+
+        /* Note for deposit match */
+        if(a.bonus_type==='deposit_match')html+='<div style="font-size:10px;color:var(--dim2);font-style:italic;margin-bottom:14px;position:relative;z-index:1">Eligible on Sports and Casino slots.</div>';
+
+        /* Button */
+        if(a.bonus_type==='cashback'&&a.progress>0){
+            html+='<button class="gc-btn-primary" onclick="claimBonus('+a.id+','+a.progress+')">Claim $'+a.progress.toFixed(2)+'</button>';
+        }else if(a.bonus_type==='free_spins'){
+            html+='<button class="gc-btn-primary" onclick="activateBonus('+a.id+')">Activate Now</button>';
+        }else{
+            html+='<button class="gc-btn-outline" onclick="viewBonusDetails('+a.id+')">View Details</button>';
+        }
+        html+='</div>';
+    });
+    if(b.active.length===0){
+        html+='<div style="text-align:center;padding:40px 0;opacity:.4"><span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:6px">redeem</span><span style="font-size:12px">No active bonuses</span></div>';
+    }
+    document.getElementById('activeBonusList').innerHTML=html;
+}
+
+function renderBonusHistory(){
+    var h=userBonuses.history;
+    var html='';
+    h.forEach(function(item){
+        var isExpired=item.status==='expired';
+        var dateStr=item.claimed_at||item.created_at||'';
+        var dateLabel=isExpired?'Expired ':'Claimed ';
+        if(dateStr.length>=10)dateLabel+=formatBonusDate(dateStr);
+
+        html+='<div class="history-item'+(isExpired?' expired':'')+'" style="border-left:3px solid '+(isExpired?'var(--border)':'var(--red)')+'">';
+
+        /* Top: icon + info + amount */
+        html+='<div class="hi-top"><div style="display:flex;align-items:flex-start;gap:10px"><div class="hi-icon '+(isExpired?'inactive':'active')+'"><span class="material-symbols-outlined" style="color:'+(isExpired?'var(--dim2)':'var(--red)')+';font-variation-settings:\'FILL\' '+(isExpired?'0':'1')+'">'+(item.icon||'redeem')+'</span></div>';
+        html+='<div class="hi-info"><div class="hi-title">'+item.title+'</div><div class="hi-date">'+dateLabel+'</div></div></div>';
+        html+='<div class="hi-amount"><div class="hi-val"'+(isExpired?' style="color:var(--dim2)"':'')+'>$'+(item.amount||0).toFixed(2)+'</div><div class="hi-val-label">Value</div></div></div>';
+
+        /* Bottom: status + badge */
+        html+='<div class="hi-bottom"><div class="hi-status '+(isExpired?'':'completed')+'">';
+        if(isExpired)html+='<span class="material-symbols-outlined">cancel</span><span>Expired</span>';
+        else html+='<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">check_circle</span><span>Completed</span>';
+        html+='</div><span class="hi-badge">'+(item.badge||item.bonus_type||'BONUS')+'</span></div>';
+        html+='</div>';
+    });
+    if(h.length===0){
+        html+='<div style="text-align:center;padding:30px 0;opacity:.4"><span style="font-size:12px">No bonus history yet</span></div>';
+    }
+    document.getElementById('bonusHistoryList').innerHTML=html;
+}
+
+function getTimeRemaining(dateStr){
+    try{
+        var end=new Date(dateStr.replace(' ','T'));var now=new Date();
+        var diff=end-now;if(diff<=0)return null;
+        var h=Math.floor(diff/3600000);var m=Math.floor((diff%3600000)/60000);var s=Math.floor((diff%60000)/1000);
+        return (h<10?'0':'')+h+'h : '+(m<10?'0':'')+m+'m : '+(s<10?'0':'')+s+'s';
+    }catch(e){return null}
+}
+
+function formatBonusDate(d){
+    try{
+        var dt=new Date(d.replace(' ','T'));
+        var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return months[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear();
+    }catch(e){return d}
+}
+
+async function claimBonus(id,amount){
+    try{
+        var r=await fetch(API+'/api/claim-bonus',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},auth(),{bonus_id:id}))});
+        var d=await r.json();
+        if(d.ok){
+            showToast('✅','Claimed $'+(amount||0).toFixed(2)+'!','OK','',function(){closeToast()});
+            loadBalance();loadBonuses();
+        }else{
+            showToast('❌',d.error||'Failed to claim','OK','',function(){closeToast()});
+        }
+    }catch(e){showToast('❌','Network error','OK','',function(){closeToast()})}
+}
+
+async function activateBonus(id){
+    try{
+        var r=await fetch(API+'/api/activate-bonus',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},auth(),{bonus_id:id}))});
+        var d=await r.json();
+        if(d.ok){
+            var msg=d.free_spins_added?'+'+d.free_spins_added+' Free Spins!':'Bonus activated!';
+            showToast('⚡',msg,'OK','',function(){closeToast()});
+            loadBalance();loadBonuses();
+        }else{
+            showToast('❌',d.error||'Failed','OK','',function(){closeToast()});
+        }
+    }catch(e){showToast('❌','Network error','OK','',function(){closeToast()})}
+}
+
+function viewBonusDetails(id){
+    var bonus=userBonuses.active.find(function(b){return b.id===id});
+    if(bonus&&bonus.max_progress>0){
+        var remaining=(bonus.max_progress-bonus.progress).toFixed(2);
+        showToast('ℹ️','Wager $'+remaining+' more to unlock $'+bonus.amount.toFixed(2),'OK','',function(){closeToast()});
+    }else{
+        showToast('ℹ️','View details','OK','',function(){closeToast()});
+    }
+}
+
+function initBonuses(){loadBonuses()}
 
 function buildWalletPackages(){
     var pkgs=[{amount:'50',price:'0.50'},{amount:'100',price:'0.90'},{amount:'500',price:'4.00'}];
@@ -1546,7 +1766,7 @@ initLocale();
 initLangDisplay();
 buildCategories();
 buildGameGrid();
-buildBonusPills();
+initBonuses();
 buildWalletPackages();
 loadBalance();
 checkWheel();
