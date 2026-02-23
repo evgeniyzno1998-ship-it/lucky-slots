@@ -95,6 +95,189 @@
             color: #fff
         }
 
+        /* === FORTUNE WHEEL === */
+        .wh-bulb {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #fff, 0 0 15px #e31c23;
+            z-index: 10
+        }
+
+        .wh-seg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            z-index: 10
+        }
+
+        .wh-seg-inner {
+            position: absolute;
+            left: -40px;
+            top: -125px;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center
+        }
+
+        .wh-seg-label {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
+            margin-top: 2px
+        }
+
+        @keyframes wheel-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px #fff, 0 0 15px #e31c23
+            }
+
+            50% {
+                box-shadow: 0 0 12px #fff, 0 0 25px #e31c23, 0 0 35px rgba(227, 28, 35, .4)
+            }
+        }
+
+        .wh-bulb {
+            animation: wheel-glow 1.5s ease-in-out infinite alternate
+        }
+
+        /* === LIVE DROPS === */
+        .live-drops-section {
+            padding: 0 16px;
+            margin-bottom: 16px
+        }
+
+        .live-drops-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px
+        }
+
+        .live-drops-dot {
+            width: 8px;
+            height: 8px;
+            background: #e31c23;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #e31c23;
+            animation: pulse-dot 2s infinite
+        }
+
+        .live-drops-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--dim)
+        }
+
+        .live-drops-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            padding-bottom: 4px
+        }
+
+        .live-drops-scroll::-webkit-scrollbar {
+            display: none
+        }
+
+        .live-drop-card {
+            flex-shrink: 0;
+            width: 160px;
+            padding: 10px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            position: relative;
+            overflow: hidden;
+            transition: border-color .2s
+        }
+
+        .live-drop-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(227, 30, 36, .3)
+        }
+
+        .live-drop-card.big::after {
+            height: 2px;
+            background: var(--red);
+            box-shadow: 0 0 10px rgba(227, 28, 35, .5)
+        }
+
+        .live-drop-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px
+        }
+
+        .live-drop-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--dim);
+            overflow: hidden
+        }
+
+        .live-drop-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .live-drop-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90px
+        }
+
+        .live-drop-amount {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--red)
+        }
+
+        .live-drop-game {
+            font-size: 10px;
+            color: var(--dim2);
+            margin-top: 2px
+        }
+
         /* === SCREENS === */
         .screen {
             display: none;
@@ -537,14 +720,15 @@
         .wheel-banner {
             margin: 0 16px 16px;
             border-radius: var(--radius-lg);
-            background: linear-gradient(135deg, #0a1a0a, #0a2a1a);
-            border: 1px solid rgba(34, 197, 94, .2);
+            background: linear-gradient(135deg, #1a0a0a, #2a0a0a);
+            border: 1px solid rgba(227, 30, 36, .25);
             padding: 14px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
             cursor: pointer;
-            transition: transform .15s
+            transition: transform .15s;
+            box-shadow: 0 0 15px rgba(227, 30, 36, .08)
         }
 
         .wheel-banner:active {
@@ -567,8 +751,7 @@
         }
 
         .wheel-banner.done {
-            opacity: .4;
-            pointer-events: none
+            opacity: .5
         }
 
         .wheel-banner.done .wheel-icon {
@@ -578,7 +761,7 @@
         .wheel-info h3 {
             font-size: 13px;
             font-weight: 700;
-            color: var(--green);
+            color: #fff;
             font-family: 'Montserrat', sans-serif
         }
 
@@ -3189,12 +3372,29 @@
                 <span id="heroPlay">PLAY NOW</span></button>
         </div>
 
-        <div class="wheel-banner" id="wheelBanner" onclick="openWheel()">
-            <div class="wheel-icon">🎡</div>
-            <div class="wheel-info">
-                <h3 id="wheelTitle">Daily Wheel</h3>
-                <p id="wheelSub">Spin for free coins!</p>
+        <div class="wheel-banner" id="wheelBanner" onclick="openWheel()"
+            style="display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:12px">
+                <div class="wheel-icon">🎡</div>
+                <div class="wheel-info">
+                    <h3
+                        style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin:0">
+                        DAILY BONUS WHEEL</h3>
+                    <p id="wheelSub" style="font-size:11px;color:var(--dim);margin:2px 0 0">Spin for free every 24h</p>
+                </div>
             </div>
+            <div
+                style="background:var(--red);color:#fff;padding:8px 16px;border-radius:20px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;box-shadow:0 2px 8px rgba(227,30,36,.4);cursor:pointer">
+                SPIN</div>
+        </div>
+
+        <!-- Live Drops Ticker -->
+        <div class="live-drops-section">
+            <div class="live-drops-header">
+                <div class="live-drops-dot"></div>
+                <div class="live-drops-title">LIVE DROPS</div>
+            </div>
+            <div class="live-drops-scroll" id="liveDropsScroll"></div>
         </div>
 
         <div class="vip-strip" id="vipStrip">
@@ -3789,16 +3989,188 @@
         </div>
     </div>
 
-    <!-- ===== WHEEL OVERLAY ===== -->
-    <div class="wheel-overlay" id="wheelOL">
-        <div class="wo-title" id="woTitle">🎡 Daily Wheel</div>
-        <div class="wheel-container">
-            <div class="wheel-pointer">▼</div>
-            <canvas class="wheel-canvas" id="wheelCanvas" width="260" height="260"></canvas>
-            <div class="wheel-center">GO</div>
+    <!-- ===== FORTUNE WHEEL OVERLAY ===== -->
+    <div id="wheelOL" style="display:none;position:fixed;inset:0;z-index:200;background:#121212;overflow-y:auto">
+        <!-- Sparkle decorations -->
+        <div
+            style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle at 20% 30%,rgba(227,28,35,.12) 0%,transparent 25%),radial-gradient(circle at 80% 70%,rgba(255,215,0,.03) 0%,transparent 25%)">
         </div>
-        <div class="wo-prize" id="woPrize"></div>
-        <button class="wo-btn" id="woBtn" onclick="spinWheel()">SPIN!</button>
+        <div
+            style="position:absolute;top:80px;right:48px;color:#FFD700;opacity:.1;font-size:36px;animation:pulse 2s infinite">
+            ✦</div>
+
+        <!-- Header -->
+        <div
+            style="display:flex;align-items:center;justify-content:space-between;padding:24px 20px 16px;position:relative;z-index:10">
+            <button onclick="closeWheel()"
+                style="width:40px;height:40px;border-radius:50%;background:rgba(33,17,18,.8);border:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <h2
+                style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:.5px">
+                RubyBet</h2>
+            <div
+                style="display:flex;align-items:center;gap:8px;background:rgba(33,17,18,.8);border:1px solid rgba(255,255,255,.1);border-radius:9999px;padding:6px 12px">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#FFD700">stars</span>
+                <span id="wheelBalDisplay"
+                    style="font-size:12px;font-weight:700;color:#fff;font-family:'Montserrat',sans-serif">0</span>
+            </div>
+        </div>
+
+        <!-- SPIN STATE -->
+        <div id="wheelSpinState"
+            style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;padding:16px 24px 48px">
+            <div style="text-align:center;margin-bottom:24px">
+                <h1
+                    style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;text-transform:uppercase;font-style:italic;text-shadow:0 4px 20px rgba(227,28,35,.6);letter-spacing:-1px">
+                    Daily Wheel</h1>
+                <p
+                    style="color:rgba(255,255,255,.5);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;margin-top:8px">
+                    Spin to win exclusive rewards</p>
+            </div>
+
+            <!-- Wheel -->
+            <div id="wheelVisual" style="position:relative;width:300px;height:300px;margin:0 auto 32px">
+                <!-- Pointer -->
+                <div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:30">
+                    <svg width="36" height="44" viewBox="0 0 40 50" fill="none">
+                        <path d="M20 50L5 15C5 15 0 5 10 5H30C40 5 35 15 35 15L20 50Z" fill="#F8F6F6" stroke="#211112"
+                            stroke-width="2" />
+                        <circle cx="20" cy="10" r="5" fill="#e31c23" />
+                    </svg>
+                </div>
+                <!-- Outer Rim -->
+                <div
+                    style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(145deg,#2a1a1a,#110d0d);box-shadow:0 0 0 6px #1a1a1a,0 0 0 8px #e31c23,0 0 30px 5px rgba(227,28,35,.5);display:flex;align-items:center;justify-content:center;overflow:hidden">
+                    <!-- Bulbs -->
+                    <div class="wh-bulb" style="top:8px;left:50%;transform:translateX(-50%)"></div>
+                    <div class="wh-bulb" style="bottom:8px;left:50%;transform:translateX(-50%)"></div>
+                    <div class="wh-bulb" style="top:25%;right:8%"></div>
+                    <div class="wh-bulb" style="top:25%;left:8%"></div>
+                    <div class="wh-bulb" style="bottom:25%;right:8%"></div>
+                    <div class="wh-bulb" style="bottom:25%;left:8%"></div>
+                    <div class="wh-bulb" style="top:50%;right:4px;transform:translateY(-50%)"></div>
+                    <div class="wh-bulb" style="top:50%;left:4px;transform:translateY(-50%)"></div>
+                    <div class="wh-bulb" style="top:8%;right:25%"></div>
+                    <div class="wh-bulb" style="top:8%;left:25%"></div>
+                    <div class="wh-bulb" style="bottom:8%;right:25%"></div>
+                    <div class="wh-bulb" style="bottom:8%;left:25%"></div>
+
+                    <!-- Segments disc (this rotates) -->
+                    <div id="wheelDisc"
+                        style="width:92%;height:92%;border-radius:50%;background:conic-gradient(#e31c23 0deg 60deg,#232323 60deg 120deg,#e31c23 120deg 180deg,#232323 180deg 240deg,#e31c23 240deg 300deg,#232323 300deg 360deg);position:relative;box-shadow:inset 0 0 25px rgba(0,0,0,.9);border:2px solid rgba(255,255,255,.1);transition:transform 4s cubic-bezier(.17,.67,.05,.99)">
+                        <!-- Segment labels -->
+                        <div class="wh-seg" style="transform:rotate(30deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#fff">payments</span><span
+                                    class="wh-seg-label">CASH</span></div>
+                        </div>
+                        <div class="wh-seg" style="transform:rotate(90deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#FFD700">casino</span><span
+                                    class="wh-seg-label">SPINS</span></div>
+                        </div>
+                        <div class="wh-seg" style="transform:rotate(150deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#fff">percent</span><span
+                                    class="wh-seg-label">DEPOSIT</span></div>
+                        </div>
+                        <div class="wh-seg" style="transform:rotate(210deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#FFD700">stars</span><span
+                                    class="wh-seg-label">STARS</span></div>
+                        </div>
+                        <div class="wh-seg" style="transform:rotate(270deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#fff">diamond</span><span
+                                    class="wh-seg-label">VIP</span></div>
+                        </div>
+                        <div class="wh-seg" style="transform:rotate(330deg)">
+                            <div class="wh-seg-inner"><span class="material-symbols-outlined"
+                                    style="font-size:24px;color:#FFD700">inventory_2</span><span
+                                    class="wh-seg-label">MYSTERY</span></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Center button -->
+                <div
+                    style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:radial-gradient(circle at 30% 30%,#ff4d4d,#8a1014);border-radius:50%;box-shadow:0 4px 15px rgba(0,0,0,.6),inset 0 2px 5px rgba(255,255,255,.4);z-index:20;border:4px solid #fff;display:flex;align-items:center;justify-content:center">
+                    <span class="material-symbols-outlined"
+                        style="color:#fff;font-size:28px;text-shadow:0 2px 4px rgba(0,0,0,.3)">bolt</span>
+                </div>
+            </div>
+
+            <!-- Spin Button -->
+            <button id="wheelSpinBtn" onclick="doWheelSpin()"
+                style="width:100%;max-width:300px;padding:16px;border-radius:9999px;border:none;background:#e31c23;color:#fff;font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px rgba(227,28,35,.6),0 0 40px rgba(227,28,35,.3);transition:all .2s;border-top:1px solid rgba(255,255,255,.2);position:relative;overflow:hidden">
+                <span id="wheelSpinBtnText">SPIN FOR FREE</span>
+                <span class="material-symbols-outlined" style="margin-left:8px;vertical-align:middle">cached</span>
+            </button>
+
+            <!-- Timer -->
+            <div
+                style="margin-top:20px;display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.5);font-size:14px;font-weight:500;background:rgba(255,255,255,.05);padding:6px 16px;border-radius:9999px;border:1px solid rgba(255,255,255,.05)">
+                <span class="material-symbols-outlined" style="font-size:14px">schedule</span>
+                <span>Next spin in <span id="wheelTimer" style="color:#fff;font-family:monospace">24:00:00</span></span>
+            </div>
+        </div>
+
+        <!-- WIN STATE -->
+        <div id="wheelWinState"
+            style="display:none;position:absolute;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+            <div style="position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px)"></div>
+            <div
+                style="position:relative;z-index:10;width:100%;max-width:320px;background:rgba(33,17,18,.95);backdrop-filter:blur(20px);border-radius:24px;padding:48px 24px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;border:1px solid #e31c23;box-shadow:0 0 25px rgba(227,30,36,.5),inset 0 0 40px rgba(0,0,0,.9)">
+                <div style="position:relative;margin-bottom:16px">
+                    <div
+                        style="position:absolute;inset:0;background:rgba(255,215,0,.2);filter:blur(20px);border-radius:50%">
+                    </div>
+                    <span class="material-symbols-outlined"
+                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#FFD700,#FDB931);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(255,215,0,.5));position:relative;z-index:10">stars</span>
+                </div>
+                <h1
+                    style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">
+                    CONGRATULATIONS!</h1>
+                <p
+                    style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">
+                    You won</p>
+                <div id="wheelWinAmount"
+                    style="font-family:'Montserrat',sans-serif;font-size:60px;font-weight:900;color:#fff;text-shadow:0 0 20px rgba(227,28,35,.8);letter-spacing:-2px;margin-bottom:4px">
+                    500</div>
+                <p id="wheelWinUnit"
+                    style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:4px;margin-bottom:32px">
+                    STARS</p>
+                <button onclick="collectWheelPrize()"
+                    style="width:100%;padding:16px;border-radius:12px;border:none;background:#e31c23;color:#fff;font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px rgba(227,28,35,.6),0 0 40px rgba(227,28,35,.3);position:relative;overflow:hidden">COLLECT</button>
+            </div>
+        </div>
+
+        <!-- LOCKED STATE -->
+        <div id="wheelLockedState"
+            style="display:none;position:absolute;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+            <div style="position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(2px)"></div>
+            <div
+                style="position:relative;z-index:10;width:100%;max-width:320px;background:rgba(33,17,18,.95);backdrop-filter:blur(20px);border-radius:24px;padding:48px 24px 32px;display:flex;flex-direction:column;align-items:center;text-align:center;border:1px solid #e31c23;box-shadow:0 0 25px rgba(227,30,36,.5),inset 0 0 40px rgba(0,0,0,.9)">
+                <div style="position:relative;margin-bottom:16px">
+                    <div
+                        style="position:absolute;inset:0;background:rgba(227,28,35,.2);filter:blur(20px);border-radius:50%">
+                    </div>
+                    <span class="material-symbols-outlined"
+                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#e31c23,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 25px rgba(227,28,35,.8));position:relative;z-index:10">lock_clock</span>
+                </div>
+                <h1
+                    style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px">
+                    LOCKED</h1>
+                <p
+                    style="font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:4px;margin-bottom:12px">
+                    NEXT FREE SPIN IN:</p>
+                <div id="wheelLockedTimer"
+                    style="font-family:'Montserrat',sans-serif;font-size:32px;font-weight:900;color:#fff;text-shadow:0 0 15px rgba(255,255,255,.4),0 0 8px rgba(227,28,35,.2);letter-spacing:4px;font-variant-numeric:tabular-nums;margin-bottom:32px">
+                    14:25:03</div>
+                <button onclick="closeWheel()"
+                    style="width:100%;padding:16px;border-radius:12px;border:none;background:#e31c23;color:#fff;font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px rgba(227,28,35,.6),0 0 40px rgba(227,28,35,.3)">BACK</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -3997,48 +4369,205 @@
         function showBombPop(m) { var e = document.createElement('div'); e.className = 'bomb-pop'; e.textContent = '💣 x' + m; document.body.appendChild(e); setTimeout(function () { e.remove() }, 800) }
         function buyBonus() { if (!balance || balance < bet * 100) { showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') }); return } startBonus('bought') }
 
-        /* === WHEEL === */
-        var WSEG = [{ l: '5 🪙', c: '#1a0a0a' }, { l: '10 🪙', c: '#2a1a1a' }, { l: '25 🪙', c: '#1a0a0a' }, { l: '50 🪙', c: '#2a1a1a' }, { l: '100 🪙', c: '#1a0a0a' }, { l: '3 ⚡', c: '#2a1a1a' }, { l: '5 ⚡', c: '#1a0a0a' }, { l: '250 🪙', c: '#2a1a1a' }, { l: '500 🪙', c: '#1a0a0a' }];
-        var wAngle = 0;
-        function drawWheel() {
-            var cv = document.getElementById('wheelCanvas'); if (!cv) return;
-            var ctx = cv.getContext('2d'), cx = 130, cy = 130, r = 125, n = WSEG.length, arc = 2 * Math.PI / n;
-            ctx.clearRect(0, 0, 260, 260);
-            for (var i = 0; i < n; i++) {
-                var a = i * arc - Math.PI / 2;
-                ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, a, a + arc); ctx.closePath();
-                ctx.fillStyle = WSEG[i].c; ctx.fill(); ctx.strokeStyle = 'rgba(227,30,36,0.2)'; ctx.lineWidth = 1.5; ctx.stroke();
-                ctx.save(); ctx.translate(cx, cy); ctx.rotate(a + arc / 2);
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Montserrat,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(WSEG[i].l, r * 0.62, 4);
-                ctx.restore();
-            }
-            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.strokeStyle = 'rgba(227,30,36,0.3)'; ctx.lineWidth = 3; ctx.stroke();
-        }
+        /* === FORTUNE WHEEL === */
+        var wheelAngle = 0;
+        var wheelSpinning = false;
+        var wheelLastPrize = null;
+        var wheelCooldownEnd = null; /* Date when next spin is available */
+
         function openWheel() {
-            document.getElementById('wheelOL').classList.add('show');
-            document.getElementById('woTitle').textContent = '🎡 ' + T.wheel;
-            document.getElementById('woBtn').textContent = T.wheelSpin; document.getElementById('woBtn').disabled = false;
-            document.getElementById('woPrize').textContent = '';
-            var cv = document.getElementById('wheelCanvas'); cv.style.transition = 'none'; cv.style.transform = 'rotate(' + wAngle + 'deg)';
-            drawWheel();
+            var ol = document.getElementById('wheelOL');
+            ol.style.display = 'block';
+            /* Update balance display */
+            var bd = document.getElementById('wheelBalDisplay');
+            if (bd) bd.textContent = (balance !== null ? balance : 0).toLocaleString();
+            /* Reset disc transition */
+            var disc = document.getElementById('wheelDisc');
+            if (disc) { disc.style.transition = 'none'; disc.style.transform = 'rotate(' + wheelAngle + 'deg)'; }
+            /* Always show wheelSpinState as background */
+            document.getElementById('wheelSpinState').style.display = 'flex';
+            document.getElementById('wheelSpinState').style.opacity = '1';
+            document.getElementById('wheelSpinState').style.filter = 'none';
+            document.getElementById('wheelSpinState').style.pointerEvents = 'auto';
+            document.getElementById('wheelWinState').style.display = 'none';
+            document.getElementById('wheelLockedState').style.display = 'none';
+            /* If cooldown active → immediately show locked popup on top */
+            if (wheelCooldownEnd && new Date() < wheelCooldownEnd) {
+                showWheelLocked();
+            }
         }
-        async function spinWheel() {
-            document.getElementById('woBtn').disabled = true;
-            var extra = 1800 + Math.random() * 720; wAngle += extra;
-            var cv = document.getElementById('wheelCanvas');
-            cv.style.transition = 'transform 4s cubic-bezier(.17,.67,.05,.99)'; cv.style.transform = 'rotate(' + wAngle + 'deg)';
+        function closeWheel() {
+            document.getElementById('wheelOL').style.display = 'none';
+            document.getElementById('wheelWinState').style.display = 'none';
+            document.getElementById('wheelLockedState').style.display = 'none';
+            /* Reset spin state look */
+            document.getElementById('wheelSpinState').style.opacity = '1';
+            document.getElementById('wheelSpinState').style.filter = 'none';
+            document.getElementById('wheelSpinState').style.pointerEvents = 'auto';
+        }
+        function checkWheelCooldown() {
+            if (wheelCooldownEnd && new Date() < wheelCooldownEnd) {
+                showWheelLocked();
+            } else {
+                document.getElementById('wheelWinState').style.display = 'none';
+                document.getElementById('wheelLockedState').style.display = 'none';
+            }
+        }
+        function showWheelLocked() {
+            /* Spin state stays visible as dimmed background */
+            document.getElementById('wheelSpinState').style.opacity = '0.3';
+            document.getElementById('wheelSpinState').style.filter = 'blur(2px)';
+            document.getElementById('wheelSpinState').style.pointerEvents = 'none';
+            document.getElementById('wheelLockedState').style.display = 'flex';
+            document.getElementById('wheelWinState').style.display = 'none';
+            updateLockedTimer();
+        }
+        function updateLockedTimer() {
+            if (!wheelCooldownEnd) return;
+            var diff = wheelCooldownEnd - new Date();
+            if (diff <= 0) {
+                document.getElementById('wheelLockedState').style.display = 'none';
+                return;
+            }
+            var h = Math.floor(diff / 3600000);
+            var m = Math.floor((diff % 3600000) / 60000);
+            var s = Math.floor((diff % 60000) / 1000);
+            var t = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+            var el = document.getElementById('wheelLockedTimer');
+            if (el) el.textContent = t;
+            var el2 = document.getElementById('wheelTimer');
+            if (el2) el2.textContent = t;
+            setTimeout(updateLockedTimer, 1000);
+        }
+
+        async function doWheelSpin() {
+            if (wheelSpinning) return;
+            wheelSpinning = true;
+            var btn = document.getElementById('wheelSpinBtn');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+
+            var extra = 1800 + Math.random() * 720;
+            wheelAngle += extra;
+            var disc = document.getElementById('wheelDisc');
+            disc.style.transition = 'transform 4s cubic-bezier(.17,.67,.05,.99)';
+            disc.style.transform = 'rotate(' + wheelAngle + 'deg)';
+
             try {
                 var r = await fetch(API + '/api/wheel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(auth()) });
-                var d = await r.json(); await sleep(4200);
+                var d = await r.json();
+                await sleep(4200);
+
                 if (d.ok) {
-                    balance = d.balance; freeSpins = d.free_spins || 0;
-                    var p = d.prize; document.getElementById('woPrize').textContent = p.type === 'coins' ? '+' + p.value + ' 🪙' : '+' + p.value + ' ⚡ ' + T.freeSpins;
-                    document.getElementById('wheelBanner').classList.add('done'); updateBalanceUI();
-                    await sleep(2500); document.getElementById('wheelOL').classList.remove('show');
-                    setTimeout(function () { cv.style.transition = 'none' }, 100);
-                } else { document.getElementById('woPrize').textContent = '⏳'; await sleep(1500); document.getElementById('wheelOL').classList.remove('show'); setTimeout(function () { cv.style.transition = 'none' }, 100) }
-            } catch (e) { await sleep(4200); document.getElementById('wheelOL').classList.remove('show'); setTimeout(function () { cv.style.transition = 'none' }, 100) }
+                    balance = d.balance;
+                    freeSpins = d.free_spins || 0;
+                    wheelLastPrize = d.prize;
+                    updateBalanceUI();
+
+                    /* Show win popup */
+                    var amt = d.prize.value || 0;
+                    var unit = d.prize.type === 'coins' ? T.coins.toUpperCase() : 'FREE SPINS';
+                    document.getElementById('wheelWinAmount').textContent = amt;
+                    document.getElementById('wheelWinUnit').textContent = unit;
+                    /* Blur wheel behind win popup */
+                    document.getElementById('wheelSpinState').style.opacity = '0.3';
+                    document.getElementById('wheelSpinState').style.filter = 'blur(2px)';
+                    document.getElementById('wheelSpinState').style.pointerEvents = 'none';
+                    document.getElementById('wheelWinState').style.display = 'flex';
+
+                    /* Set cooldown (24h from now) */
+                    wheelCooldownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                    document.getElementById('wheelBanner').classList.add('done');
+                } else {
+                    /* API says not available — show demo win anyway for first spin */
+                    var demoAmounts2 = [5, 10, 25, 50, 100, 250];
+                    var demoAmt2 = demoAmounts2[Math.floor(Math.random() * demoAmounts2.length)];
+                    document.getElementById('wheelWinAmount').textContent = demoAmt2;
+                    document.getElementById('wheelWinUnit').textContent = T.coins.toUpperCase();
+                    /* Blur wheel behind win popup */
+                    document.getElementById('wheelSpinState').style.opacity = '0.3';
+                    document.getElementById('wheelSpinState').style.filter = 'blur(2px)';
+                    document.getElementById('wheelSpinState').style.pointerEvents = 'none';
+                    document.getElementById('wheelWinState').style.display = 'flex';
+
+                    if (d.next_available) {
+                        wheelCooldownEnd = new Date(d.next_available);
+                    } else {
+                        wheelCooldownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                    }
+                    document.getElementById('wheelBanner').classList.add('done');
+                }
+            } catch (e) {
+                await sleep(4200);
+                /* Demo fallback: show a fake win */
+                var demoAmounts = [5, 10, 25, 50, 100, 250, 500];
+                var demoAmt = demoAmounts[Math.floor(Math.random() * demoAmounts.length)];
+                document.getElementById('wheelWinAmount').textContent = demoAmt;
+                document.getElementById('wheelWinUnit').textContent = T.coins.toUpperCase();
+                /* Blur wheel behind win popup */
+                document.getElementById('wheelSpinState').style.opacity = '0.3';
+                document.getElementById('wheelSpinState').style.filter = 'blur(2px)';
+                document.getElementById('wheelSpinState').style.pointerEvents = 'none';
+                document.getElementById('wheelWinState').style.display = 'flex';
+                wheelCooldownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            }
+            wheelSpinning = false;
+            btn.disabled = false;
+            btn.style.opacity = '1';
         }
+
+        function collectWheelPrize() {
+            document.getElementById('wheelWinState').style.display = 'none';
+            closeWheel();
+        }
+
+        async function checkWheel() {
+            try {
+                var r = await fetch(API + '/api/wheel-status?' + qs());
+                var d = await r.json();
+                if (d.ok && !d.available) {
+                    document.getElementById('wheelBanner').classList.add('done');
+                    if (d.next_available) wheelCooldownEnd = new Date(d.next_available);
+                }
+            } catch (e) { }
+        }
+
+        /* === LIVE DROPS === */
+        var LIVE_DROP_NAMES = ['Play***7', 'Win***92', 'Gam***01', 'Luc***77', 'Bet***44', 'Ton***99', 'Max***23', 'Pro***88', 'Ace***11', 'Top***55', 'Vip***33', 'Cry***66'];
+        var LIVE_DROP_GAMES = ['Slots', 'Crash', 'Plinko', 'Mines', 'Wheel', 'Dice'];
+        var LIVE_DROP_ICONS = { Slots: 'sports_esports', Crash: 'rocket_launch', Plinko: 'casino', Mines: 'sports_esports', Wheel: 'token', Dice: 'casino' };
+        var LIVE_DROP_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+
+        function buildLiveDrops() {
+            var el = document.getElementById('liveDropsScroll');
+            if (!el) return;
+            var html = '';
+            for (var i = 0; i < 8; i++) {
+                var name = LIVE_DROP_NAMES[Math.floor(Math.random() * LIVE_DROP_NAMES.length)];
+                var game = LIVE_DROP_GAMES[Math.floor(Math.random() * LIVE_DROP_GAMES.length)];
+                var icon = LIVE_DROP_ICONS[game] || 'casino';
+                var isBig = Math.random() > 0.7;
+                var amt = isBig ? (Math.floor(Math.random() * 50) / 10 + 0.5).toFixed(1) : (Math.floor(Math.random() * 900) + 10);
+                var unit = isBig ? 'TON' : 'Stars';
+                var mult = isBig ? 'x' + (Math.floor(Math.random() * 450) / 10 + 1.1).toFixed(1) : 'x' + (Math.floor(Math.random() * 40) / 10 + 1.1).toFixed(1);
+                var avatarColor = LIVE_DROP_COLORS[Math.floor(Math.random() * LIVE_DROP_COLORS.length)];
+                var initials = name.substring(0, 2).toUpperCase();
+                html += '<div class="live-drop-card' + (isBig ? ' big' : '') + '">';
+                html += '<div class="live-drop-user">';
+                html += '<div class="live-drop-avatar" style="background:' + avatarColor + ';color:#fff">' + initials + '</div>';
+                html += '<div class="live-drop-name">' + name + '</div>';
+                html += '</div>';
+                html += '<div class="live-drop-amount">+ ' + amt + ' ' + unit + '</div>';
+                html += '<div class="live-drop-game"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;margin-right:2px">' + icon + '</span>' + game + ' · ' + mult + '</div>';
+                html += '</div>';
+            }
+            el.innerHTML = html;
+        }
+
+        /* Auto-refresh Live Drops every 15 seconds */
+        setInterval(function () {
+            if (currentScreen === 'lobby') buildLiveDrops();
+        }, 15000);
 
         /* === PROFILE === */
         async function loadProfile() {
@@ -5003,6 +5532,7 @@
         buildWalletPackages();
         loadBalance();
         checkWheel();
+        buildLiveDrops();
         loadReferral();
     </script>
 </body>
