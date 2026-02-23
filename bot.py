@@ -1,4 +1,6 @@
 import logging, sqlite3, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math
+import jwt as pyjwt
+import bcrypt
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, LabeledPrice
@@ -16,6 +18,9 @@ API_PORT = int(os.getenv("PORT", 8080))
 PUBLIC_URL = os.getenv("PUBLIC_URL", "https://lucky-slots-production.up.railway.app")
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://evgeniyzno1998-ship-it.github.io/lucky-slots/")
 REFERRAL_BONUS = 10
+JWT_SECRET = os.getenv("JWT_SECRET", BOT_TOKEN[:32] if BOT_TOKEN else "change-me-in-production")
+JWT_EXPIRY_HOURS = 24
+ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_PASSWORD", "rubybet2024")
 
 # ==================== DUAL BALANCE & CURRENCY ====================
 # USDT balance is stored as cents (integer) for precision: 500 = $5.00
@@ -189,6 +194,29 @@ def init_db():
         )''')
         try: c.execute("CREATE INDEX IF NOT EXISTS idx_bonuses_user ON user_bonuses(user_id)")
         except: pass
+
+        # === ADMIN_USERS — dashboard operators ===
+        c.execute('''CREATE TABLE IF NOT EXISTS admin_users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            display_name TEXT DEFAULT '',
+            role TEXT DEFAULT 'viewer',
+            permissions TEXT DEFAULT '[]',
+            is_active INTEGER DEFAULT 1,
+            created_by INTEGER DEFAULT NULL,
+            last_login TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )''')
+        # Create default owner if no admins exist
+        existing = c.execute("SELECT COUNT(*) as cnt FROM admin_users").fetchone()
+        if existing and existing[0] == 0:
+            pw_hash = bcrypt.hashpw(ADMIN_DEFAULT_PASSWORD.encode(), bcrypt.gensalt()).decode()
+            c.execute(
+                "INSERT INTO admin_users(username,password_hash,display_name,role,permissions) VALUES(?,?,?,?,?)",
+                ('owner', pw_hash, 'Owner', 'owner', json.dumps(['*']))
+            )
+            logging.info(f"🔑 Default admin created: username='owner', password='{ADMIN_DEFAULT_PASSWORD}'")
 
 async def db(q, p=(), fetch=False, one=False):
     async with _db_lock:
@@ -897,93 +925,479 @@ async def start_api():
         app.router.add_get(path,handler)
     for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus)]:
         app.router.add_post(path,handler)
-    # Admin API (protected by bot token in query)
-    app.router.add_get("/admin/stats",admin_stats)
-    app.router.add_get("/admin/users",admin_users)
-    app.router.add_get("/admin/user/{uid}",admin_user_detail)
-    app.router.add_get("/admin/bets/{uid}",admin_user_bets)
-    app.router.add_get("/admin/payments/{uid}",admin_user_payments)
+    # Admin API routes (JWT protected)
+    for path, handler in [
+        ("/admin/auth/login", admin_auth_login),
+        ("/admin/auth/create", admin_auth_create),
+        ("/admin/auth/update", admin_auth_update),
+        ("/admin/auth/delete", admin_auth_delete),
+        ("/admin/bonus/create-campaign", admin_bonus_create),
+        ("/admin/bonus/assign", admin_bonus_assign),
+    ]:
+        app.router.add_post(path, handler)
+    for path, handler in [
+        ("/admin/auth/me", admin_auth_me),
+        ("/admin/auth/users", admin_auth_list),
+        ("/admin/stats", admin_stats),
+        ("/admin/users", admin_users),
+        ("/admin/user/{uid}", admin_user_detail),
+        ("/admin/bets/{uid}", admin_user_bets),
+        ("/admin/payments/{uid}", admin_user_payments),
+        ("/admin/games", admin_games),
+        ("/admin/financial", admin_financial),
+        ("/admin/cohorts", admin_cohorts),
+        ("/admin/live", admin_live),
+        ("/admin/affiliates", admin_affiliates),
+        ("/admin/bonus-stats", admin_bonus_stats),
+    ]:
+        app.router.add_get(path, handler)
     app.router.add_options("/{tail:.*}",opts)
     app.router.add_get("/health",lambda r:web.json_response({"ok":True}))
     runner=web.AppRunner(app); await runner.setup()
     await web.TCPSite(runner,"0.0.0.0",API_PORT).start()
     logging.info(f"🚀 API :{API_PORT}")
 
-# ==================== ADMIN API ====================
-def _admin_check(req):
-    """Simple admin auth: ?key=BOT_TOKEN_first_16_chars"""
-    key = req.rel_url.query.get("key","")
-    return key == BOT_TOKEN[:16]
+# ==================== ADMIN AUTH (JWT + RBAC) ====================
+ADMIN_SECTIONS = ['dashboard','live_monitor','players','cohorts','games','financial','risk_fraud','compliance','affiliates','bonus_analytics','bonus_management','marketing','settings']
 
+def _jwt_encode(admin_id, username, role, permissions):
+    payload = {
+        "sub": str(admin_id),
+        "username": username,
+        "role": role,
+        "permissions": permissions,
+        "exp": int(time.time()) + JWT_EXPIRY_HOURS * 3600,
+        "iat": int(time.time()),
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+def _jwt_decode(token):
+    try:
+        return pyjwt.decode(token, JWT_SECRET, algorithms=["HS256"], options={"verify_exp": True})
+    except pyjwt.ExpiredSignatureError:
+        logging.warning("JWT expired")
+        return None
+    except pyjwt.InvalidTokenError as e:
+        logging.warning(f"JWT invalid: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"JWT decode error: {e}")
+        return None
+
+def _get_admin_from_req(req):
+    """Extract and verify JWT from Authorization header or ?key= fallback."""
+    auth = req.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        payload = _jwt_decode(token)
+        if payload:
+            return payload
+        else:
+            logging.warning(f"JWT decode returned None for token: {token[:20]}...")
+    # Legacy fallback: ?key=BOT_TOKEN[:16]
+    key = req.rel_url.query.get("key","")
+    if key == BOT_TOKEN[:16]:
+
+        return {"sub": 0, "username": "legacy", "role": "owner", "permissions": ["*"]}
+    return None
+
+def _has_permission(admin, section):
+    """Check if admin has access to a section."""
+    if not admin:
+        return False
+    if admin.get("role") == "owner":
+        return True
+    perms = admin.get("permissions", [])
+    if isinstance(perms, str):
+        try: perms = json.loads(perms)
+        except: perms = []
+    return "*" in perms or section in perms
+
+def _require_admin(req, section=None):
+    """Returns admin payload or error response."""
+    admin = _get_admin_from_req(req)
+    if not admin:
+        return None, web.json_response({"ok": False, "error": "unauthorized"}, status=401, headers=H)
+    if section and not _has_permission(admin, section):
+        return None, web.json_response({"ok": False, "error": "forbidden", "required": section}, status=403, headers=H)
+    return admin, None
+
+# --- Auth Endpoints ---
+async def admin_auth_login(req):
+    """POST /admin/auth/login — authenticate admin user, return JWT."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    data = await req.json()
+    username = data.get("username", "").strip().lower()
+    password = data.get("password", "")
+    if not username or not password:
+        return web.json_response({"ok": False, "error": "missing_credentials"}, headers=H)
+
+    with _conn() as c:
+        row = c.execute("SELECT * FROM admin_users WHERE username=? AND is_active=1", (username,)).fetchone()
+    if not row:
+        return web.json_response({"ok": False, "error": "invalid_credentials"}, headers=H)
+
+    if not bcrypt.checkpw(password.encode(), row['password_hash'].encode()):
+        return web.json_response({"ok": False, "error": "invalid_credentials"}, headers=H)
+
+    perms = json.loads(row['permissions']) if row['permissions'] else []
+    token = _jwt_encode(row['id'], row['username'], row['role'], perms)
+
+    # Update last_login
+    with _conn() as c:
+        c.execute("UPDATE admin_users SET last_login=? WHERE id=?", (_now(), row['id']))
+
+    return web.json_response({"ok": True, "token": token, "admin": {
+        "id": row['id'], "username": row['username'], "display_name": row['display_name'],
+        "role": row['role'], "permissions": perms,
+    }}, headers=H)
+
+async def admin_auth_me(req):
+    """GET /admin/auth/me — get current admin profile."""
+    admin, err = _require_admin(req)
+    if err: return err
+    return web.json_response({"ok": True, "admin": admin}, headers=H)
+
+async def admin_auth_list(req):
+    """GET /admin/auth/users — list all admin accounts (owner/admin only)."""
+    admin, err = _require_admin(req, "settings")
+    if err: return err
+    if admin['role'] not in ('owner', 'admin'):
+        return web.json_response({"ok": False, "error": "forbidden"}, status=403, headers=H)
+    with _conn() as c:
+        rows = c.execute("SELECT id,username,display_name,role,permissions,is_active,last_login,created_at FROM admin_users ORDER BY id").fetchall()
+    return web.json_response({"ok": True, "admins": [dict(r) for r in rows] if rows else []}, headers=H)
+
+async def admin_auth_create(req):
+    """POST /admin/auth/create — create new admin user (owner only)."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    admin, err = _require_admin(req, "settings")
+    if err: return err
+    if admin['role'] != 'owner':
+        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+    data = await req.json()
+    username = data.get("username", "").strip().lower()
+    password = data.get("password", "")
+    display_name = data.get("display_name", username)
+    role = data.get("role", "viewer")
+    permissions = data.get("permissions", [])
+    if not username or not password:
+        return web.json_response({"ok": False, "error": "missing_fields"}, headers=H)
+    if role not in ('admin', 'manager', 'viewer'):
+        return web.json_response({"ok": False, "error": "invalid_role"}, headers=H)
+    pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    try:
+        with _conn() as c:
+            c.execute(
+                "INSERT INTO admin_users(username,password_hash,display_name,role,permissions,created_by) VALUES(?,?,?,?,?,?)",
+                (username, pw_hash, display_name, role, json.dumps(permissions), admin['sub'])
+            )
+        return web.json_response({"ok": True, "message": f"Admin '{username}' created"}, headers=H)
+    except sqlite3.IntegrityError:
+        return web.json_response({"ok": False, "error": "username_exists"}, headers=H)
+
+async def admin_auth_update(req):
+    """POST /admin/auth/update — update admin user (owner only)."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    admin, err = _require_admin(req, "settings")
+    if err: return err
+    if admin['role'] != 'owner':
+        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+    data = await req.json()
+    admin_id = int(data.get("id", 0))
+    updates = []
+    params = []
+    if "role" in data and data["role"] in ('admin', 'manager', 'viewer'):
+        updates.append("role=?"); params.append(data["role"])
+    if "permissions" in data:
+        updates.append("permissions=?"); params.append(json.dumps(data["permissions"]))
+    if "display_name" in data:
+        updates.append("display_name=?"); params.append(data["display_name"])
+    if "is_active" in data:
+        updates.append("is_active=?"); params.append(1 if data["is_active"] else 0)
+    if "password" in data and data["password"]:
+        pw_hash = bcrypt.hashpw(data["password"].encode(), bcrypt.gensalt()).decode()
+        updates.append("password_hash=?"); params.append(pw_hash)
+    if not updates:
+        return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
+    params.append(admin_id)
+    with _conn() as c:
+        c.execute(f"UPDATE admin_users SET {','.join(updates)} WHERE id=?", params)
+    return web.json_response({"ok": True}, headers=H)
+
+async def admin_auth_delete(req):
+    """POST /admin/auth/delete — delete admin user (owner only)."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    admin, err = _require_admin(req, "settings")
+    if err: return err
+    if admin['role'] != 'owner':
+        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+    data = await req.json()
+    admin_id = int(data.get("id", 0))
+    # Can't delete self
+    if admin_id == admin['sub']:
+        return web.json_response({"ok": False, "error": "cannot_delete_self"}, headers=H)
+    with _conn() as c:
+        c.execute("DELETE FROM admin_users WHERE id=? AND role!='owner'", (admin_id,))
+    return web.json_response({"ok": True}, headers=H)
+
+# --- Data Endpoints (JWT protected) ---
 async def admin_stats(req):
-    """GET /admin/stats?key=... — глобальная статистика платформы"""
-    if not _admin_check(req): return web.json_response({"ok":False,"error":"forbidden"},headers=H)
+    """GET /admin/stats — platform overview."""
+    admin, err = _require_admin(req, "dashboard")
+    if err: return err
     total_users = await db("SELECT COUNT(*) as cnt FROM users", one=True)
     active_today = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
     active_week = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= date('now','-7 days')", one=True)
+    new_today = await db("SELECT COUNT(*) as cnt FROM users WHERE created_at LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
     total_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history", one=True)
-    total_deposits = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usd),0) as usd, COALESCE(SUM(amount_coins),0) as coins FROM payments WHERE direction='deposit' AND status='completed'", one=True)
+    today_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history WHERE created_at LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
+    total_deposits = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE direction='deposit' AND status='completed'", one=True)
+    total_withdrawals = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE direction='withdrawal' AND status='completed'", one=True)
     total_referrals = await db("SELECT COALESCE(SUM(referrals_count),0) as cnt FROM users", one=True)
+    # Revenue per day (last 14 days)
+    revenue_daily = await db("SELECT date(created_at) as day, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, COUNT(*) as bets FROM bet_history WHERE created_at >= date('now','-14 days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    # Registrations per day (last 14 days)
+    reg_daily = await db("SELECT date(created_at) as day, COUNT(*) as cnt FROM users WHERE created_at >= date('now','-14 days') GROUP BY date(created_at) ORDER BY day", fetch=True)
     top_winners = await db("SELECT user_id,username,first_name,total_won,total_wagered,biggest_win FROM users ORDER BY total_won DESC LIMIT 10", fetch=True)
     top_depositors = await db("SELECT user_id,username,first_name,total_deposited_usd,coins FROM users WHERE total_deposited_usd>0 ORDER BY total_deposited_usd DESC LIMIT 10", fetch=True)
-    return web.json_response({"ok":True,
-        "users":{"total":total_users['cnt'],"active_today":active_today['cnt'],"active_week":active_week['cnt']},
-        "bets":{"total":total_bets['cnt'],"wagered":total_bets['wagered'],"won":total_bets['won'],"house_profit":total_bets['wagered']-total_bets['won']},
-        "deposits":{"total":total_deposits['cnt'],"usd":round(total_deposits['usd'],2),"coins":total_deposits['coins']},
-        "referrals":total_referrals['cnt'],
-        "top_winners":[dict(r) for r in top_winners] if top_winners else [],
-        "top_depositors":[dict(r) for r in top_depositors] if top_depositors else [],
-    },headers=H)
+    ggr = total_bets['wagered'] - total_bets['won']
+    ggr_today = today_bets['wagered'] - today_bets['won']
+    return web.json_response({"ok": True,
+        "users": {"total": total_users['cnt'], "active_today": active_today['cnt'], "active_week": active_week['cnt'], "new_today": new_today['cnt']},
+        "bets": {"total": total_bets['cnt'], "wagered": total_bets['wagered'], "won": total_bets['won'], "ggr": ggr, "today_bets": today_bets['cnt'], "today_wagered": today_bets['wagered'], "today_ggr": ggr_today},
+        "deposits": {"total": total_deposits['cnt'], "usd": round(total_deposits['usd'], 2)},
+        "withdrawals": {"total": total_withdrawals['cnt'], "usd": round(total_withdrawals['usd'], 2)},
+        "net_revenue": round(total_deposits['usd'] - total_withdrawals['usd'], 2),
+        "referrals": total_referrals['cnt'],
+        "revenue_daily": [dict(r) for r in revenue_daily] if revenue_daily else [],
+        "registrations_daily": [dict(r) for r in reg_daily] if reg_daily else [],
+        "top_winners": [dict(r) for r in top_winners] if top_winners else [],
+        "top_depositors": [dict(r) for r in top_depositors] if top_depositors else [],
+    }, headers=H)
 
 async def admin_users(req):
-    """GET /admin/users?key=...&limit=50&offset=0&sort=created_at — список всех юзеров"""
-    if not _admin_check(req): return web.json_response({"ok":False,"error":"forbidden"},headers=H)
-    limit = min(int(req.rel_url.query.get("limit",50)),200)
-    offset = int(req.rel_url.query.get("offset",0))
-    sort = req.rel_url.query.get("sort","created_at")
-    allowed_sorts = {"created_at","last_login","total_wagered","total_deposited_usd","coins","total_spins"}
+    """GET /admin/users — player list with filters."""
+    admin, err = _require_admin(req, "players")
+    if err: return err
+    limit = min(int(req.rel_url.query.get("limit", 50)), 200)
+    offset = int(req.rel_url.query.get("offset", 0))
+    sort = req.rel_url.query.get("sort", "created_at")
+    search = req.rel_url.query.get("search", "").strip()
+    segment = req.rel_url.query.get("segment", "all")
+    allowed_sorts = {"created_at","last_login","total_wagered","total_deposited_usd","coins","total_spins","balance_usdt_cents","balance_stars"}
     if sort not in allowed_sorts: sort = "created_at"
-    rows = await db(f"SELECT user_id,username,first_name,last_name,tg_language_code,is_premium,coins,total_wagered,total_won,total_deposited_usd,total_withdrawn_usd,total_spins,biggest_win,referrals_count,last_login,last_game,last_bot_interaction,created_at FROM users ORDER BY {sort} DESC LIMIT ? OFFSET ?", (limit,offset), fetch=True)
-    total = await db("SELECT COUNT(*) as cnt FROM users", one=True)
-    return web.json_response({"ok":True,"total":total['cnt'],"users":[dict(r) for r in rows] if rows else []},headers=H)
+    where = "1=1"
+    params = []
+    if search:
+        where += " AND (username LIKE ? OR first_name LIKE ? OR CAST(user_id AS TEXT) LIKE ?)"
+        s = f"%{search}%"
+        params.extend([s, s, s])
+    if segment == "vip":
+        where += " AND total_wagered >= 5000"
+    elif segment == "new":
+        where += " AND created_at >= date('now','-7 days')"
+    elif segment == "churn_risk":
+        where += " AND last_login < date('now','-14 days')"
+    elif segment == "depositors":
+        where += " AND total_deposited_usd > 0"
+    rows = await db(f"SELECT user_id,username,first_name,last_name,is_premium,coins,balance_usdt_cents,balance_stars,total_wagered,total_won,total_deposited_usd,total_withdrawn_usd,total_spins,biggest_win,referrals_count,last_login,last_game,created_at FROM users WHERE {where} ORDER BY {sort} DESC LIMIT ? OFFSET ?", (*params, limit, offset), fetch=True)
+    total = await db(f"SELECT COUNT(*) as cnt FROM users WHERE {where}", params, one=True)
+    return web.json_response({"ok": True, "total": total['cnt'], "users": [dict(r) for r in rows] if rows else []}, headers=H)
 
 async def admin_user_detail(req):
-    """GET /admin/user/{uid}?key=... — полная инфа по одному юзеру"""
-    if not _admin_check(req): return web.json_response({"ok":False,"error":"forbidden"},headers=H)
+    """GET /admin/user/{uid} — full user info."""
+    admin, err = _require_admin(req, "players")
+    if err: return err
     uid = int(req.match_info['uid'])
     u = await get_user(uid)
-    if not u: return web.json_response({"ok":False,"error":"not_found"},headers=H)
+    if not u: return web.json_response({"ok": False, "error": "not_found"}, headers=H)
     v = vip_level(u['total_wagered'])
-    # Bet stats by game
     game_stats = await db("SELECT game,COUNT(*) as cnt,SUM(bet_amount) as wagered,SUM(win_amount) as won,SUM(profit) as profit,MAX(win_amount) as best FROM bet_history WHERE user_id=? GROUP BY game", (uid,), fetch=True)
-    # Payment summary
-    dep_total = await db("SELECT COUNT(*) as cnt,COALESCE(SUM(amount_usd),0) as usd,COALESCE(SUM(amount_coins),0) as coins FROM payments WHERE user_id=? AND direction='deposit' AND status='completed'", (uid,), one=True)
-    return web.json_response({"ok":True,"user":dict(u),"vip":{"name":v['name'],"icon":v['icon'],"level_cb":v['cb']},
-        "game_stats":[dict(g) for g in game_stats] if game_stats else [],
-        "deposit_summary":dict(dep_total) if dep_total else {},
-    },headers=H)
+    dep_total = await db("SELECT COUNT(*) as cnt,COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE user_id=? AND direction='deposit' AND status='completed'", (uid,), one=True)
+    bonuses = await db("SELECT * FROM user_bonuses WHERE user_id=? ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
+    return web.json_response({"ok": True, "user": dict(u), "vip": {"name": v['name'], "icon": v['icon'], "level_cb": v['cb']},
+        "game_stats": [dict(g) for g in game_stats] if game_stats else [],
+        "deposit_summary": dict(dep_total) if dep_total else {},
+        "bonuses": [dict(b) for b in bonuses] if bonuses else [],
+    }, headers=H)
 
 async def admin_user_bets(req):
-    """GET /admin/bets/{uid}?key=...&limit=100 — история ставок юзера"""
-    if not _admin_check(req): return web.json_response({"ok":False,"error":"forbidden"},headers=H)
+    """GET /admin/bets/{uid} — user bet history."""
+    admin, err = _require_admin(req, "players")
+    if err: return err
     uid = int(req.match_info['uid'])
-    limit = min(int(req.rel_url.query.get("limit",100)),500)
-    rows = await db("SELECT * FROM bet_history WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid,limit), fetch=True)
+    limit = min(int(req.rel_url.query.get("limit", 100)), 500)
+    rows = await db("SELECT * FROM bet_history WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit), fetch=True)
     total = await db("SELECT COUNT(*) as cnt FROM bet_history WHERE user_id=?", (uid,), one=True)
-    return web.json_response({"ok":True,"total":total['cnt'],"bets":[dict(r) for r in rows] if rows else []},headers=H)
+    return web.json_response({"ok": True, "total": total['cnt'], "bets": [dict(r) for r in rows] if rows else []}, headers=H)
 
 async def admin_user_payments(req):
-    """GET /admin/payments/{uid}?key=...&limit=100 — история платежей юзера"""
-    if not _admin_check(req): return web.json_response({"ok":False,"error":"forbidden"},headers=H)
+    """GET /admin/payments/{uid} — user payment history."""
+    admin, err = _require_admin(req, "financial")
+    if err: return err
     uid = int(req.match_info['uid'])
-    limit = min(int(req.rel_url.query.get("limit",100)),500)
-    rows = await db("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid,limit), fetch=True)
+    limit = min(int(req.rel_url.query.get("limit", 100)), 500)
+    rows = await db("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit), fetch=True)
     total = await db("SELECT COUNT(*) as cnt FROM payments WHERE user_id=?", (uid,), one=True)
-    return web.json_response({"ok":True,"total":total['cnt'],"payments":[dict(r) for r in rows] if rows else []},headers=H)
+    return web.json_response({"ok": True, "total": total['cnt'], "payments": [dict(r) for r in rows] if rows else []}, headers=H)
+
+async def admin_games(req):
+    """GET /admin/games — per-game analytics."""
+    admin, err = _require_admin(req, "games")
+    if err: return err
+    games = await db("SELECT game, COUNT(*) as total_bets, COUNT(DISTINCT user_id) as unique_players, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, AVG(bet_amount) as avg_bet, MAX(win_amount) as biggest_win FROM bet_history GROUP BY game ORDER BY wagered DESC", fetch=True)
+    # Per game per day (last 7 days)
+    daily = await db("SELECT game, date(created_at) as day, COUNT(*) as bets, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= date('now','-7 days') GROUP BY game, date(created_at) ORDER BY day", fetch=True)
+    return web.json_response({"ok": True,
+        "games": [dict(g) for g in games] if games else [],
+        "daily": [dict(d) for d in daily] if daily else [],
+    }, headers=H)
+
+async def admin_financial(req):
+    """GET /admin/financial — deposits, withdrawals, GGR trends."""
+    admin, err = _require_admin(req, "financial")
+    if err: return err
+    days = int(req.rel_url.query.get("days", 30))
+    dep_daily = await db(f"SELECT date(created_at) as day, COUNT(*) as cnt, SUM(amount_usd) as usd, method FROM payments WHERE direction='deposit' AND status='completed' AND created_at >= date('now','-{days} days') GROUP BY date(created_at), method ORDER BY day", fetch=True)
+    wd_daily = await db(f"SELECT date(created_at) as day, COUNT(*) as cnt, SUM(amount_usd) as usd FROM payments WHERE direction='withdrawal' AND status='completed' AND created_at >= date('now','-{days} days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    ggr_daily = await db(f"SELECT date(created_at) as day, SUM(bet_amount)-SUM(win_amount) as ggr, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= date('now','-{days} days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    # Totals
+    totals = await db("SELECT COALESCE(SUM(CASE WHEN direction='deposit' THEN amount_usd ELSE 0 END),0) as deposits, COALESCE(SUM(CASE WHEN direction='withdrawal' THEN amount_usd ELSE 0 END),0) as withdrawals FROM payments WHERE status='completed'", one=True)
+    # By method
+    by_method = await db("SELECT method, COUNT(*) as cnt, SUM(amount_usd) as usd FROM payments WHERE direction='deposit' AND status='completed' GROUP BY method", fetch=True)
+    return web.json_response({"ok": True,
+        "deposits_daily": [dict(d) for d in dep_daily] if dep_daily else [],
+        "withdrawals_daily": [dict(d) for d in wd_daily] if wd_daily else [],
+        "ggr_daily": [dict(d) for d in ggr_daily] if ggr_daily else [],
+        "totals": {"deposits": round(totals['deposits'], 2), "withdrawals": round(totals['withdrawals'], 2), "net": round(totals['deposits'] - totals['withdrawals'], 2)},
+        "by_method": [dict(m) for m in by_method] if by_method else [],
+    }, headers=H)
+
+async def admin_cohorts(req):
+    """GET /admin/cohorts — cohort analysis by registration date."""
+    admin, err = _require_admin(req, "cohorts")
+    if err: return err
+    # Weekly cohorts for last 8 weeks
+    cohorts = await db("""
+        SELECT
+            strftime('%Y-W%W', created_at) as cohort,
+            COUNT(*) as size,
+            SUM(CASE WHEN total_deposited_usd > 0 THEN 1 ELSE 0 END) as depositors,
+            AVG(total_wagered) as avg_wagered,
+            AVG(total_deposited_usd) as avg_deposit,
+            SUM(total_deposited_usd) as total_ltv,
+            SUM(CASE WHEN last_login >= date('now','-7 days') THEN 1 ELSE 0 END) as retained_7d
+        FROM users WHERE created_at >= date('now','-56 days')
+        GROUP BY strftime('%Y-W%W', created_at) ORDER BY cohort
+    """, fetch=True)
+    return web.json_response({"ok": True, "cohorts": [dict(c) for c in cohorts] if cohorts else []}, headers=H)
+
+async def admin_live(req):
+    """GET /admin/live — recent activity feed."""
+    admin, err = _require_admin(req, "live_monitor")
+    if err: return err
+    limit = min(int(req.rel_url.query.get("limit", 50)), 200)
+    recent_bets = await db("SELECT b.*, u.username, u.first_name FROM bet_history b LEFT JOIN users u ON b.user_id=u.user_id ORDER BY b.id DESC LIMIT ?", (limit,), fetch=True)
+    recent_deps = await db("SELECT p.*, u.username, u.first_name FROM payments p LEFT JOIN users u ON p.user_id=u.user_id WHERE p.direction='deposit' AND p.status='completed' ORDER BY p.id DESC LIMIT 20", fetch=True)
+    active_now = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= datetime('now','-5 minutes')", one=True)
+    return web.json_response({"ok": True,
+        "recent_bets": [dict(r) for r in recent_bets] if recent_bets else [],
+        "recent_deposits": [dict(r) for r in recent_deps] if recent_deps else [],
+        "active_now": active_now['cnt'],
+    }, headers=H)
+
+async def admin_affiliates(req):
+    """GET /admin/affiliates — referral stats."""
+    admin, err = _require_admin(req, "affiliates")
+    if err: return err
+    top_refs = await db("SELECT user_id, username, first_name, referrals_count, total_deposited_usd FROM users WHERE referrals_count > 0 ORDER BY referrals_count DESC LIMIT 50", fetch=True)
+    total = await db("SELECT COALESCE(SUM(referrals_count),0) as cnt, COUNT(CASE WHEN referrals_count>0 THEN 1 END) as referrers FROM users", one=True)
+    return web.json_response({"ok": True,
+        "top_referrers": [dict(r) for r in top_refs] if top_refs else [],
+        "total_referrals": total['cnt'],
+        "total_referrers": total['referrers'],
+    }, headers=H)
+
+async def admin_bonus_stats(req):
+    """GET /admin/bonus-stats — bonus analytics."""
+    admin, err = _require_admin(req, "bonus_analytics")
+    if err: return err
+    by_type = await db("SELECT bonus_type, status, COUNT(*) as cnt, SUM(amount) as total_amount FROM user_bonuses GROUP BY bonus_type, status", fetch=True)
+    active = await db("SELECT COUNT(*) as cnt FROM user_bonuses WHERE status='active'", one=True)
+    claimed = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM user_bonuses WHERE status='completed'", one=True)
+    return web.json_response({"ok": True,
+        "by_type": [dict(r) for r in by_type] if by_type else [],
+        "active_count": active['cnt'],
+        "claimed_count": claimed['cnt'],
+        "claimed_total": claimed['total'],
+    }, headers=H)
+
+async def admin_bonus_create(req):
+    """POST /admin/bonus/create-campaign — create bonus campaign for segment."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    admin, err = _require_admin(req, "bonus_management")
+    if err: return err
+    data = await req.json()
+    bonus_type = data.get("bonus_type", "free_spins")
+    title = data.get("title", "Bonus")
+    description = data.get("description", "")
+    amount = float(data.get("amount", 0))
+    target = data.get("target", "all")  # all, vip, new, specific
+    user_ids = data.get("user_ids", [])
+
+    if target == "specific" and user_ids:
+        targets = user_ids
+    elif target == "vip":
+        rows = await db("SELECT user_id FROM users WHERE total_wagered >= 5000", fetch=True)
+        targets = [r['user_id'] for r in rows] if rows else []
+    elif target == "new":
+        rows = await db("SELECT user_id FROM users WHERE created_at >= date('now','-7 days')", fetch=True)
+        targets = [r['user_id'] for r in rows] if rows else []
+    else:
+        rows = await db("SELECT user_id FROM users", fetch=True)
+        targets = [r['user_id'] for r in rows] if rows else []
+
+    count = 0
+    for uid in targets:
+        await db(
+            "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
+            (uid, bonus_type, title, description, "redeem", amount, "active", bonus_type.upper().replace("_", " "))
+        )
+        count += 1
+    return web.json_response({"ok": True, "assigned_count": count, "target": target}, headers=H)
+
+async def admin_bonus_assign(req):
+    """POST /admin/bonus/assign — assign bonus to specific user."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    admin, err = _require_admin(req, "bonus_management")
+    if err: return err
+    data = await req.json()
+    uid = int(data.get("user_id", 0))
+    bonus_type = data.get("bonus_type", "free_spins")
+    title = data.get("title", "Manual Bonus")
+    amount = float(data.get("amount", 0))
+    if not uid: return web.json_response({"ok": False, "error": "missing_user_id"}, headers=H)
+    await db(
+        "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
+        (uid, bonus_type, title, f"Assigned by {admin['username']}", "redeem", amount, "active", bonus_type.upper().replace("_", " "))
+    )
+    return web.json_response({"ok": True, "assigned_to": uid}, headers=H)
 
 async def main():
-    init_db(); await start_api(); await dp.start_polling(bot)
+    init_db()
+    await start_api()
+    api_only = os.getenv("API_ONLY", "") == "1" or "--api-only" in sys.argv
+    if api_only:
+        logging.info("🖥️  Running in API-ONLY mode (no Telegram polling)")
+        while True:
+            await asyncio.sleep(3600)
+    else:
+        await dp.start_polling(bot)
 
 if __name__=='__main__':
+    import sys
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
     asyncio.run(main())
+
+
