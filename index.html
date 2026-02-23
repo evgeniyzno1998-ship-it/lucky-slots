@@ -219,64 +219,46 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(18, 18, 18, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
             height: var(--nav-h);
+            background: var(--surface);
+            border-top: 1px solid rgba(255, 255, 255, .05);
             display: flex;
-            justify-content: space-around;
-            align-items: center;
             z-index: 100;
             padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, .4)
         }
 
         .nav-item {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            color: var(--dim);
-            font-size: 10px;
-            font-weight: 600;
+            justify-content: center;
+            gap: 3px;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            width: 60px;
-            position: relative;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .nav-item .material-symbols-outlined {
-            font-size: 24px;
-            transition: all 0.3s ease;
+            color: var(--dim);
+            transition: color .2s;
+            position: relative
         }
 
         .nav-item.active {
-            color: var(--red);
+            color: var(--red)
+        }
+
+        .nav-item .material-symbols-outlined {
+            font-size: 22px;
+            transition: all .2s
         }
 
         .nav-item.active .material-symbols-outlined {
-            font-variation-settings: 'FILL' 1;
-            transform: translateY(-2px);
-            filter: drop-shadow(0 0 8px rgba(227, 30, 36, 0.4));
+            filter: drop-shadow(0 0 6px var(--red-glow))
         }
 
-        .nav-indicator {
-            position: absolute;
-            bottom: -8px;
-            width: 4px;
-            height: 4px;
-            background: var(--red);
-            border-radius: 50%;
-            opacity: 0;
-            transform: scale(0);
-            transition: all 0.3s ease;
-        }
-
-        .nav-item.active .nav-indicator {
-            opacity: 1;
-            transform: scale(1);
+        .nav-item .nav-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px
         }
 
         .nav-item .nav-label {
@@ -683,29 +665,22 @@
             width: 56px;
             height: 56px;
             border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--surface);
+            border: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(12px);
+            transition: all .15s
         }
 
         .cat-icon .material-symbols-outlined {
             font-size: 24px;
-            color: var(--text);
-            transition: color 0.2s;
+            color: var(--red)
         }
 
         .cat-item:active .cat-icon {
-            transform: scale(0.95);
-        }
-
-        .cat-item.active .cat-icon {
-            background: var(--ruby);
-            border-color: var(--ruby);
-            box-shadow: 0 0 15px rgba(227, 30, 36, 0.3);
+            border-color: var(--red);
+            background: rgba(227, 30, 36, .08)
         }
 
         .cat-label {
@@ -3144,29 +3119,16 @@
 
 <body>
 
-    <!-- ===== HEADER ===== -->
-    <div class="header">
+    <!-- ===== HEADER (shared) ===== -->
+    <div class="header" id="mainHeader">
         <div class="logo">
-            <span class="material-symbols-outlined"
-                style="color:var(--red);font-variation-settings:'FILL' 1;font-size:24px;filter:drop-shadow(0 0 8px rgba(227,30,36,0.5))">diamond</span>
-            <span
-                style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:18px;letter-spacing:-.5px">RUBY<span
-                    style="color:var(--red)">BET</span></span>
+            <div class="logo-icon"><span class="material-symbols-outlined">diamond</span></div>
+            <div class="logo-text">RUBY<span>BET</span></div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-            <div class="header-bal" onclick="openBalancePopup()"
-                style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px)">
-                <span class="material-symbols-outlined" style="color:var(--gold)">toll</span>
-                <div>
-                    <div id="headerBal" style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px">...
-                    </div>
-                    <div id="headerUnit"
-                        style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700">
-                        USDT</div>
-                </div>
-            </div>
-            <div class="header-notif">
-                <span class="material-symbols-outlined">notifications</span>
+        <div class="header-right">
+            <div class="header-bal" onclick="openBalancePopup()"><span id="headerBal">...</span><span class="amt"
+                    id="headerUnit">coins</span></div>
+            <div class="header-notif"><span class="material-symbols-outlined">notifications</span>
                 <div class="dot"></div>
             </div>
         </div>
@@ -3215,44 +3177,16 @@
 
     <!-- ===== SCREEN: LOBBY ===== -->
     <div class="screen active" id="scrLobby">
-        <div class="relative px-4 pt-2 pb-6">
-            <div class="lobby-search relative" onclick="/* future search */">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span class="material-symbols-outlined text-gray-500">search</span>
-                </div>
-                <input type="text"
-                    class="w-full bg-surface2 border border-border text-white text-sm rounded-xl focus:ring-ruby focus:border-ruby block pl-10 p-3 transition-colors"
-                    placeholder="Search games..." id="searchPlaceholder" readonly>
-            </div>
-        </div>
+        <div class="lobby-search" onclick="/* future search */"><span
+                class="material-symbols-outlined">search</span><span id="searchPlaceholder">Search games...</span></div>
 
-        <div class="px-4 mb-6">
-            <!-- Hero Banner Tailwind styles -->
-            <div
-                class="hero-banner relative overflow-hidden rounded-2xl bg-gradient-to-br from-charcoal to-surface border border-border p-5 shadow-lg">
-                <div class="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-ruby opacity-20 rounded-full blur-3xl">
-                </div>
-                <div
-                    class="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-ruby-dark opacity-20 rounded-full blur-2xl">
-                </div>
-                <div class="relative z-10 flex flex-col items-start gap-1">
-                    <div
-                        class="hero-tag inline-flex items-center gap-1 bg-red-500/10 text-ruby px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider mb-1">
-                        <span class="material-symbols-outlined text-sm">local_fire_department</span>
-                        <span id="heroTag">HOT</span>
-                    </div>
-                    <h2 class="hero-title text-3xl font-black text-white leading-tight font-display tracking-tight"
-                        id="heroTitle">RUBY <span
-                            class="text-ruby drop-shadow-[0_0_15px_rgba(227,30,36,0.6)]">JACKPOT</span></h2>
-                    <p class="hero-sub text-gray-400 text-sm mb-4" id="heroSub">5,000 coins prize pool</p>
-                    <button
-                        class="hero-btn filled inline-flex items-center justify-center gap-2 bg-ruby hover:bg-ruby-dark text-white font-bold py-3 px-6 rounded-xl transition-all shadow-[0_4px_14px_0_rgba(227,30,36,0.39)] w-auto"
-                        onclick="nav('game')">
-                        <span class="material-symbols-outlined text-lg">play_arrow</span>
-                        <span id="heroPlay">PLAY NOW</span>
-                    </button>
-                </div>
-            </div>
+        <div class="hero-banner">
+            <div class="hero-tag"><span class="material-symbols-outlined">local_fire_department</span><span
+                    id="heroTag">HOT</span></div>
+            <h2 class="hero-title" id="heroTitle">RUBY <span>JACKPOT</span></h2>
+            <p class="hero-sub" id="heroSub">5,000 coins prize pool</p>
+            <button class="hero-btn" onclick="nav('game')"><span class="material-symbols-outlined">play_arrow</span>
+                <span id="heroPlay">PLAY NOW</span></button>
         </div>
 
         <div class="wheel-banner" id="wheelBanner" onclick="openWheel()">
@@ -3275,24 +3209,24 @@
             </div>
         </div>
 
-        <div class="px-4 mb-2">
-            <div class="section-head flex items-center justify-between mb-3">
-                <div class="section-title text-sm font-black text-gray-400 tracking-widest uppercase font-display"
-                    id="secCat">CATEGORIES</div>
-                <div class="section-more text-xs font-bold text-ruby cursor-pointer hover:text-ruby-dark transition-colors"
-                    id="secCatMore">VIEW ALL</div>
+        <div class="section">
+            <div class="section-head">
+                <div class="section-title" id="secCat">CATEGORIES</div>
+                <div class="section-more" id="secCatMore">VIEW ALL</div>
             </div>
+            <div class="cat-row" id="catRow"></div>
         </div>
-        <div class="cat-row snap-x flex overflow-x-auto gap-3 px-4 pb-4 no-scrollbar" id="catRow"></div>
 
-        <div class="px-4 mb-3 mt-2">
-            <div class="section-head flex items-center gap-2">
-                <span style="color:var(--ruby)">🔥</span>
-                <span class="section-title text-sm font-black text-white tracking-widest uppercase font-display"
-                    id="secTrending">TRENDING NOW</span>
+        <div class="section" style="margin-bottom:0">
+            <div class="section-head">
+                <div class="section-title"><span class="material-symbols-outlined"
+                        style="color:var(--red);font-size:16px;margin-right:4px">local_fire_department</span><span
+                        id="secTrend">TRENDING NOW</span></div>
             </div>
+            <div id="gameGrid" class="grid grid-cols-2 gap-[12px] px-[16px] mb-[20px]"></div>
         </div>
-        <div class="game-grid grid grid-cols-2 gap-3 px-4 mb-6" id="gameGrid"></div>
+
+        <div style="height:20px"></div>
     </div>
 
     <!-- ===== SCREEN: CRASH ===== -->
@@ -3388,92 +3322,76 @@
         <!-- speed is toggled via AUTO button now -->
     </div>
 
-    <!-- ===== SCREEN: BONUSES (Personal Bonus Dashboard) ===== -->
+    <!-- ===== SCREEN: BONUSES ===== -->
     <div class="screen" id="scrBonuses">
-        <!-- Header -->
-        <div style="padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-            <h2 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.5px"
-                id="bonusTitle">My Bonuses</h2>
+        <div style="padding:16px 16px 8px">
+            <h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900" id="bonusTitle">Bonuses</h2>
+        </div>
+        <div class="pill-row" id="bonusPills"></div>
+
+        <div class="bonus-featured">
             <div
-                style="position:relative;width:36px;height:36px;border-radius:8px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
-                <span class="material-symbols-outlined" style="color:var(--red);font-size:20px">notifications</span>
-                <div
-                    style="position:absolute;top:5px;right:5px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1.5px solid var(--bg)">
+                style="position:absolute;inset:0;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover;opacity:.4">
+            </div>
+            <div
+                style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)">
+            </div>
+            <div class="bonus-featured-content">
+                <div class="bf-tags">
+                    <div class="bf-tag" id="bfTag">EXCLUSIVE</div>
+                    <div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span
+                            id="bfTimer">Expires in 24h</span></div>
+                </div>
+                <div class="bf-title" id="bfTitle">100% Deposit Match</div>
+                <div class="bf-desc" id="bfDesc">Get up to 1 BTC on your first deposit. Double your playing money
+                    instantly.</div>
+                <div class="bf-bottom">
+                    <div>
+                        <div class="bf-wager-label" id="bfWagerL">WAGER</div>
+                        <div class="bf-wager-val">x30</div>
+                    </div>
+                    <button class="bf-activate" onclick="nav('wallet')"><span id="bfActivate">Activate</span><span
+                            class="material-symbols-outlined">arrow_forward</span></button>
                 </div>
             </div>
         </div>
 
-        <!-- Hero: Available Bonus Balance -->
-        <div style="text-align:center;padding:24px 16px 32px;position:relative">
-            <div
-                style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(227,30,36,.12) 0%,transparent 70%);pointer-events:none">
+        <div class="bonus-card" id="bonusCard1">
+            <div class="bonus-card-img"
+                style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0') center/cover">
             </div>
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:3px;color:rgba(227,30,36,.7);margin-bottom:8px"
-                id="bonusBalLabel">Available Bonus Balance</div>
-            <div style="font-family:'Montserrat',sans-serif;font-size:44px;font-weight:900;color:#fff;text-shadow:0 0 15px rgba(227,30,36,.5);margin-bottom:12px"
-                id="bonusBalAmount">$0.00</div>
-            <div
-                style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(227,30,36,.15);border:1px solid rgba(227,30,36,.25);border-radius:20px">
-                <span class="material-symbols-outlined" style="font-size:14px;color:var(--red)">info</span>
-                <span
-                    style="font-size:10px;font-weight:700;color:rgba(227,30,36,.8);text-transform:uppercase;letter-spacing:1px"
-                    id="bonusReadyLabel">Ready to claim</span>
+            <div class="bonus-card-body">
+                <div class="bonus-card-title" id="bc1Title">50 Free Spins</div>
+                <div class="bonus-card-desc" id="bc1Desc">Valid for Ruby Slots. No deposit required for new players.
+                </div>
+                <button class="bonus-card-btn" id="bc1Btn">Claim Now</button>
             </div>
         </div>
 
-        <!-- Segmented Control: Active / History -->
-        <div style="padding:0 16px;margin-bottom:16px">
-            <div style="display:flex;padding:3px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px"
-                id="bonusSegments">
-                <button class="bonus-seg active" id="segActive" onclick="switchBonusTab('active')"
-                    style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">Active</button>
-                <button class="bonus-seg" id="segHistory" onclick="switchBonusTab('history')"
-                    style="flex:1;padding:8px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;transition:all .15s">History</button>
+        <div class="bonus-card" id="bonusCard2">
+            <div class="bonus-card-img"
+                style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw') center/cover">
+            </div>
+            <div class="bonus-card-body">
+                <div class="bonus-card-title" id="bc2Title">Weekly Cashback</div>
+                <div class="bonus-card-desc" id="bc2Desc">Get 10% back on all losses every Monday. VIP tiers get up to
+                    20%.</div>
+                <button class="bonus-card-btn" id="bc2Btn">Join Club</button>
             </div>
         </div>
 
-        <!-- Active Bonuses Panel -->
-        <div id="bonusActivePanel">
+        <div class="bonus-locked" style="position:relative">
             <div
-                style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
-                <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)"
-                    id="activeBonusHead">Your Active Bonuses</div>
-                <span style="font-size:10px;color:var(--red);font-weight:800;text-transform:uppercase"
-                    id="activeBonusCount">0 Active</span>
+                style="width:33%;min-height:100px;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y') center/cover;filter:grayscale(1);flex-shrink:0">
             </div>
-
-            <!-- Active bonus cards rendered by JS -->
-            <div id="activeBonusList" style="padding:0 16px;display:flex;flex-direction:column;gap:12px"></div>
-
-            <!-- View History link -->
-            <div style="padding:24px 0;text-align:center">
-                <button onclick="switchBonusTab('history')"
-                    style="background:none;border:none;color:var(--dim2);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
-                    View Bonus History <span class="material-symbols-outlined" style="font-size:14px">history</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- History Panel (hidden by default) -->
-        <div id="bonusHistoryPanel" style="display:none">
-            <div
-                style="display:flex;align-items:center;justify-content:space-between;padding:0 16px;margin-bottom:12px">
-                <div
-                    style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--dim2)">
-                    Past Rewards</div>
-                <span
-                    style="font-size:10px;color:var(--dim2);background:rgba(255,255,255,.05);padding:3px 8px;border-radius:4px;font-weight:800;text-transform:uppercase;letter-spacing:1px">Last
-                    30 Days</span>
-            </div>
-
-            <!-- History items rendered by JS -->
-            <div id="bonusHistoryList" style="padding:0 16px;display:flex;flex-direction:column;gap:10px"></div>
-
-            <!-- End of history -->
-            <div style="padding:40px 0;text-align:center;opacity:.4">
-                <span class="material-symbols-outlined"
-                    style="font-size:36px;display:block;margin-bottom:6px">history</span>
-                <span style="font-size:11px">End of history</span>
+            <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
+            <div class="bonus-locked-body">
+                <div class="bl-title" id="blTitle">Diamond VIP Status</div>
+                <div class="bl-desc" id="blDesc">Unlock exclusive tournaments.</div>
+                <div class="bl-progress">
+                    <div class="bl-progress-fill" style="width:45%"></div>
+                </div>
+                <div class="bl-progress-label">Level 4/10</div>
             </div>
         </div>
     </div>
@@ -3725,6 +3643,35 @@
             </div>
         </div>
 
+        <div
+            style="margin:20px 16px 12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <h3 style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:#fff">My Bonuses
+                </h3>
+                <span style="font-size:10px;color:var(--dim2);text-transform:uppercase;font-weight:800">Available</span>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
+                    <span class="material-symbols-outlined" style="color:var(--red)">redeem</span>
+                </div>
+                <div>
+                    <div
+                        style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">
+                        Bonus Balance</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff"
+                        id="bonusBalAmount">$0.00</div>
+                </div>
+            </div>
+
+            <div id="activeBonusList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
+
+            <button onclick="nav('bonuses')"
+                style="width:100%;padding:12px;background:none;border:1px solid rgba(227,30,36,.3);border-radius:var(--radius);color:var(--red);font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s">VIEW
+                ALL OFFERS</button>
+        </div>
+
         <div class="prof-referral-btn" onclick="nav('referral')">
             <div class="prof-ref-left">
                 <div class="prof-ref-icon"><span class="material-symbols-outlined">diversity_3</span></div>
@@ -3918,6 +3865,7 @@
             if (s === 'profile') loadProfile();
             if (s === 'referral') loadReferral();
             if (s === 'wallet') { updateWallet(); switchWalletTab(activeWallet) }
+            if (s === 'bonuses') buildBonusPills();
             window.scrollTo(0, 0);
         }
 
@@ -4130,81 +4078,98 @@
         }
         function shareRef() { tg.openTelegramLink('https://t.me/share/url?url=https://t.me/' + BOT + '?start=ref' + UID + '&text=🎰') }
         function changeLang() { openLangSelector() }
+
+        function openLangSelector() {
+            var el = document.getElementById('langOverlay');
+            if (el) el.style.display = 'flex';
+        }
+        function closeLangSelector() {
+            var el = document.getElementById('langOverlay');
+            if (el) el.style.display = 'none';
+        }
+        function setLang(l) {
+            var u = new URL(window.location.href);
+            u.searchParams.set('lang', l);
+            window.location.href = u.toString();
+        }
+
         async function checkWheel() { try { var r = await fetch(API + '/api/wheel-status?' + qs()); var d = await r.json(); if (d.ok && !d.available) document.getElementById('wheelBanner').classList.add('done') } catch (e) { } }
 
         /* === INIT LOCALE === */
         function initLocale() {
+            function setTxt(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; }
+            function setHtm(id, htm) { var el = document.getElementById(id); if (el) el.innerHTML = htm; }
             /* Nav */
-            document.getElementById('navLobby').textContent = T.home;
-            document.getElementById('navGame').textContent = T.games;
-            document.getElementById('navBonuses').textContent = T.bonuses;
-            document.getElementById('navWallet').textContent = T.wallet;
-            document.getElementById('navProfile').textContent = T.profile;
+            setTxt('navLobby', T.home);
+            setTxt('navGame', T.games);
+            setTxt('navBonuses', T.bonuses);
+            setTxt('navWallet', T.wallet);
+            setTxt('navProfile', T.profile);
             /* Header */
-            document.getElementById('headerUnit').textContent = T.coins;
+            setTxt('headerUnit', T.coins);
             /* Lobby */
-            document.getElementById('searchPlaceholder').textContent = T.searchPlaceholder;
-            document.getElementById('heroTag').textContent = T.hot;
-            document.getElementById('heroTitle').innerHTML = 'RUBY <span class="accent">JACKPOT</span>';
-            document.getElementById('heroSub').textContent = T.heroSub;
-            document.getElementById('heroPlay').textContent = T.playNow;
-            document.getElementById('wheelTitle').textContent = T.wheel;
-            document.getElementById('wheelSub').textContent = T.wheelSub;
-            document.getElementById('secCat').textContent = T.categories;
-            document.getElementById('secCatMore').textContent = T.viewAll;
-            document.getElementById('secTrending').textContent = T.trending;
+            setTxt('searchPlaceholder', T.searchPlaceholder);
+            setTxt('heroTag', T.hot);
+            setHtm('heroTitle', 'RUBY <span class="accent">JACKPOT</span>');
+            setTxt('heroSub', T.heroSub);
+            setTxt('heroPlay', T.playNow);
+            setTxt('wheelTitle', T.wheel);
+            setTxt('wheelSub', T.wheelSub);
+            setTxt('secCat', T.categories);
+            setTxt('secCatMore', T.viewAll);
+            setTxt('secTrending', T.trending);
             /* Game */
-            document.getElementById('bbLabel').textContent = T.buyBonus;
-            document.getElementById('jackpotLabel').textContent = T.grandJackpot;
-            document.getElementById('betUnit').textContent = T.coins;
-            document.getElementById('betAmountLabel').textContent = LANG === 'pl' ? 'KWOTA ZAKŁADU' : LANG === 'ru' ? 'СУММА СТАВКИ' : LANG === 'ua' ? 'СУМА СТАВКИ' : 'BET AMOUNT';
+            setTxt('bbLabel', T.buyBonus);
+            setTxt('jackpotLabel', T.grandJackpot);
+            setTxt('betUnit', T.coins);
+            setTxt('betAmountLabel', LANG === 'pl' ? 'KWOTA ZAKŁADU' : LANG === 'ru' ? 'СУММА СТАВКИ' : LANG === 'ua' ? 'СУМА СТАВКИ' : 'BET AMOUNT');
             /* Bonuses */
-            document.getElementById('bonusTitle').textContent = T.bonusTitle;
-            document.getElementById('bfTag').textContent = T.exclusive;
-            document.getElementById('bfTimer').textContent = T.bfTimer;
-            document.getElementById('bfTitle').textContent = T.bfTitle;
-            document.getElementById('bfDesc').textContent = T.bfDesc;
-            document.getElementById('bfWagerL').textContent = T.wager;
-            document.getElementById('bfActivate').textContent = T.activate;
-            document.getElementById('bc1Title').textContent = T.freeSpinsTitle;
-            document.getElementById('bc1Desc').textContent = T.freeSpinsDesc;
-            document.getElementById('bc1Btn').textContent = T.claimNow;
-            document.getElementById('bc2Title').textContent = T.cashbackTitle;
-            document.getElementById('bc2Desc').textContent = T.cashbackDesc;
-            document.getElementById('bc2Btn').textContent = T.joinClub;
-            document.getElementById('blTitle').textContent = T.vipTitle;
-            document.getElementById('blDesc').textContent = T.vipDesc;
+            setTxt('bonusTitle', T.bonusTitle);
+            setTxt('bfTag', T.exclusive);
+            setTxt('bfTimer', T.bfTimer);
+            setTxt('bfTitle', T.bfTitle);
+            setTxt('bfDesc', T.bfDesc);
+            setTxt('bfWagerL', T.wager);
+            setTxt('bfActivate', T.activate);
+            setTxt('bc1Title', T.freeSpinsTitle);
+            setTxt('bc1Desc', T.freeSpinsDesc);
+            setTxt('bc1Btn', T.claimNow);
+            setTxt('bc2Title', T.cashbackTitle);
+            setTxt('bc2Desc', T.cashbackDesc);
+            setTxt('bc2Btn', T.joinClub);
+            setTxt('blTitle', T.vipTitle);
+            setTxt('blDesc', T.vipDesc);
             /* Wallet */
-            document.getElementById('wBalLabel').textContent = T.totalBalance;
-            document.getElementById('wDeposit').textContent = T.deposit;
-            document.getElementById('wWithdraw').textContent = T.withdraw;
-            document.getElementById('wHistory').textContent = T.transHistory;
-            var wml = document.getElementById('wMethodLabel'); if (wml) wml.textContent = LANG === 'ru' ? 'МЕТОД ОПЛАТЫ' : LANG === 'ua' ? 'МЕТОД ОПЛАТИ' : LANG === 'pl' ? 'METODA PŁATNOŚCI' : 'PAYMENT METHOD';
-            var wpl = document.getElementById('wPkgLabel'); if (wpl) wpl.textContent = T.selectPkg;
-            var pct = document.getElementById('pmCardTitle'); if (pct) pct.textContent = LANG === 'ru' ? 'Банковская карта' : LANG === 'ua' ? 'Банківська картка' : LANG === 'pl' ? 'Karta bankowa' : 'Bank Card';
+            setTxt('wBalLabel', T.totalBalance);
+            setTxt('wDeposit', T.deposit);
+            setTxt('wWithdraw', T.withdraw);
+            setTxt('wHistory', T.transHistory);
+            setTxt('wMethodLabel', LANG === 'ru' ? 'МЕТОД ОПЛАТЫ' : LANG === 'ua' ? 'МЕТОД ОПЛАТИ' : LANG === 'pl' ? 'METODA PŁATNOŚCI' : 'PAYMENT METHOD');
+            setTxt('wPkgLabel', T.selectPkg);
+            setTxt('pmCardTitle', LANG === 'ru' ? 'Банковская карта' : LANG === 'ua' ? 'Банківська картка' : LANG === 'pl' ? 'Karta bankowa' : 'Bank Card');
             /* Referral */
-            document.getElementById('refHeroTitle').innerHTML = T.inviteEarn.replace('&', '&amp;').replace(/(Earn|Zarabiaj|Зарабатывай|Заробляй)/, '<span>$1</span>');
-            document.getElementById('refHeroDesc').innerHTML = T.inviteDesc;
-            document.getElementById('refLinkLabel').textContent = T.tapCopy;
-            document.getElementById('refCopyText').textContent = T.copy;
-            document.getElementById('refTotalLabel').textContent = T.totalRefs;
-            document.getElementById('refEarnedLabel').textContent = T.earnedCoins;
-            document.getElementById('refHowTitle').textContent = T.howItWorks;
-            document.getElementById('refStep1T').textContent = T.step1T; document.getElementById('refStep1D').textContent = T.step1D;
-            document.getElementById('refStep2T').textContent = T.step2T; document.getElementById('refStep2D').textContent = T.step2D;
-            document.getElementById('refStep3T').textContent = T.step3T; document.getElementById('refStep3D').textContent = T.step3D;
-            document.getElementById('refShareBtn').textContent = T.shareNow;
+            setHtm('refHeroTitle', T.inviteEarn.replace('&', '&amp;').replace(/(Earn|Zarabiaj|Зарабатывай|Заробляй)/, '<span>$1</span>'));
+            setHtm('refHeroDesc', T.inviteDesc);
+            setTxt('refLinkLabel', T.tapCopy);
+            setTxt('refCopyText', T.copy);
+            setTxt('refTotalLabel', T.totalRefs);
+            setTxt('refEarnedLabel', T.earnedCoins);
+            setTxt('refHowTitle', T.howItWorks);
+            setTxt('refStep1T', T.step1T); setTxt('refStep1D', T.step1D);
+            setTxt('refStep2T', T.step2T); setTxt('refStep2D', T.step2D);
+            setTxt('refStep3T', T.step3T); setTxt('refStep3D', T.step3D);
+            setTxt('refShareBtn', T.shareNow);
             /* Profile */
-            document.getElementById('stWinsL').textContent = T.wins;
-            document.getElementById('stLossesL').textContent = T.losses;
-            document.getElementById('stTotalL').textContent = T.total;
-            document.getElementById('profRefTitle').textContent = T.referralProgram;
-            document.getElementById('profRefSub').textContent = T.inviteFriends;
-            document.getElementById('profSettings').textContent = T.settings;
-            document.getElementById('profSecurity').textContent = T.security;
-            document.getElementById('profSupport').textContent = T.support;
-            document.getElementById('profSignout').textContent = T.signOut;
-            document.getElementById('profXpLabel').textContent = T.currentXp;
+            setTxt('stWinsL', T.wins);
+            setTxt('stLossesL', T.losses);
+            setTxt('stTotalL', T.total);
+            setTxt('profRefTitle', T.referralProgram);
+            setTxt('profRefSub', T.inviteFriends);
+            setTxt('profSettings', T.settings);
+            setTxt('profSecurity', T.security);
+            setTxt('profSupport', T.support);
+            setTxt('profSignout', T.signOut);
+            setTxt('profXpLabel', T.currentXp);
         }
 
         /* === BUILD DYNAMIC CONTENT === */
@@ -4231,25 +4196,48 @@
                 diamond: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y'
             };
             var games = [
-                { emoji: '🍭', name: T.slotName, tag: T.slotTag, badge: 'hot', bg: "url('" + IMG.slots + "') center/cover", screen: 'game' },
-                { emoji: '📈', name: T.crashName, tag: T.slotTag, badge: 'hot', bg: "url('" + IMG.cubes + "') center/cover", screen: 'crash' },
-                { emoji: '🎲', name: T.diceName, tag: T.comingTag, badge: 'soon', bg: "url('" + IMG.chips + "') center/cover", screen: null },
-                { emoji: '💣', name: T.mineName, tag: T.comingTag, badge: 'soon', bg: "url('" + IMG.diamond + "') center/cover", screen: null },
-                { emoji: '🪙', name: T.coinName, tag: T.comingTag, badge: 'soon', bg: 'linear-gradient(135deg,#1a0a1a,#0a001a)', screen: null },
-                { emoji: '🎯', name: T.rouletteName, tag: T.comingTag, badge: 'soon', bg: 'linear-gradient(135deg,#2a1a0a,#1a0a00)', screen: null }
+                { name: T.slotName, emoji: '🎰', tag: T.slotTag, screen: 'game', bg: 'linear-gradient(135deg,#ff4b2b,#ff416c)' },
+                { name: T.crashName, emoji: '📈', tag: T.hot, screen: 'crash', bg: 'linear-gradient(135deg,#11998e,#38ef7d)' },
+                { name: T.diceName, emoji: '🎲', tag: T.comingTag, screen: null, bg: 'linear-gradient(135deg,#8E2DE2,#4A00E0)' },
+                { name: T.mineName, emoji: '💣', tag: T.comingTag, screen: null, bg: 'linear-gradient(135deg,#b92b27,#1565C0)' }
             ];
-            document.getElementById('gameGrid').innerHTML = games.map(function (g) {
-                var hasImg = g.bg.indexOf('url') === 0;
-                var badgeColorCls = g.badge === 'hot' ? 'bg-red-500 text-white' : (g.badge === 'new' ? 'bg-green-500 text-white' : 'bg-surface2 text-dim');
-                return '<div class="game-tile bg-surface border border-border rounded-xl flex flex-col overflow-hidden hover:scale-[0.98] transition-transform shadow-md" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred(\'light\')}' : '') + '">'
-                    + '<div class="relative w-full aspect-[4/3] flex items-center justify-center text-4xl" style="background:' + g.bg + '">'
-                    + (hasImg ? '<div class="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-80 z-0"></div>' : '')
-                    + '<div class="relative z-10 drop-shadow-lg">' + g.emoji + '</div>'
-                    + '<div class="absolute top-2 right-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider z-10 ' + badgeColorCls + '">' + g.tag + '</div></div>'
-                    + '<div class="p-3 flex flex-col gap-0.5">'
-                    + '<div class="text-[13px] font-bold text-white font-display">' + g.name + '</div>'
-                    + '<div class="text-[10px] text-dim uppercase tracking-wider">' + (g.screen ? T.slotTag : T.comingTag) + '</div></div></div>';
-            }).join('');
+            var html = '';
+            for (var i = 0; i < 4; i++) {
+                html += games.map(function (g) {
+                    var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
+                    var badgeHtml = g.tag ? '<div class="absolute top-2 right-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
+                    return '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
+                        + badgeHtml
+                        + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
+                        + '<div class="absolute inset-0 opacity-40" style="background:' + g.bg + '"></div>'
+                        + '<div class="relative z-10">' + g.emoji + '</div>'
+                        + '</div>'
+                        + '<div class="p-[10px]">'
+                        + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
+                        + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + g.tag + '</div>'
+                        + '</div></div>';
+                }).join('');
+            }
+            document.getElementById('gameGrid').innerHTML = html;
+        }
+
+        function initBonuses() {
+            loadBonuses();
+            buildBonusPills();
+        }
+
+        function buildBonusPills() {
+            var pillLabels = ['All', 'Deposit', 'Free Spins', 'VIP', 'Cashback'];
+            if (LANG === 'ru') pillLabels = ['Все', 'Депозит', 'Фриспины', 'VIP', 'Кэшбек'];
+            if (LANG === 'ua') pillLabels = ['Все', 'Депозит', 'Фріспіни', 'VIP', 'Кешбек'];
+            if (LANG === 'pl') pillLabels = ['Wszystkie', 'Depozyt', 'Darmowe Spiny', 'VIP', 'Cashback'];
+            var bp = document.getElementById('bonusPills');
+            if (bp) {
+                bp.className = 'flex gap-[8px] px-[16px] mb-[16px] overflow-x-auto no-scrollbar';
+                bp.innerHTML = pillLabels.map(function (p, i) {
+                    return '<div class="pill' + (i === 0 ? ' active' : '') + '" onclick="this.parentNode.querySelectorAll(\'.pill\').forEach(function(e){e.classList.remove(\'active\')});this.classList.add(\'active\')">' + p + '</div>';
+                }).join('');
+            }
         }
 
         /* === PERSONAL BONUS SYSTEM === */
@@ -4290,8 +4278,10 @@
 
         function renderActiveBonuses() {
             var b = userBonuses;
-            document.getElementById('bonusBalAmount').textContent = '$' + b.balance.toFixed(2);
-            document.getElementById('activeBonusCount').textContent = b.active.length + ' Active';
+            var elBal = document.getElementById('bonusBalAmount');
+            if (elBal) elBal.textContent = '$' + b.balance.toFixed(2);
+            var elCount = document.getElementById('activeBonusCount');
+            if (elCount) elCount.textContent = b.active.length + ' Active';
             var html = '';
             b.active.forEach(function (a) {
                 /* Card with left red border accent */
@@ -4365,7 +4355,9 @@
             if (h.length === 0) {
                 html += '<div style="text-align:center;padding:30px 0;opacity:.4"><span style="font-size:12px">No bonus history yet</span></div>';
             }
-            document.getElementById('bonusHistoryList').innerHTML = html;
+            // Temporarily mapping bonusHistoryList to nothing since it was moved to Profile screen but removed from it to save space
+            var hl = document.getElementById('bonusHistoryList');
+            if (hl) hl.innerHTML = html;
         }
 
         function getTimeRemaining(dateStr) {
@@ -4435,6 +4427,11 @@
             if (sr) sr.innerHTML = starPkgs.map(function (p, i) {
                 return '<button class="asset-btn' + (i === 0 ? ' active' : '') + '" onclick="selectPkg(this,\'' + p.stars + '\',\'' + p.price + '\')" data-stars="' + p.stars + '" data-price="' + p.price + '">⭐ ' + p.stars + '<br><span style="font-size:10px;color:var(--dim)">' + p.price + ' ⭐</span></button>';
             }).join('');
+        }
+
+        function selectPkg(el, amount, price) {
+            document.querySelectorAll('.asset-btn').forEach(function (b) { b.classList.remove('active') });
+            el.classList.add('active');
         }
         var selectedPkg = { coins: '50', price: '0.50' };
         function selectPkg(el, amount, price) {
@@ -4990,6 +4987,11 @@
             if (screen === 'crash') {
                 setTimeout(initCrashCanvas, 100);
             }
+        }
+
+        function initLangDisplay() {
+            var el = document.getElementById('profLangCurrent');
+            if (el) el.textContent = LANG.toUpperCase();
         }
 
         /* === INIT === */
