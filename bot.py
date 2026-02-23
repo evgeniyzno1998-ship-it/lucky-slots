@@ -1370,6 +1370,20 @@ async def admin_affiliates(req):
         "total_referrers": total['referrers'],
     }, headers=H)
 
+async def admin_bonus_stats(req):
+    """GET /admin/bonus-stats — bonus analytics."""
+    admin, err = _require_admin(req, "bonus_analytics")
+    if err: return err
+    by_type = await db("SELECT bonus_type, status, COUNT(*) as cnt, SUM(amount) as total_amount FROM user_bonuses GROUP BY bonus_type, status", fetch=True)
+    active = await db("SELECT COUNT(*) as cnt FROM user_bonuses WHERE status='active'", one=True)
+    claimed = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM user_bonuses WHERE status='completed'", one=True)
+    return web.json_response({"ok": True,
+        "by_type": [dict(r) for r in by_type] if by_type else [],
+        "active_count": active['cnt'],
+        "claimed_count": claimed['cnt'],
+        "claimed_total": claimed['total'],
+    }, headers=H)
+
 async def admin_bonus_templates_get(req):
     """GET /admin/bonus/templates — list all templates."""
     admin, err = _require_admin(req, "bonus_management")
