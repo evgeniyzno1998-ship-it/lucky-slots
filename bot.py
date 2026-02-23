@@ -168,6 +168,28 @@ def init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at)")
 
+        # === USER_BONUSES — personal bonus assignments ===
+        c.execute('''CREATE TABLE IF NOT EXISTS user_bonuses(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            bonus_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            icon TEXT DEFAULT 'redeem',
+            amount REAL DEFAULT 0,
+            progress REAL DEFAULT 0,
+            max_progress REAL DEFAULT 0,
+            vip_tag TEXT DEFAULT '',
+            expires_at TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            badge TEXT DEFAULT '',
+            claimed_at TEXT DEFAULT '',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )''')
+        try: c.execute("CREATE INDEX IF NOT EXISTS idx_bonuses_user ON user_bonuses(user_id)")
+        except: pass
+
 async def db(q, p=(), fetch=False, one=False):
     async with _db_lock:
         def r():
@@ -188,6 +210,8 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
             "INSERT OR IGNORE INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES(?,?,?,?,?,?,?,?)",
             (int(uid), un, fn, ln, lang_code, 1 if is_prem else 0, _now(), _now())
         )
+        # Auto-assign welcome bonuses for new user
+        await assign_welcome_bonuses(int(uid))
         return True
     else:
         await db(
@@ -195,6 +219,19 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
             (un, fn, ln, lang_code, 1 if is_prem else 0, _now(), int(uid))
         )
     return False
+
+async def assign_welcome_bonuses(uid):
+    """Assign default bonuses for a new user."""
+    bonuses = [
+        ("cashback", "Weekly Cashback", "Earn 10% back on all weekly losses", "payments", 0, 0, 100, "", "", "active", "CASHBACK"),
+        ("free_spins", "Welcome Free Spins", "50 Free Spins on Ruby Slots for new players", "casino", 50, 0, 0, "", "", "active", "FREE SPINS"),
+        ("deposit_match", "100% Deposit Match", "Double your first deposit up to $50", "redeem", 50, 0, 200, "", "", "active", "DEPOSIT MATCH"),
+    ]
+    for b in bonuses:
+        await db(
+            "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,progress,max_progress,vip_tag,expires_at,status,badge) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            (uid, *b)
+        )
 
 async def update_last_login(uid):
     """Обновляет last_login при каждом входе в миниапп."""
@@ -633,6 +670,74 @@ async def api_webhook(req):
         return web.json_response({"ok":True})
     except Exception as e: logging.error(f"WH: {e}", exc_info=True); return web.json_response({"ok":False})
 
+async def api_bonuses(req):
+    """GET /api/bonuses — get user's personal bonuses (active + history)"""
+    uid = get_uid(query=dict(req.rel_url.query))
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    
+    # Get active bonuses
+    active = await db("SELECT * FROM user_bonuses WHERE user_id=? AND status='active' ORDER BY created_at DESC", (uid,), fetch=True)
+    # Get history (completed/expired)
+    history = await db("SELECT * FROM user_bonuses WHERE user_id=? AND status IN ('completed','expired') ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
+    # Calculate total claimable
+    total_claimable = 0
+    active_list = []
+    for b in (active or []):
+        bd = dict(b)
+        if bd['bonus_type'] == 'cashback' and bd['progress'] > 0:
+            total_claimable += bd['progress']
+        active_list.append(bd)
+    
+    return web.json_response({"ok":True,
+        "balance": round(total_claimable, 2),
+        "active": active_list,
+        "history": [dict(h) for h in history] if history else []
+    },headers=H)
+
+async def api_claim_bonus(req):
+    """POST /api/claim-bonus — claim a specific bonus"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    bonus_id = int(data.get("bonus_id", 0))
+    if not bonus_id: return web.json_response({"ok":False,"error":"invalid_bonus"},headers=H)
+    
+    b = await db("SELECT * FROM user_bonuses WHERE id=? AND user_id=? AND status='active'", (bonus_id, uid), one=True)
+    if not b: return web.json_response({"ok":False,"error":"bonus_not_found"},headers=H)
+    
+    # Credit the bonus amount
+    claim_amount = b['progress'] if b['bonus_type'] == 'cashback' else b['amount']
+    if claim_amount > 0:
+        usdt_cents = int(round(claim_amount * 100))
+        await add_usdt(uid, usdt_cents)
+        await record_payment(uid, "deposit", claim_amount, usdt_cents, method="bonus_claim", status="completed", details=f"bonus_id={bonus_id},type={b['bonus_type']}")
+    
+    # Mark bonus as completed
+    await db("UPDATE user_bonuses SET status='completed',claimed_at=? WHERE id=?", (_now(), bonus_id))
+    
+    u = await get_user(uid)
+    return web.json_response({"ok":True,"claimed":claim_amount,"balance_usdt_cents":u['balance_usdt_cents']},headers=H)
+
+async def api_activate_bonus(req):
+    """POST /api/activate-bonus — activate a pending bonus (e.g. free spins)"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    bonus_id = int(data.get("bonus_id", 0))
+    
+    b = await db("SELECT * FROM user_bonuses WHERE id=? AND user_id=? AND status='active'", (bonus_id, uid), one=True)
+    if not b: return web.json_response({"ok":False,"error":"bonus_not_found"},headers=H)
+    
+    # For free spins bonus, credit spins
+    if b['bonus_type'] == 'free_spins':
+        spins = int(b['amount']) if b['amount'] else 50
+        await db("UPDATE users SET free_spins=free_spins+? WHERE user_id=?", (spins, uid))
+        await db("UPDATE user_bonuses SET status='completed',claimed_at=? WHERE id=?", (_now(), bonus_id))
+        u = await get_user(uid)
+        return web.json_response({"ok":True,"free_spins_added":spins,"free_spins":u['free_spins']},headers=H)
+    
+    return web.json_response({"ok":True,"activated":True},headers=H)
+
 async def api_set_currency(req):
     """POST /api/set-currency — change display currency"""
     if req.method=="OPTIONS": return web.Response(headers=H)
@@ -788,9 +893,9 @@ async def api_create_card_payment(req):
 
 async def start_api():
     app=web.Application()
-    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies)]:
+    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus)]:
         app.router.add_post(path,handler)
     # Admin API (protected by bot token in query)
     app.router.add_get("/admin/stats",admin_stats)
