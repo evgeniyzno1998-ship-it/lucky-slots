@@ -17,6 +17,27 @@ PUBLIC_URL = os.getenv("PUBLIC_URL", "https://lucky-slots-production.up.railway.
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://evgeniyzno1998-ship-it.github.io/lucky-slots/")
 REFERRAL_BONUS = 10
 
+# ==================== DUAL BALANCE & CURRENCY ====================
+# USDT balance is stored as cents (integer) for precision: 500 = $5.00
+# Stars balance is separate, stored as integer count
+# Currency display rates (approximate, updated periodically)
+CURRENCY_RATES = {
+    'USD': 1.0,
+    'EUR': 0.92,
+    'PLN': 4.05,
+    'UAH': 41.5,
+    'RUB': 96.0,
+    'GBP': 0.79,
+}
+CURRENCY_SYMBOLS = {'USD':'$','EUR':'€','PLN':'zł','UAH':'₴','RUB':'₽','GBP':'£'}
+
+# Stars packages (Telegram Stars pricing)
+STARS_PACKAGES = {"50": 50, "150": 150, "500": 500, "1000": 1000}
+# USDT packages via CryptoBot
+USDT_PACKAGES = {"1": 1.00, "5": 5.00, "10": 10.00, "25": 25.00, "50": 50.00}
+# Legacy coins packages (kept for backward compat)
+PACKAGES = {"50": 0.50, "100": 0.90, "500": 4.00}
+
 # ==================== LOCALIZATION ====================
 LANGUAGES = {'pl': '🇵🇱 Polski', 'ua': '🇺🇦 Українська', 'ru': '🇷🇺 Русский', 'en': '🇬🇧 English'}
 BOT_TEXTS = {
@@ -91,6 +112,14 @@ def init_db():
             ("last_game","TEXT DEFAULT ''"),("last_login","TEXT DEFAULT ''"),
             ("last_bot_interaction","TEXT DEFAULT ''"),
             ("total_deposited_usd","REAL DEFAULT 0"),("total_withdrawn_usd","REAL DEFAULT 0"),
+            # NEW: dual balance system
+            ("balance_usdt_cents","INTEGER DEFAULT 0"),  # USDT balance in cents (500 = $5.00)
+            ("balance_stars","INTEGER DEFAULT 0"),        # Telegram Stars balance
+            ("display_currency","TEXT DEFAULT 'USD'"),    # preferred display currency
+            ("total_wagered_usdt_cents","INTEGER DEFAULT 0"),
+            ("total_won_usdt_cents","INTEGER DEFAULT 0"),
+            ("total_wagered_stars","INTEGER DEFAULT 0"),
+            ("total_won_stars","INTEGER DEFAULT 0"),
         ]
         for col, d in new_cols:
             try: c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
@@ -182,6 +211,30 @@ async def add_coins(uid, delta):
     await db("UPDATE users SET coins=MAX(0,coins+?) WHERE user_id=?", (delta, int(uid)))
     r = await db("SELECT coins FROM users WHERE user_id=?", (int(uid),), one=True)
     return r['coins'] if r else 0
+
+async def add_usdt(uid, delta_cents):
+    """Add/subtract USDT balance in cents. delta_cents can be negative."""
+    await db("UPDATE users SET balance_usdt_cents=MAX(0,balance_usdt_cents+?) WHERE user_id=?", (int(delta_cents), int(uid)))
+    r = await db("SELECT balance_usdt_cents FROM users WHERE user_id=?", (int(uid),), one=True)
+    return r['balance_usdt_cents'] if r else 0
+
+async def add_stars(uid, delta):
+    """Add/subtract Stars balance."""
+    await db("UPDATE users SET balance_stars=MAX(0,balance_stars+?) WHERE user_id=?", (int(delta), int(uid)))
+    r = await db("SELECT balance_stars FROM users WHERE user_id=?", (int(uid),), one=True)
+    return r['balance_stars'] if r else 0
+
+def usdt_cents_to_display(cents, currency='USD'):
+    """Convert USDT cents to display currency amount."""
+    usd = cents / 100.0
+    rate = CURRENCY_RATES.get(currency, 1.0)
+    return round(usd * rate, 2)
+
+def display_to_usdt_cents(amount, currency='USD'):
+    """Convert display currency amount to USDT cents."""
+    rate = CURRENCY_RATES.get(currency, 1.0)
+    usd = amount / rate
+    return int(round(usd * 100))
 
 async def record_bet(uid, game, bet_type, bet_amt, win_amt, balance_after, multiplier=0, is_bonus=False, is_free=False, details=""):
     """Записывает КАЖДУЮ ставку в историю."""
@@ -399,9 +452,17 @@ async def api_balance(req):
     uid=get_uid(query=dict(req.rel_url.query))
     if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
     await ensure_user(uid)
-    await update_last_login(uid)  # Track miniapp login
+    await update_last_login(uid)
     u=await get_user(uid); v=vip_level(u['total_wagered'])
-    return web.json_response({"ok":True,"balance":u['coins'],"free_spins":u['free_spins'],
+    cur = u['display_currency'] or 'USD'
+    return web.json_response({"ok":True,
+        "balance":u['coins'],  # legacy coins
+        "balance_usdt_cents":u['balance_usdt_cents'],
+        "balance_stars":u['balance_stars'],
+        "display_currency":cur,
+        "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
+        "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$'),
+        "free_spins":u['free_spins'],
         "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],"biggest":u['biggest_win']},
         "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered']},
         "refs":u['referrals_count']},headers=H)
@@ -488,12 +549,19 @@ async def api_profile(req):
     # Get payment summary
     payments = await db("SELECT direction,amount_usd,amount_coins,method,created_at FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20", (uid,), fetch=True)
     pay_list = [dict(p) for p in payments] if payments else []
+    cur = u['display_currency'] or 'USD'
     return web.json_response({"ok":True,
         "username":u['username'] or '',"first_name":u['first_name'] or '',"last_name":u['last_name'] or '',
         "tg_language":u['tg_language_code'] or '',"is_premium":bool(u['is_premium']),
         "coins":u['coins'],"free_spins":u['free_spins'],
+        "balance_usdt_cents":u['balance_usdt_cents'],
+        "balance_stars":u['balance_stars'],
+        "display_currency":cur,
+        "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
+        "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$'),
         "last_login":u['last_login'] or '',"last_game":u['last_game'] or '',
         "registered_at":u['created_at'] or '',
+        "language":u['language'] or 'en',
         "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered'],
                "next":nxt['name'] if nxt else None,"next_at":nxt['min'] if nxt else None},
         "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],
@@ -509,35 +577,136 @@ async def api_webhook(req):
         body=await req.json()
         if body.get("update_type")!="invoice_paid": return web.json_response({"ok":True})
         pl=json.loads(body.get("payload",{}).get("payload","{}"))
-        uid=pl.get("user_id"); coins=pl.get("coins",0); price_usd=pl.get("price_usd",0)
-        if not uid or not coins: return web.json_response({"ok":False})
+        uid=pl.get("user_id"); price_usd=pl.get("amount_usd",0)
+        usdt_cents = pl.get("usdt_cents", 0)
+        coins=pl.get("coins",0)  # legacy support
+        if not uid: return web.json_response({"ok":False})
         invoice_id = str(body.get("payload",{}).get("invoice_id",""))
         amount_usd = price_usd or PACKAGES.get(str(coins), 0)
         # Try to update pending payment to completed
         existing = await db("SELECT id FROM payments WHERE user_id=? AND invoice_id=? AND status='pending' LIMIT 1", (uid, invoice_id), one=True)
         if existing:
-            bal_before = (await get_user(uid))['coins']
-            await db("UPDATE payments SET status='completed',balance_before=?,balance_after=?,created_at=? WHERE id=?",
-                (bal_before, bal_before+coins, _now(), existing['id']))
+            await db("UPDATE payments SET status='completed',created_at=? WHERE id=?", (_now(), existing['id']))
         else:
-            # No pending found — create completed record
-            await record_payment(uid, "deposit", amount_usd, coins, method="crypto_bot", status="completed", invoice_id=invoice_id, details=f"package={coins}")
-        # Add coins
-        bal=await add_coins(uid,coins)
-        # Update total deposited
-        await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+            await record_payment(uid, "deposit", amount_usd, usdt_cents or coins, method="crypto_bot", status="completed", invoice_id=invoice_id)
+        # Credit balance
+        if usdt_cents > 0:
+            # New system: credit USDT cents
+            bal = await add_usdt(uid, usdt_cents)
+            await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+            logging.info(f"💳 USDT deposit OK: uid={uid}, +{usdt_cents}c (${amount_usd}), bal={bal}c")
+        elif coins > 0:
+            # Legacy: credit coins
+            bal = await add_coins(uid, coins)
+            await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+            logging.info(f"💳 Coins deposit OK: uid={uid}, +{coins} coins, ${amount_usd}, bal={bal}")
         u=await get_user(uid); lang=u['language'] if u else 'pl'
-        logging.info(f"💳 Payment OK: uid={uid}, +{coins} coins, ${amount_usd}, bal={bal}")
-        try: await bot.send_message(uid,BOT_TEXTS[lang]['pay_success'].format(amount=coins,balance=bal))
+        try:
+            if usdt_cents > 0:
+                await bot.send_message(uid, f"✅ +${usdt_cents/100:.2f} USDT!")
+            else:
+                await bot.send_message(uid, BOT_TEXTS[lang]['pay_success'].format(amount=coins,balance=bal))
         except: pass
         return web.json_response({"ok":True})
     except Exception as e: logging.error(f"WH: {e}", exc_info=True); return web.json_response({"ok":False})
 
+async def api_set_currency(req):
+    """POST /api/set-currency — change display currency"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data=await req.json(); uid=get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    cur = data.get("currency","USD").upper()
+    if cur not in CURRENCY_RATES: return web.json_response({"ok":False,"error":"invalid_currency"},headers=H)
+    await db("UPDATE users SET display_currency=? WHERE user_id=?",(cur,uid))
+    u=await get_user(uid)
+    return web.json_response({"ok":True,"display_currency":cur,
+        "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
+        "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$')},headers=H)
+
+async def api_set_language(req):
+    """POST /api/set-language — change language from miniapp"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data=await req.json(); uid=get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    lang = data.get("language","en")
+    if lang not in LANGUAGES: return web.json_response({"ok":False,"error":"invalid_lang"},headers=H)
+    await db("UPDATE users SET language=? WHERE user_id=?",(lang,uid))
+    return web.json_response({"ok":True,"language":lang},headers=H)
+
+async def api_create_deposit(req):
+    """POST /api/create-deposit — create payment (CryptoBot USDT or Telegram Stars)"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data=await req.json(); uid=get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    method = data.get("method","cryptobot")  # cryptobot | stars | card
+    amount = data.get("amount", 0)
+    u = await get_user(uid); lang = u['language'] if u else 'en'
+
+    if method == "stars":
+        # Telegram Stars — return stars_amount for client to call tg.openInvoice
+        stars_count = int(amount)
+        if stars_count not in STARS_PACKAGES.values() and stars_count <= 0:
+            return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
+        # Stars are handled client-side via Telegram.WebApp.openInvoice
+        # We just return confirmation; the actual crediting happens via stars webhook
+        return web.json_response({"ok":True,"method":"stars","stars_amount":stars_count,
+            "description":f"RubyBet: {stars_count} ⭐ Stars"},headers=H)
+
+    elif method == "cryptobot":
+        # CryptoBot USDT deposit
+        amount_usd = float(amount)
+        if amount_usd < 1.0: return web.json_response({"ok":False,"error":"min_1_usd"},headers=H)
+        if not CRYPTO_TOKEN: return web.json_response({"ok":False,"error":"not_configured"},headers=H)
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as s:
+                usdt_cents = int(round(amount_usd * 100))
+                r = await s.post("https://pay.crypt.bot/api/createInvoice", json={
+                    "currency_type":"fiat","fiat":"USD","amount":str(amount_usd),
+                    "description":f"RubyBet: ${amount_usd:.2f} USDT deposit",
+                    "payload":json.dumps({"user_id":uid,"usdt_cents":usdt_cents,"amount_usd":amount_usd}),
+                    "paid_btn_name":"callback",
+                    "paid_btn_url":f"https://t.me/{(await bot.get_me()).username}"
+                }, headers={"Crypto-Pay-API-Token":CRYPTO_TOKEN})
+                d = await r.json()
+                if not d.get("ok"): return web.json_response({"ok":False,"error":"invoice_failed"},headers=H)
+                inv_id = str(d["result"].get("invoice_id",""))
+                pay_url = d["result"]["mini_app_invoice_url"]
+                await record_payment(uid, "deposit", amount_usd, usdt_cents, method="crypto_bot", status="pending", invoice_id=inv_id)
+                return web.json_response({"ok":True,"method":"cryptobot","pay_url":pay_url,"invoice_id":inv_id},headers=H)
+        except Exception as e:
+            logging.error(f"CryptoBot deposit error: {e}")
+            return web.json_response({"ok":False,"error":"service_unavailable"},headers=H)
+
+    elif method == "card":
+        # Placeholder for card payments — would integrate Stripe/etc
+        return web.json_response({"ok":False,"error":"card_not_yet_available"},headers=H)
+
+    return web.json_response({"ok":False,"error":"unknown_method"},headers=H)
+
+async def api_stars_webhook(req):
+    """POST /api/stars-webhook — called after successful Telegram Stars payment"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    stars = int(data.get("stars",0))
+    if stars <= 0: return web.json_response({"ok":False,"error":"invalid"},headers=H)
+    bal = await add_stars(uid, stars)
+    await record_payment(uid, "deposit", 0, stars, method="telegram_stars", status="completed", details=f"stars={stars}")
+    logging.info(f"⭐ Stars deposit: uid={uid}, +{stars} stars, bal={bal}")
+    return web.json_response({"ok":True,"balance_stars":bal},headers=H)
+
+async def api_currencies(req):
+    """GET /api/currencies — return available currencies and rates"""
+    return web.json_response({"ok":True,
+        "currencies":[{"code":c,"rate":r,"symbol":CURRENCY_SYMBOLS.get(c,c)} for c,r in CURRENCY_RATES.items()]
+    },headers=H)
+
 async def start_api():
     app=web.Application()
-    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile)]:
+    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook)]:
         app.router.add_post(path,handler)
     # Admin API (protected by bot token in query)
     app.router.add_get("/admin/stats",admin_stats)
