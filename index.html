@@ -53,6 +53,20 @@
             --radius-xl: 20px;
             --nav-h: 68px;
             --header-h: 56px;
+            /* Phase 3 Redesign Colors */
+            --ruby-red: #e62e3d;
+            --bg-darker: #0d0f12;
+            --surface-darker: #15171b;
+            --surface-hover: #1a1c22;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
 
         * {
@@ -165,6 +179,63 @@
 
         .wh-bulb {
             animation: wheel-glow 1.5s ease-in-out infinite alternate
+        }
+
+        /* Phase 3 Live Drops & Neon */
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(233, 30, 63, 0.4);
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(233, 30, 63, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(233, 30, 63, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(233, 30, 63, 0);
+            }
+        }
+
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Phase 3 Bonus Activation */
+        .modal-gradient {
+            background: radial-gradient(circle at top, rgba(230, 46, 61, 0.15) 0%, rgba(13, 15, 18, 1) 70%);
+        }
+
+        .confetti-piece {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #e62e3d;
+            top: -20px;
+            opacity: 0;
+            animation: fall 3s infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(400px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        .success-glow {
+            box-shadow: 0 0 40px rgba(230, 46, 61, 0.3);
         }
 
         /* === LIVE DROPS === */
@@ -3724,6 +3795,16 @@
                     <span class="material-symbols-outlined" style="font-size:14px">arrow_upward</span> WITHDRAW
                 </button>
             </div>
+            <!-- Floating Fortune Wheel Button (Phase 3) -->
+            <button onclick="openWheel()"
+                class="fixed bottom-24 right-5 w-14 h-14 bg-gradient-to-tr from-[#C0142A] to-[#FF0033] rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(233,30,63,0.5)] hover:scale-110 active:scale-95 transition-all z-40 group animate-pulse-ring">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                    class="w-8 h-8 text-white transition-transform group-hover:rotate-90">
+                    <path fill-rule="evenodd"
+                        d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                        clip-rule="evenodd" />
+                </svg>
+            </button>
         </div>
     </div>
 
@@ -3778,13 +3859,14 @@
                 SPIN</div>
         </div>
 
-        <!-- Live Drops Ticker -->
-        <div class="live-drops-section">
-            <div class="live-drops-header">
-                <div class="live-drops-dot"></div>
-                <div class="live-drops-title">LIVE DROPS</div>
-            </div>
-            <div class="live-drops-scroll" id="liveDropsScroll"></div>
+        <!-- Live Drops Ticker (Phase 3 Redesign) -->
+        <div class="px-5 py-4 flex items-center gap-2 mb-2">
+            <div class="w-2 h-2 rounded-full bg-[#E91E3F] animate-pulse shadow-[0_0_8px_#E91E3F]"></div>
+            <h1 class="font-bold text-[12px] tracking-widest uppercase text-gray-400">LIVE DROPS</h1>
+        </div>
+        <div class="live-drops-scroll no-scrollbar px-4 space-y-3 mb-6" id="liveDropsScroll"
+            style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Rendered by JS -->
         </div>
 
         <!-- TOP WINNINGS LEADERBOARD -->
@@ -3977,257 +4059,153 @@
         </div>
     </div>
 
-    <!-- ===== SCREEN: WALLET (CASHIER) ===== -->
-    <div class="screen" id="scrWallet">
-        <!-- Cashier Header -->
-        <div style="padding:16px 16px 8px">
-            <h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;margin:0">Cashier</h2>
-        </div>
-
-        <!-- Dual balance cards -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px">
-            <div onclick="switchActiveWallet('usdt')"
-                style="padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative;overflow:hidden"
-                id="cashierUsdtCard">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                    <span style="font-size:16px">💵</span>
+    <!-- ===== SCREEN: WALLET (CASHIER) - PHASE 3 REDESIGN ===== -->
+    <div class="screen" id="scrWallet" style="padding-bottom: 0;">
+        <div class="flex flex-col h-full bg-[#0d0f12] overflow-hidden">
+            <!-- Redesigned Wallet Header (Unified with design-84c234ff) -->
+            <div
+                class="px-5 py-4 flex items-center justify-between sticky top-0 bg-[#0d0f12] z-20 border-b border-gray-800/50">
+                <button class="text-gray-400 hover:text-white transition" onclick="nav('lobby')">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18">
+                        </path>
+                    </svg>
+                </button>
+                <h1 class="text-lg font-bold tracking-wide uppercase">CASHIER</h1>
+                <div class="relative cursor-pointer" onclick="openSearch()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                        class="w-6 h-6 text-gray-300 hover:text-white transition">
+                        <path fill-rule="evenodd"
+                            d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z"
+                            clip-rule="evenodd"></path>
+                    </svg>
                     <span
-                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)">CRYPTO</span>
-                </div>
-                <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#fff"
-                    id="wBalAmount">0.00</div>
-                <div style="font-size:10px;color:var(--dim);margin-top:2px" id="wBalUnit">USDT</div>
-            </div>
-            <div onclick="switchActiveWallet('stars')"
-                style="padding:16px;background:rgba(255,215,0,0.03);backdrop-filter:blur(10px);border:1px solid rgba(255,215,0,0.15);border-radius:var(--radius-xl);cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative;overflow:hidden"
-                id="cashierStarsCard">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-                    <span style="font-size:16px">⭐</span>
-                    <span
-                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)">STARS</span>
-                </div>
-                <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#FFD700"
-                    id="wStarsAmount">0</div>
-                <div style="font-size:10px;color:var(--dim);margin-top:2px">Stars</div>
-            </div>
-        </div>
-
-        <!-- Currency display switcher -->
-        <div style="display:flex;gap:6px;padding:0 16px 12px;justify-content:center;flex-wrap:wrap" id="currencyRow">
-            <button class="pill active" onclick="setCurrency('USDT')" data-cur="USDT"
-                style="font-size:10px;height:26px;padding:0 10px">USDT</button>
-            <button class="pill" onclick="setCurrency('USD')" data-cur="USD"
-                style="font-size:10px;height:26px;padding:0 10px">USD</button>
-            <button class="pill" onclick="setCurrency('PLN')" data-cur="PLN"
-                style="font-size:10px;height:26px;padding:0 10px">PLN</button>
-            <button class="pill" onclick="setCurrency('UAH')" data-cur="UAH"
-                style="font-size:10px;height:26px;padding:0 10px">UAH</button>
-            <button class="pill" onclick="setCurrency('EUR')" data-cur="EUR"
-                style="font-size:10px;height:26px;padding:0 10px">EUR</button>
-        </div>
-
-        <!-- 3 Main Tabs: Deposit / Withdraw / History -->
-        <div
-            style="display:flex;gap:0;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-            <div class="tw-tab active" onclick="switchCashierTab('deposit')" id="cashTabDeposit"
-                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)">
-                Deposit</div>
-            <div class="tw-tab" onclick="switchCashierTab('withdraw')" id="cashTabWithdraw"
-                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)">
-                Withdraw</div>
-            <div class="tw-tab" onclick="switchCashierTab('history')" id="cashTabHistory"
-                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s">
-                History</div>
-        </div>
-
-        <!-- ====== DEPOSIT TAB ====== -->
-        <div id="cashDeposit">
-            <!-- Payment methods -->
-            <div style="padding:0 16px;margin-bottom:12px">
-                <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:10px"
-                    id="wMethodLabel">PAYMENT METHOD</div>
-                <div style="display:flex;flex-direction:column;gap:8px">
-                    <!-- CryptoBot -->
-                    <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(34,197,94,0.3);border-radius:var(--radius-xl);transition:all .2s"
-                        id="pmCrypto" onclick="selectPayMethod('crypto')">
-                        <div
-                            style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <span style="font-size:20px">💎</span>
-                        </div>
-                        <div style="flex:1">
-                            <div style="display:flex;align-items:center;gap:6px">
-                                <span style="font-size:13px;font-weight:700">CryptoBot</span>
-                                <span
-                                    style="font-size:9px;font-weight:800;color:var(--green);background:rgba(34,197,94,.1);padding:2px 6px;border-radius:4px">🔥
-                                    +7%</span>
-                            </div>
-                            <div style="font-size:10px;color:var(--dim)">USDT, BTC, TON · Min $1.00</div>
-                        </div>
-                        <span class="material-symbols-outlined"
-                            style="color:var(--red);font-size:18px">check_circle</span>
-                    </button>
-                    <!-- Telegram Stars -->
-                    <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);transition:all .2s"
-                        id="pmStars" onclick="selectPayMethod('stars')">
-                        <div
-                            style="width:40px;height:40px;border-radius:10px;background:rgba(255,215,0,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <span style="font-size:20px">⭐</span>
-                        </div>
-                        <div style="flex:1">
-                            <div style="font-size:13px;font-weight:700">Telegram Stars</div>
-                            <div style="font-size:10px;color:var(--dim)">Instant · In-app payment</div>
-                        </div>
-                        <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px"
-                            id="pmStarsCheck">radio_button_unchecked</span>
-                    </button>
-                    <!-- Bank Card -->
-                    <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);transition:all .2s;opacity:.5"
-                        id="pmCard" onclick="selectPayMethod('card')">
-                        <div
-                            style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <span style="font-size:20px">💳</span>
-                        </div>
-                        <div style="flex:1">
-                            <div style="font-size:13px;font-weight:700" id="pmCardTitle">Bank Card</div>
-                            <div style="font-size:10px;color:var(--dim)">Visa, Mastercard · Coming soon</div>
-                        </div>
-                        <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px"
-                            id="pmCardCheck">radio_button_unchecked</span>
-                    </button>
+                        class="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-[#0d0f12]"></span>
                 </div>
             </div>
 
-            <!-- Deposit packages (crypto) -->
-            <div id="depositCryptoSection">
-                <div class="wallet-assets">
-                    <div class="wallet-assets-label" id="wPkgLabel">SELECT PACKAGE</div>
-                    <div class="asset-row" id="assetRow"></div>
-                </div>
-                <!-- Crypto bonus info -->
-                <div
-                    style="margin:8px 16px 12px;padding:10px 12px;background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.12);border-radius:var(--radius);display:flex;align-items:center;gap:8px">
-                    <span style="font-size:14px">🎁</span>
-                    <div style="font-size:10px;color:var(--dim);line-height:1.4">Your deposit will receive <b
-                            style="color:var(--green)">+7% bonus</b> with <b>x3 wager</b> requirement</div>
-                </div>
-            </div>
+            <!-- Wallet Content -->
+            <div class="flex-1 overflow-y-auto px-5 pb-24 hide-scrollbar">
 
-            <!-- Stars packages -->
-            <div id="depositStarsSection" style="display:none">
-                <div class="wallet-assets">
-                    <div class="wallet-assets-label">SELECT STARS PACKAGE</div>
-                    <div class="asset-row" id="starsRow"></div>
-                </div>
-                <div style="padding:0 16px;margin-top:8px">
-                    <div class="dc-note"><span class="material-symbols-outlined">info</span>
-                        <p>Stars are purchased via Telegram. Stars balance is independent from USDT/Crypto.</p>
+                <!-- Dual Balance Switcher (Improved 디자인) -->
+                <div class="grid grid-cols-2 gap-3 mb-6 mt-4">
+                    <div onclick="switchActiveWallet('usdt')" id="cashierUsdtCard"
+                        class="relative overflow-hidden p-4 rounded-xl border border-gray-800 bg-[#15171b] transition-all cursor-pointer">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lg">💵</span>
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">USDT</span>
+                        </div>
+                        <div class="text-xl font-bold text-white tracking-tight" id="wBalAmount">0.00</div>
+                        <div class="absolute -right-2 -bottom-2 opacity-5 text-4xl transform rotate-12">USDT</div>
+                    </div>
+
+                    <div onclick="switchActiveWallet('stars')" id="cashierStarsCard"
+                        class="relative overflow-hidden p-4 rounded-xl border border-yellow-900/30 bg-[#15171b] transition-all cursor-pointer">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lg">⭐</span>
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">STARS</span>
+                        </div>
+                        <div class="text-xl font-bold text-yellow-500 tracking-tight" id="wStarsAmount">0</div>
+                        <div class="absolute -right-2 -bottom-2 opacity-5 text-4xl transform rotate-12">STARS</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Deposit Button -->
-            <div style="padding:16px">
-                <button class="btn-primary" onclick="openDepositModal(payMethod === 'stars' ? 'stars' : 'usdt')"
-                    style="height:48px;font-size:14px;border-radius:12px;width:100%">
-                    <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
-                    <span id="wDeposit">DEPOSIT NOW</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- ====== WITHDRAW TAB ====== -->
-        <div id="cashWithdraw" style="display:none;padding:0 16px">
-            <div style="padding:12px 0">
-                <div
-                    style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:12px">
-                    WITHDRAW FUNDS</div>
-
-                <!-- Method selector -->
-                <div style="display:flex;gap:8px;margin-bottom:16px">
-                    <button class="pill active" id="wdCrypto" onclick="selectWithdrawMethod('crypto')"
-                        style="flex:1;justify-content:center;height:36px">💎 CryptoBot</button>
-                    <button class="pill" id="wdStars" onclick="selectWithdrawMethod('stars')"
-                        style="flex:1;justify-content:center;height:36px">⭐ Stars</button>
-                </div>
-
-                <!-- Amount input -->
-                <div
-                    style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px">
+                <!-- Featured Promotion Banner (from design-84c234ff) -->
+                <div class="relative w-full rounded-2xl bg-gradient-to-br from-[#1a1c22] to-black overflow-hidden border border-gray-800/50 mb-6"
+                    id="walletPromoTop">
                     <div
-                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:8px">
-                        AMOUNT</div>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <input type="number" id="withdrawAmount" value="10.00" min="1" step="0.01"
-                            style="flex:1;background:transparent;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;outline:none;width:100%">
+                        class="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center">
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-transparent"></div>
+                    <div class="relative p-6 z-10">
                         <span
-                            style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--dim);font-size:14px"
-                            id="wdUnit">USDT</span>
-                    </div>
-                    <div style="display:flex;gap:6px;margin-top:10px">
-                        <button class="pill" onclick="setWithdrawPct(25)"
-                            style="flex:1;justify-content:center;height:28px;font-size:10px">25%</button>
-                        <button class="pill" onclick="setWithdrawPct(50)"
-                            style="flex:1;justify-content:center;height:28px;font-size:10px">50%</button>
-                        <button class="pill" onclick="setWithdrawPct(75)"
-                            style="flex:1;justify-content:center;height:28px;font-size:10px">75%</button>
-                        <button class="pill" onclick="setWithdrawPct(100)"
-                            style="flex:1;justify-content:center;height:28px;font-size:10px">MAX</button>
-                    </div>
-                </div>
-
-                <!-- Withdraw info -->
-                <div
-                    style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                        <span style="font-size:11px;color:var(--dim)">Available</span>
-                        <span style="font-size:11px;font-weight:700;color:#fff" id="wdAvailable">0.00 USDT</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                        <span style="font-size:11px;color:var(--dim)">Min withdrawal</span>
-                        <span style="font-size:11px;font-weight:700;color:var(--dim)">$5.00</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between">
-                        <span style="font-size:11px;color:var(--dim)">Fee</span>
-                        <span style="font-size:11px;font-weight:700;color:var(--green)">FREE</span>
+                            class="inline-block bg-[#e62e3d] text-white text-[10px] font-bold px-2 py-0.5 rounded mb-3 tracking-wider">OFFER
+                            OF THE DAY</span>
+                        <div class="mb-4">
+                            <h2 class="text-2xl font-black italic text-white mb-0 leading-none">100% MATCH</h2>
+                            <h2 class="text-2xl font-black italic text-[#e62e3d] leading-none">UP TO $500</h2>
+                        </div>
+                        <button
+                            class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-3 rounded-lg text-xs transition-colors uppercase tracking-wider shadow-lg shadow-red-900/20"
+                            onclick="selectPayMethod('crypto')">
+                            Claim Bonus
+                        </button>
                     </div>
                 </div>
 
-                <button class="btn-primary" onclick="submitWithdraw()"
-                    style="height:48px;font-size:14px;border-radius:12px;width:100%">
-                    <span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span>
-                    WITHDRAW
+                <!-- Payment Methods Section -->
+                <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Payment Methods</h3>
+                <div class="space-y-3 mb-6">
+                    <!-- CryptoBot -->
+                    <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#e62e3d] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
+                        onclick="selectPayMethod('crypto')" id="pmCrypto">
+                        <div class="flex items-center gap-4 z-10">
+                            <div
+                                class="w-10 h-10 rounded-lg bg-red-900/10 flex items-center justify-center border border-red-500/10">
+                                <span class="text-xl">💎</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm tracking-wide">CRYPTOBOT</h3>
+                                <p class="text-gray-500 text-[10px]">USDT, BTC, TON · Min $1.00</p>
+                            </div>
+                        </div>
+                        <div
+                            class="bg-[#e62e3d]/10 text-[#e62e3d] text-[9px] font-bold px-2 py-1 rounded border border-[#e62e3d]/20 uppercase tracking-widest">
+                            +7%</div>
+                    </div>
+
+                    <!-- Telegram Stars -->
+                    <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-yellow-600 relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
+                        onclick="selectPayMethod('stars')" id="pmStars">
+                        <div class="flex items-center gap-4 z-10">
+                            <div
+                                class="w-10 h-10 rounded-lg bg-yellow-900/10 flex items-center justify-center border border-yellow-500/10">
+                                <span class="text-xl">⭐</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm tracking-wide uppercase">Telegram Stars</h3>
+                                <p class="text-gray-500 text-[10px]">Instant · In-app payment</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Package Selection Row -->
+                <div id="depositCryptoSection">
+                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Select Amount</h3>
+                    <div class="grid grid-cols-3 gap-2 mb-6" id="assetRow">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <div id="depositStarsSection" class="hidden">
+                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Stars Packages</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-6" id="starsRow">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Deposit Action Button -->
+                <button
+                    class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest shadow-lg shadow-red-900/30 mb-8"
+                    onclick="openDepositModal(payMethod === 'stars' ? 'stars' : 'usdt')">
+                    Confirm Deposit
                 </button>
 
-                <!-- Wager warning -->
-                <div
-                    style="margin-top:12px;padding:10px;background:rgba(227,30,36,.04);border:1px solid rgba(227,30,36,.1);border-radius:var(--radius);display:flex;align-items:center;gap:8px">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:var(--red)">warning</span>
-                    <div style="font-size:10px;color:var(--dim);line-height:1.4">Bonus funds require <b>x3 wagering</b>
-                        before withdrawal. Active bonuses will be forfeited.</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ====== HISTORY TAB ====== -->
-        <div id="cashHistory" style="display:none;padding:0 16px">
-            <div style="padding:12px 0">
-                <div
-                    style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:12px">
-                    TRANSACTION HISTORY</div>
-                <div id="txHistoryList">
-                    <div style="text-align:center;padding:40px 0;opacity:.4">
-                        <span class="material-symbols-outlined"
-                            style="font-size:40px;display:block;margin-bottom:6px">receipt_long</span>
-                        <span style="font-size:12px">No transactions yet</span>
+                <!-- Transaction History Link -->
+                <button
+                    class="w-full flex items-center justify-between p-4 bg-[#15171b] border border-gray-800/50 rounded-xl hover:bg-[#1a1c22] transition mb-4"
+                    onclick="switchCashierTab('history')">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-gray-400">history</span>
+                        <span class="text-xs font-bold text-white uppercase tracking-wider">Transaction History</span>
                     </div>
-                </div>
+                    <span class="material-symbols-outlined text-gray-600">chevron_right</span>
+                </button>
+
             </div>
         </div>
-
-        <div style="height:20px"></div>
     </div>
 
     <!-- ===== SCREEN: REFERRAL ===== -->
@@ -4536,6 +4514,92 @@
                 <button onclick="closePlinkoRules()"
                     style="width:100%;height:44px;background:linear-gradient(135deg,#e42127,#b91c1c);color:#fff;border:none;border-radius:var(--radius);font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(228,33,39,.4)">PLAY
                     NOW</button>
+            </div>
+        </div>
+        <!-- ===== BONUS ACTIVATION POPUP (PHASE 3 REDESIGN) ===== -->
+        <div id="bonusPop"
+            class="fixed inset-0 z-[1000] hidden items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div
+                class="relative z-20 w-[340px] bg-[#15171b] rounded-3xl border border-gray-800/50 overflow-hidden modal-gradient flex flex-col items-center">
+                <!-- Confetti & Header Section -->
+                <div class="relative h-44 w-full flex items-center justify-center overflow-hidden"
+                    id="bonusPopConfetti">
+                    <div class="confetti-piece" style="left:20%; animation-delay: 0.2s; background: #e62e3d;"></div>
+                    <div class="confetti-piece" style="left:40%; animation-delay: 1.5s; background: #fff;"></div>
+                    <div class="confetti-piece" style="left:60%; animation-delay: 0.7s; background: #e62e3d;"></div>
+                    <div class="confetti-piece" style="left:80%; animation-delay: 2.1s; background: #d97706;"></div>
+                    <div class="confetti-piece" style="left:10%; animation-delay: 1.1s; background: #e62e3d;"></div>
+
+                    <div
+                        class="w-20 h-20 bg-[#e62e3d] rounded-full flex items-center justify-center success-glow animate-bounce">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3"
+                            stroke="currentColor" class="w-10 h-10 text-white">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+                        </svg>
+                    </div>
+                    <div class="absolute bottom-4 text-center">
+                        <h2 class="text-xl font-black italic tracking-tighter text-white uppercase">Bonus Activated!
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="w-full px-6 pb-8">
+                    <!-- Bonus Detail Card -->
+                    <div class="bg-black/40 rounded-2xl p-5 border border-white/5 mb-6 text-center">
+                        <p class="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-1" id="bonusPopType">
+                            Your Match Bonus</p>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="text-3xl font-black italic text-white" id="bonusPopTitle">100%</span>
+                            <span class="text-3xl font-black italic text-[#e62e3d]" id="bonusPopValue">UP TO $500</span>
+                        </div>
+                    </div>
+
+                    <!-- Terms Section -->
+                    <div class="space-y-4 mb-8">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-[#e62e3d]"></div>
+                                <span class="text-xs text-gray-400 font-medium">Wagering Req.</span>
+                            </div>
+                            <span class="text-xs font-bold text-white font-mono" id="bonusPopWager">35x Bonus</span>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-gray-600"></div>
+                                <span class="text-xs text-gray-400 font-medium">Max Bet</span>
+                            </div>
+                            <span class="text-xs font-bold text-white font-mono" id="bonusPopMaxBet">$5.00 USDT</span>
+                        </div>
+
+                        <div class="h-px w-full bg-gray-800/50"></div>
+
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400 font-medium">Bonus expires in:</span>
+                            <div class="flex items-center gap-1.5 text-[#e62e3d]">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                                    class="w-3.5 h-3.5">
+                                    <path fill-rule="evenodd"
+                                        d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-xs font-black tracking-wider" id="bonusPopExpiry">29D 23H 59M</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-[0.15em] shadow-lg shadow-red-900/30"
+                        onclick="closeBonusPop()">
+                        Start Playing
+                    </button>
+
+                    <button
+                        class="w-full mt-4 text-[10px] text-gray-500 font-bold uppercase tracking-widest hover:text-gray-300 transition"
+                        onclick="showBonusTerms()">
+                        View Terms & Conditions
+                    </button>
+                </div>
             </div>
         </div>
         <!-- Plinko Leaderboard Popup -->
@@ -5819,6 +5883,117 @@
             el.innerHTML = html;
         }
 
+        /* === LIVE DROPS REDESIGN RENDERING === */
+        function renderLiveDrops(drops) {
+            var el = document.getElementById('liveDropsScroll');
+            if (!el) return;
+            var html = '';
+            drops.forEach(function (d) {
+                var isBig = d.multiplier >= 10;
+                var color = d.color || '#E91E3F';
+                var unit = d.currency === 'stars' ? 'Stars' : 'TON';
+                var initials = (d.username || 'U').substring(0, 2).toUpperCase();
+
+                html += `
+                <div class="bg-gradient-to-r from-[#1A1A1A] to-[#0F0F0F] p-3.5 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden group ${isBig ? 'border-[#E91E3F]/40 shadow-[0_0_20px_rgba(233,30,63,0.1)]' : ''}">
+                    ${isBig ? `<div class="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#E91E3F] to-transparent opacity-40"></div>` : ''}
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-full bg-[#252525] p-0.5 flex items-center justify-center border border-white/5 overflow-hidden">
+                             <div class="w-full h-full rounded-full flex items-center justify-center text-xs font-bold" style="background:${color}; color:white">${initials}</div>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <div class="font-bold text-sm text-gray-100">${d.username}</div>
+                            <div class="text-[10px] text-gray-500 font-medium flex items-center gap-1 uppercase tracking-wider">
+                                <span class="material-symbols-outlined text-[12px]" style="color:${color}">stars</span> ${d.game}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right flex flex-col items-end gap-1">
+                        <div class="font-bold text-[14px] flex items-center gap-1 ${isBig ? 'text-[#E91E3F] drop-shadow-[0_0_5px_rgba(233,30,63,0.3)]' : 'text-[#FFD700]'}">
+                            + ${d.amount} ${unit}
+                        </div>
+                        <div class="text-[10px] font-mono ${isBig ? 'bg-[#E91E3F]/10 text-[#E91E3F]' : 'bg-white/5 text-gray-400'} px-1.5 py-0.5 rounded border ${isBig ? 'border-[#E91E3F]/20' : 'border-white/5'}">x${d.multiplier}</div>
+                    </div>
+                </div>`;
+            });
+            el.innerHTML = html;
+        }
+
+        /* === FORTUNE WHEEL REDESIGN LOGIC === */
+        function closeWheel() {
+            var el = document.getElementById('wheelOL');
+            if (el) {
+                el.style.display = 'none';
+                el.style.opacity = '0';
+            }
+        }
+        function openWheel() {
+            var el = document.getElementById('wheelOL');
+            if (el) {
+                el.style.display = 'block';
+                el.style.opacity = '1';
+                loadWheelStatus();
+            }
+        }
+
+        async function loadWheelStatus() {
+            try {
+                var r = await fetch(API + '/api/wheel-status?' + qs());
+                var d = await r.json();
+                if (d.ok) {
+                    document.getElementById('wheelBalDisplay').textContent = d.balance_stars || 0;
+                    if (!d.available) {
+                        showWheelState('locked', d.next_spin);
+                    } else {
+                        showWheelState('spin');
+                    }
+                }
+            } catch (e) { }
+        }
+
+        function showWheelState(state, extra) {
+            document.getElementById('wheelSpinState').style.display = state === 'spin' ? 'flex' : 'none';
+            document.getElementById('wheelWinState').style.display = state === 'win' ? 'flex' : 'none';
+            document.getElementById('wheelLockedState').style.display = state === 'locked' ? 'flex' : 'none';
+
+            if (state === 'locked' && extra) {
+                document.getElementById('wheelLockedTimer').textContent = extra;
+            }
+        }
+
+        var isWheelSpinning = false;
+        async function doWheelSpin() {
+            if (isWheelSpinning) return;
+            isWheelSpinning = true;
+
+            try {
+                var r = await fetch(API + '/api/wheel-spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getAuth()) });
+                var d = await r.json();
+                if (d.ok) {
+                    var finalDeg = (720 * 3) + (d.index * 60) + 30; // 6 segments, 60deg each
+                    var wheelDisc = document.getElementById('wheelDisc');
+                    wheelDisc.style.transform = 'rotate(' + finalDeg + 'deg)';
+
+                    setTimeout(function () {
+                        document.getElementById('wheelWinAmount').textContent = d.win_val;
+                        document.getElementById('wheelWinUnit').textContent = d.win_type.toUpperCase();
+                        showWheelState('win');
+                        isWheelSpinning = false;
+                    }, 4000);
+                } else {
+                    isWheelSpinning = false;
+                    showToast('!', d.error || 'Failed', 'OK');
+                }
+            } catch (e) {
+                isWheelSpinning = false;
+            }
+        }
+
+        function collectWheelPrize() {
+            closeWheel();
+            loadUserData();
+        }
+
         /* === SEARCH === */
         var ALL_GAMES = [];
 
@@ -6134,7 +6309,7 @@
                 var d = await r.json();
                 if (d.ok) {
                     showToast('✅', 'Claimed $' + (amount || 0).toFixed(2) + '!', 'OK', '', function () { closeToast() });
-                    loadBalance(); loadBonuses();
+                    loadBalance();
                 } else {
                     showToast('❌', d.error || 'Failed to claim', 'OK', '', function () { closeToast() });
                 }
@@ -6148,7 +6323,7 @@
                 if (d.ok) {
                     var msg = d.free_spins_added ? '+' + d.free_spins_added + ' Free Spins!' : 'Bonus activated!';
                     showToast('⚡', msg, 'OK', '', function () { closeToast() });
-                    loadBalance(); loadBonuses();
+                    loadBalance();
                 } else {
                     showToast('❌', d.error || 'Failed', 'OK', '', function () { closeToast() });
                 }
@@ -6972,22 +7147,42 @@
 
             // Dark casino theme
             tg.setHeaderColor('#000000');
+            /* === LIVE DROPS AUTO-UPDATE === */
+            async function updateLiveDrops() {
+                try {
+                    var r = await fetch(API + '/api/live-drops?' + qs());
+                    var d = await r.json();
+                    if (d.ok) {
+                        renderLiveDrops(d.drops);
+                    }
+                } catch (e) { }
+            }
+            setInterval(updateLiveDrops, 5000);
+            updateLiveDrops();
+
+            /* === INITIAL LOAD === */
+            async function initApp() {
+                loadUserData();
+                initLocale();
+                buildCategories();
+                buildProviders();
+                loadTopWinnings('day');
+                initBonuses();
+                updateLiveDrops();
+            }
+            initApp();
             tg.setBackgroundColor('#121212');
         }
-        initLocale();
-        initLangDisplay();
-        buildCategories();
-        buildProviders();
-        buildGameGrid();
-        initBonuses();
-        buildWalletPackages();
-        loadBalance();
-        loadNotifications();
-        checkWheel();
-        loadTopWinnings('day');
-        updateBonusBadge();
+
+        async function loadUserData() {
+            loadBalance();
+            loadNotifications();
+            checkWheel();
+            updateBonusBadge();
+            loadReferral();
+        }
+
         buildLiveDrops();
-        loadReferral();
         initCarousel();
 
         /* === HERO CAROUSEL === */
