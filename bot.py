@@ -914,6 +914,38 @@ async def api_currencies(req):
         "currencies":[{"code":c,"rate":r,"symbol":CURRENCY_SYMBOLS.get(c,c)} for c,r in CURRENCY_RATES.items()]
     },headers=H)
 
+async def api_top_winnings(req):
+    """GET /api/top-winnings — leaderboard of top wins for period"""
+    period = req.rel_url.query.get("period", "day")
+    period_map = {
+        "day": "datetime('now','-1 day')",
+        "week": "datetime('now','-7 days')",
+        "month": "datetime('now','-30 days')",
+        "all": "datetime('now','-100 years')"
+    }
+    since = period_map.get(period, period_map["day"])
+    rows = await db(
+        f"SELECT b.user_id, b.game, b.win_amount, b.multiplier, u.username, u.first_name "
+        f"FROM bet_history b LEFT JOIN users u ON b.user_id=u.user_id "
+        f"WHERE b.win_amount > 0 AND b.created_at >= {since} "
+        f"ORDER BY b.win_amount DESC LIMIT 10",
+        fetch=True
+    )
+    colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6']
+    winners = []
+    for i, r in enumerate(rows or []):
+        name = r['first_name'] or r['username'] or f"Player{r['user_id']}"
+        # Anonymize: show first 3 chars + ***
+        anon = name[:3] + '***' + str(r['user_id'])[-2:] if len(name) > 3 else name + '***'
+        winners.append({
+            "username": anon,
+            "game": r['game'] or 'Casino',
+            "win_amount": r['win_amount'],
+            "multiplier": r['multiplier'] or 0,
+            "color": colors[i % len(colors)]
+        })
+    return web.json_response({"ok":True,"winners":winners,"period":period},headers=H)
+
 async def api_create_stars_invoice(req):
     """POST /api/create-stars-invoice — create Telegram Stars invoice for purchase"""
     if req.method=="OPTIONS": return web.Response(headers=H)
@@ -977,7 +1009,7 @@ async def api_create_card_payment(req):
 
 async def start_api():
     app=web.Application()
-    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses)]:
+    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings)]:
         app.router.add_get(path,handler)
     for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus)]:
         app.router.add_post(path,handler)
