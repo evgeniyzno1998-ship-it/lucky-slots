@@ -73,7 +73,7 @@ VIP_LEVELS = [
 ]
 
 # ==================== DATABASE ====================
-DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:pOy8CePzLBKgNMvB@db.xlkjdtfnqzmrblaomfrp.supabase.co:5432/postgres")
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.xlkjdtfnqzmrblaomfrp:pOy8CePzLBKgNMvB@aws-0-eu-central-1.pooler.supabase.com:6543/postgres")
 db_pool = None
 
 async def init_db():
