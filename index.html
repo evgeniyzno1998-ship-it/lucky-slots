@@ -6334,21 +6334,19 @@
             const tg = window.Telegram.WebApp;
             tg.ready();
 
-            // Fullsize mode — expand the bottom sheet to maximum height
-            // This is how BotFather and TonPlay work: expand() + Telegram native header
-            const ensureExpand = () => {
-                tg.expand();
-                if (tg.isExpanded === false) {
-                    setTimeout(ensureExpand, 200);
-                }
-            };
-            ensureExpand();
+            // Main Mini App — Fullsize mode (configured in BotFather)
+            // expand() as fallback for older clients or menu button launches
+            tg.expand();
 
-            // DO NOT use requestFullscreen() — it causes the web content to go
-            // behind the status bar, creating a double-header effect.
-            // expand() alone gives the proper BotFather-like experience.
+            // Prevent swipe-to-minimize (Bot API 7.7+)
+            if (tg.disableVerticalSwipes) {
+                tg.disableVerticalSwipes();
+            }
 
+            // Prevent accidental closing — only X button works
             tg.enableClosingConfirmation();
+
+            // Dark casino theme
             tg.setHeaderColor('#000000');
             tg.setBackgroundColor('#121212');
         }
