@@ -1,4 +1,4 @@
-import logging, sqlite3, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math
+import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math
 import jwt as pyjwt
 import bcrypt
 from aiogram import Bot, Dispatcher, types, F
@@ -73,32 +73,31 @@ VIP_LEVELS = [
 ]
 
 # ==================== DATABASE ====================
-DB_PATH = 'users.db'
-_db_lock = asyncio.Lock()
+DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:pOy8CePzLBKgNMvB@db.xlkjdtfnqzmrblaomfrp.supabase.co:5432/postgres")
+db_pool = None
 
-def _conn():
-    c = sqlite3.connect(DB_PATH); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=5000"); c.execute("PRAGMA synchronous=NORMAL"); c.row_factory = sqlite3.Row; return c
-
-def init_db():
-    with _conn() as c:
+async def init_db():
+    global db_pool
+    db_pool = await asyncpg.create_pool(DB_URL, min_size=1, max_size=20)
+    async with db_pool.acquire() as c:
         # === USERS — основная таблица клиентов ===
-        c.execute('''CREATE TABLE IF NOT EXISTS users(
-            user_id INTEGER PRIMARY KEY,
+        await c.execute('''CREATE TABLE IF NOT EXISTS users(
+            user_id BIGINT PRIMARY KEY,
             username TEXT,
             first_name TEXT,
             last_name TEXT,
             tg_language_code TEXT,
             is_premium INTEGER DEFAULT 0,
-            coins INTEGER DEFAULT 0,
+            coins BIGINT DEFAULT 0,
             free_spins INTEGER DEFAULT 0,
-            total_wagered INTEGER DEFAULT 0,
-            total_won INTEGER DEFAULT 0,
+            total_wagered BIGINT DEFAULT 0,
+            total_won BIGINT DEFAULT 0,
             total_spins INTEGER DEFAULT 0,
-            biggest_win INTEGER DEFAULT 0,
+            biggest_win BIGINT DEFAULT 0,
             total_deposited_usd REAL DEFAULT 0,
             total_withdrawn_usd REAL DEFAULT 0,
             referrals_count INTEGER DEFAULT 0,
-            referred_by INTEGER DEFAULT NULL,
+            referred_by BIGINT DEFAULT NULL,
             language TEXT DEFAULT 'pl',
             last_wheel TEXT DEFAULT '',
             last_game TEXT DEFAULT '',
@@ -106,81 +105,81 @@ def init_db():
             last_bot_interaction TEXT DEFAULT '',
             admin_note TEXT DEFAULT '',
             is_blocked INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
         # Migration: add new columns to existing DB
         new_cols = [
-            ("free_spins","INTEGER DEFAULT 0"),("total_wagered","INTEGER DEFAULT 0"),
-            ("total_won","INTEGER DEFAULT 0"),("total_spins","INTEGER DEFAULT 0"),
-            ("biggest_win","INTEGER DEFAULT 0"),("last_wheel","TEXT DEFAULT ''"),
-            ("created_at","TEXT DEFAULT CURRENT_TIMESTAMP"),("language","TEXT DEFAULT 'pl'"),
-            ("referred_by","INTEGER DEFAULT NULL"),("last_name","TEXT"),
+            ("free_spins","INTEGER DEFAULT 0"),("total_wagered","BIGINT DEFAULT 0"),
+            ("total_won","BIGINT DEFAULT 0"),("total_spins","INTEGER DEFAULT 0"),
+            ("biggest_win","BIGINT DEFAULT 0"),("last_wheel","TEXT DEFAULT ''"),
+            ("created_at","TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),("language","TEXT DEFAULT 'pl'"),
+            ("referred_by","BIGINT DEFAULT NULL"),("last_name","TEXT"),
             ("tg_language_code","TEXT"),("is_premium","INTEGER DEFAULT 0"),
             ("last_game","TEXT DEFAULT ''"),("last_login","TEXT DEFAULT ''"),
             ("last_bot_interaction","TEXT DEFAULT ''"),
             ("total_deposited_usd","REAL DEFAULT 0"),("total_withdrawn_usd","REAL DEFAULT 0"),
             # NEW: dual balance system
-            ("balance_usdt_cents","INTEGER DEFAULT 0"),  # USDT balance in cents (500 = $5.00)
-            ("balance_stars","INTEGER DEFAULT 0"),        # Telegram Stars balance
+            ("balance_usdt_cents","BIGINT DEFAULT 0"),  # USDT balance in cents (500 = $5.00)
+            ("balance_stars","BIGINT DEFAULT 0"),        # Telegram Stars balance
             ("display_currency","TEXT DEFAULT 'USD'"),    # preferred display currency
-            ("total_wagered_usdt_cents","INTEGER DEFAULT 0"),
-            ("total_won_usdt_cents","INTEGER DEFAULT 0"),
-            ("total_wagered_stars","INTEGER DEFAULT 0"),
-            ("total_won_stars","INTEGER DEFAULT 0"),
+            ("total_wagered_usdt_cents","BIGINT DEFAULT 0"),
+            ("total_won_usdt_cents","BIGINT DEFAULT 0"),
+            ("total_wagered_stars","BIGINT DEFAULT 0"),
+            ("total_won_stars","BIGINT DEFAULT 0"),
             ("admin_note","TEXT DEFAULT ''"),
             ("is_blocked","INTEGER DEFAULT 0"),
         ]
         for col, d in new_cols:
-            try: c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
+            try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
             except: pass
 
         # === BET_HISTORY — история каждой ставки ===
-        c.execute('''CREATE TABLE IF NOT EXISTS bet_history(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
+        await c.execute('''CREATE TABLE IF NOT EXISTS bet_history(
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
             game TEXT NOT NULL,
             bet_type TEXT NOT NULL,
-            bet_amount INTEGER NOT NULL,
-            win_amount INTEGER NOT NULL,
-            profit INTEGER NOT NULL,
-            balance_after INTEGER NOT NULL,
+            bet_amount BIGINT NOT NULL,
+            win_amount BIGINT NOT NULL,
+            profit BIGINT NOT NULL,
+            balance_after BIGINT NOT NULL,
             multiplier REAL DEFAULT 0,
             is_bonus INTEGER DEFAULT 0,
             is_free_spin INTEGER DEFAULT 0,
             details TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )''')
 
         # === PAYMENTS — история платежей in/out ===
-        c.execute('''CREATE TABLE IF NOT EXISTS payments(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
+        await c.execute('''CREATE TABLE IF NOT EXISTS payments(
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
             direction TEXT NOT NULL,
             amount_usd REAL NOT NULL,
-            amount_coins INTEGER NOT NULL,
+            amount_coins BIGINT NOT NULL,
             method TEXT DEFAULT 'crypto_bot',
             status TEXT DEFAULT 'completed',
             invoice_id TEXT DEFAULT '',
-            balance_before INTEGER DEFAULT 0,
-            balance_after INTEGER DEFAULT 0,
+            balance_before BIGINT DEFAULT 0,
+            balance_after BIGINT DEFAULT 0,
             details TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )''')
 
         # === INDEXES for fast queries ===
-        c.execute("CREATE INDEX IF NOT EXISTS idx_bets_user ON bet_history(user_id)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_bets_created ON bet_history(created_at)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_bets_game ON bet_history(game)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at)")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_bets_user ON bet_history(user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_bets_created ON bet_history(created_at)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_bets_game ON bet_history(game)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at)")
+        await c.execute("CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at)")
 
         # === USER_BONUSES — personal bonus assignments ===
-        c.execute('''CREATE TABLE IF NOT EXISTS user_bonuses(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
+        await c.execute('''CREATE TABLE IF NOT EXISTS user_bonuses(
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
             bonus_type TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT DEFAULT '',
@@ -193,25 +192,25 @@ def init_db():
             status TEXT DEFAULT 'active',
             badge TEXT DEFAULT '',
             claimed_at TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )''')
-        try: c.execute("CREATE INDEX IF NOT EXISTS idx_bonuses_user ON user_bonuses(user_id)")
+        try: await c.execute("CREATE INDEX IF NOT EXISTS idx_bonuses_user ON user_bonuses(user_id)")
         except: pass
 
         # === BONUS_TEMPLATES ===
-        c.execute('''CREATE TABLE IF NOT EXISTS bonus_templates(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await c.execute('''CREATE TABLE IF NOT EXISTS bonus_templates(
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             bonus_type TEXT NOT NULL,
             amount REAL NOT NULL,
             description TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
 
         # === BONUS_CAMPAIGNS ===
-        c.execute('''CREATE TABLE IF NOT EXISTS bonus_campaigns(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await c.execute('''CREATE TABLE IF NOT EXISTS bonus_campaigns(
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             bonus_type TEXT NOT NULL,
             template_id INTEGER,
@@ -220,12 +219,12 @@ def init_db():
             claimed_players INTEGER DEFAULT 0,
             notification_sent INTEGER DEFAULT 0,
             status TEXT DEFAULT 'active',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
 
         # === ADMIN_USERS — dashboard operators ===
-        c.execute('''CREATE TABLE IF NOT EXISTS admin_users(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        await c.execute('''CREATE TABLE IF NOT EXISTS admin_users(
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             display_name TEXT DEFAULT '',
@@ -234,34 +233,47 @@ def init_db():
             is_active INTEGER DEFAULT 1,
             created_by INTEGER DEFAULT NULL,
             last_login TEXT DEFAULT '',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
         
         # Add sample templates if none exist
-        if not c.execute("SELECT COUNT(*) FROM bonus_templates").fetchone()[0]:
-            c.executemany("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES(?,?,?,?)", [
+        count = await c.fetchval("SELECT COUNT(*) FROM bonus_templates")
+        if not count:
+            await c.executemany("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES($1,$2,$3,$4)", [
                 ("Welcome Pack 100%", "deposit_bonus", 100.0, "100% bonus on first deposit up to $100"),
                 ("VIP Weekly Cashback", "cashback", 50.0, "Weekly 10% cashback for VIP players"),
                 ("Reactivation Spins", "free_spins", 20.0, "20 free spins for inactive users")
             ])
+            
         # Create default owner if no admins exist
-        existing = c.execute("SELECT COUNT(*) as cnt FROM admin_users").fetchone()
-        if existing and existing[0] == 0:
+        existing = await c.fetchval("SELECT COUNT(*) FROM admin_users")
+        if not existing:
             pw_hash = bcrypt.hashpw(ADMIN_DEFAULT_PASSWORD.encode(), bcrypt.gensalt()).decode()
-            c.execute(
-                "INSERT INTO admin_users(username,password_hash,display_name,role,permissions) VALUES(?,?,?,?,?)",
-                ('owner', pw_hash, 'Owner', 'owner', json.dumps(['*']))
+            await c.execute(
+                "INSERT INTO admin_users(username,password_hash,display_name,role,permissions) VALUES($1,$2,$3,$4,$5)",
+                'owner', pw_hash, 'Owner', 'owner', json.dumps(['*'])
             )
             logging.info(f"🔑 Default admin created: username='owner', password='{ADMIN_DEFAULT_PASSWORD}'")
 
 async def db(q, p=(), fetch=False, one=False):
-    async with _db_lock:
-        def r():
-            with _conn() as c:
-                cur = c.execute(q, p)
-                if one: return cur.fetchone()
-                if fetch: return cur.fetchall()
-        return await asyncio.get_event_loop().run_in_executor(None, r)
+    if not db_pool:
+        logging.error("DB pool not initialized!")
+        return None
+        
+    nq = q
+    for i in range(1, len(p) + 1):
+        nq = nq.replace('?', f'${i}', 1)
+        
+    async with db_pool.acquire() as conn:
+        if fetch:
+            rows = await conn.fetch(nq, *p)
+            return [dict(r) for r in rows] if rows else []
+        elif one:
+            row = await conn.fetchrow(nq, *p)
+            return dict(row) if row else None
+        else:
+            await conn.execute(nq, *p)
+            return None
 
 def _now():
     return time.strftime("%Y-%m-%d %H:%M:%S")
@@ -271,7 +283,7 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
     e = await db("SELECT user_id FROM users WHERE user_id=?", (int(uid),), one=True)
     if not e:
         await db(
-            "INSERT OR IGNORE INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES(?,?,?,?,?,?,?,?)",
+            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT (user_id) DO NOTHING",
             (int(uid), un, fn, ln, lang_code, 1 if is_prem else 0, _now(), _now())
         )
         # Auto-assign welcome bonuses for new user
@@ -1646,7 +1658,7 @@ async def setup_bot_menu():
         logging.error(f"Failed to set menu button: {e}")
 
 async def main():
-    init_db()
+    await init_db()
     await start_api()
     
     # Set the Menu Button on startup
