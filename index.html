@@ -4510,9 +4510,10 @@
     </div>
 
     <!-- ===== SCREEN: PLINKO ===== -->
-    <div class="screen" id="scrPlinko">
+    <div class="screen" id="scrPlinko"
+        style="height:100%;min-height:calc(100vh - var(--nav-h));padding-bottom:var(--nav-h)">
         <div
-            style="display:flex;flex-direction:column;height:calc(100vh - var(--header-h) - var(--nav-h));background:linear-gradient(180deg,#0a0a1a 0%,#120818 50%,#0a0a1a 100%);position:relative;overflow:hidden">
+            style="display:flex;flex-direction:column;height:100%;min-height:calc(100vh - var(--nav-h));background:linear-gradient(180deg,#0a0a1a 0%,#120818 50%,#0a0a1a 100%);position:relative;overflow:hidden;padding-bottom:16px">
             <!-- Plinko Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:10">
                 <div style="display:flex;align-items:center;gap:10px">
@@ -4551,9 +4552,9 @@
             </div>
             <!-- Plinko Canvas -->
             <div
-                style="flex:1;position:relative;z-index:5;display:flex;align-items:center;justify-content:center;padding:0 16px">
+                style="flex:1;min-height:0;position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 16px">
                 <canvas id="plinkoCanvas"
-                    style="width:100%;max-width:360px;aspect-ratio:4/5;border-radius:12px"></canvas>
+                    style="width:100%;max-width:320px;height:auto;max-height:100%;aspect-ratio:4/5;border-radius:12px;object-fit:contain"></canvas>
             </div>
             <!-- Multiplier Buckets -->
             <div id="plinkoBuckets" style="display:flex;gap:3px;padding:0 16px;z-index:5;margin-top:-10px">
