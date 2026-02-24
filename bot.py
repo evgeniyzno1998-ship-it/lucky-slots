@@ -738,6 +738,8 @@ async def api_webhook(req):
             # New system: credit USDT cents
             bal = await add_usdt(uid, usdt_cents)
             await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+            # Apply +7% crypto deposit bonus
+            await apply_crypto_bonus(uid, amount_usd)
             logging.info(f"💳 USDT deposit OK: uid={uid}, +{usdt_cents}c (${amount_usd}), bal={bal}c")
         elif coins > 0:
             # Legacy: credit coins
@@ -1007,11 +1009,78 @@ async def api_create_card_payment(req):
     if req.method=="OPTIONS": return web.Response(headers=H)
     return web.json_response({"ok":False,"error":"card_not_yet_available"},headers=H)
 
+async def api_transactions(req):
+    """GET /api/transactions — return user's payment history"""
+    uid = get_uid(query=req.rel_url.query)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    rows = await db(
+        "SELECT direction,amount_usd,amount_coins,method,status,created_at FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 50",
+        (uid,), fetch=True
+    )
+    txs = []
+    for r in (rows or []):
+        dt = r['created_at'] or ''
+        short_date = dt[:10] if len(dt) >= 10 else dt
+        amt = r['amount_usd'] if r['amount_usd'] else r['amount_coins'] / 100.0
+        txs.append({
+            "type": r['direction'],
+            "amount": round(amt, 2),
+            "method": (r['method'] or '').replace('_', ' ').title(),
+            "status": r['status'] or 'completed',
+            "date": short_date
+        })
+    return web.json_response({"ok":True,"transactions":txs},headers=H)
+
+async def api_withdraw(req):
+    """POST /api/withdraw — submit withdrawal request"""
+    if req.method=="OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    amount = float(data.get("amount", 0))
+    method = data.get("method", "crypto")
+    u = await get_user(uid)
+    if not u: return web.json_response({"ok":False,"error":"user_not_found"},headers=H)
+    
+    if method == 'crypto':
+        if amount < 5.0: return web.json_response({"ok":False,"error":"Minimum withdrawal: $5.00"},headers=H)
+        balance_usd = u['balance_usdt_cents'] / 100.0
+        if amount > balance_usd: return web.json_response({"ok":False,"error":"Insufficient balance"},headers=H)
+        cents = int(round(amount * 100))
+        await add_usdt(uid, -cents)
+        await record_payment(uid, "withdrawal", amount, cents, method="crypto_bot", status="pending", details=f"Withdraw ${amount:.2f} USDT")
+    elif method == 'stars':
+        stars = int(amount)
+        if stars <= 0: return web.json_response({"ok":False,"error":"Invalid amount"},headers=H)
+        if stars > u['balance_stars']: return web.json_response({"ok":False,"error":"Insufficient Stars"},headers=H)
+        await add_stars(uid, -stars)
+        await record_payment(uid, "withdrawal", 0, stars, method="telegram_stars", status="pending", details=f"Withdraw {stars} Stars")
+    else:
+        return web.json_response({"ok":False,"error":"unknown_method"},headers=H)
+    
+    logging.info(f"💸 Withdrawal request: uid={uid}, {method}, amount={amount}")
+    return web.json_response({"ok":True},headers=H)
+
+async def apply_crypto_bonus(uid, deposit_usd):
+    """Apply +7% crypto deposit bonus with x3 wager requirement."""
+    bonus_pct = 0.07
+    bonus_usd = round(deposit_usd * bonus_pct, 2)
+    if bonus_usd < 0.01: return
+    bonus_cents = int(round(bonus_usd * 100))
+    wager_req = round(bonus_usd * 3, 2)
+    # Credit bonus to balance
+    await add_usdt(uid, bonus_cents)
+    # Record as bonus in user_bonuses
+    await db(
+        "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,progress,max_progress,status,badge,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        (uid, 'deposit_match', f'+7% Crypto Bonus (${deposit_usd:.2f})', f'+${bonus_usd:.2f} bonus on your deposit. Wager ${wager_req:.2f} to unlock.', 'diamond', bonus_usd, 0, wager_req, 'active', 'CRYPTO +7%', _now())
+    )
+    logging.info(f"🎁 Crypto bonus: uid={uid}, deposit=${deposit_usd:.2f}, bonus=${bonus_usd:.2f}, wager=${wager_req:.2f}")
+
 async def start_api():
     app=web.Application()
-    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings)]:
+    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw)]:
         app.router.add_post(path,handler)
     # Admin API routes (JWT protected)
     # Admin API (GET)
