@@ -152,6 +152,16 @@
             }
         }
 
+        /* === PLINKO REDESIGN === */
+        .glass-orb {
+            background: radial-gradient(circle at 30% 30%, rgba(228, 33, 39, 0.6), rgba(139, 0, 0, 0.9));
+            box-shadow: 0 10px 30px rgba(228, 33, 39, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        .star-pulse {
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 0 5px rgba(228, 33, 39, 0.8);
+        }
+
         .wh-bulb {
             animation: wheel-glow 1.5s ease-in-out infinite alternate
         }
@@ -4511,9 +4521,9 @@
 
     <!-- ===== SCREEN: PLINKO ===== -->
     <div class="screen" id="scrPlinko"
-        style="height:100%;min-height:calc(100vh - var(--nav-h));padding-bottom:var(--nav-h)">
+        style="position:fixed;top:var(--header-h);bottom:var(--nav-h);left:0;right:0;width:100%;z-index:20;background:var(--bg)">
         <div
-            style="display:flex;flex-direction:column;height:100%;min-height:calc(100vh - var(--nav-h));background:linear-gradient(180deg,#0a0a1a 0%,#120818 50%,#0a0a1a 100%);position:relative;overflow:hidden;padding-bottom:16px">
+            style="display:flex;flex-direction:column;height:100%;background:linear-gradient(180deg,#0a0a1a 0%,#120818 50%,#0a0a1a 100%);position:relative;overflow:hidden;padding-bottom:12px">
             <!-- Plinko Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:10">
                 <div style="display:flex;align-items:center;gap:10px">
@@ -4559,35 +4569,47 @@
             <!-- Multiplier Buckets -->
             <div id="plinkoBuckets" style="display:flex;gap:3px;padding:0 16px;z-index:5;margin-top:-10px">
             </div>
-            <!-- Buy Bonus Trigger Button -->
-            <div style="padding:0 16px;z-index:10;display:flex;justify-content:center;margin-top:12px">
+
+            <!-- Redesigned Bottom Controls -->
+            <div
+                style="flex:none;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px 16px 8px;z-index:10;gap:12px">
+
+                <!-- Buy Bonus Action (Smaller/Subtle) -->
                 <button onclick="openPlinkoBuyBonus()"
-                    style="background:rgba(227,30,36,.15);border:1px solid var(--red);color:var(--red);padding:6px 16px;border-radius:20px;font-family:Montserrat,sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 0 10px rgba(227,30,36,.2)">
+                    style="background:rgba(227,30,36,.05);border:1px solid rgba(227,30,36,.4);color:var(--red);padding:6px 20px;border-radius:20px;font-family:Montserrat,sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s">
                     <span class="material-symbols-outlined" style="font-size:14px">bolt</span> BUY BONUS
                 </button>
-            </div>
-            <!-- Bet Controls -->
-            <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:10">
+
+                <!-- Bet Selection Pill -->
                 <div
-                    style="flex:1;display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);height:48px;overflow:hidden">
+                    style="width:100%;max-width:300px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(227,30,36,.1);padding:6px 8px;border-radius:30px;border:1px solid rgba(227,30,36,.3)">
                     <button onclick="changePlinkoBet(-1)"
-                        style="width:48px;height:48px;background:none;border:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        style="width:40px;height:40px;border-radius:50%;background:#120a0a;display:flex;align-items:center;justify-content:center;color:var(--red);border:none;cursor:pointer">
                         <span class="material-symbols-outlined">remove</span>
                     </button>
-                    <div style="flex:1;text-align:center">
-                        <span style="font-size:10px;color:#FFD700;margin-right:2px">⭐</span>
-                        <span id="plinkoBetDisplay"
-                            style="font-family:Montserrat,sans-serif;font-size:16px;font-weight:800">50</span>
+                    <div style="display:flex;flex-direction:column;align-items:center">
+                        <span style="font-size:10px;color:var(--dim);text-transform:uppercase;font-weight:800">Bet Per
+                            Drop</span>
+                        <div
+                            style="display:flex;align-items:center;gap:4px;font-weight:800;font-size:16px;font-family:Montserrat,sans-serif;margin-top:2px">
+                            <span class="star-pulse" style="color:#FFD700;font-size:14px">⭐</span> <span
+                                id="plinkoBetDisplay">50</span>
+                        </div>
                     </div>
                     <button onclick="changePlinkoBet(1)"
-                        style="width:48px;height:48px;background:none;border:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        style="width:40px;height:40px;border-radius:50%;background:#120a0a;display:flex;align-items:center;justify-content:center;color:var(--red);border:none;cursor:pointer">
                         <span class="material-symbols-outlined">add</span>
                     </button>
                 </div>
-                <button id="plinkoDropBtn" onclick="dropPlinkoBall()"
-                    style="height:48px;padding:0 28px;background:linear-gradient(135deg,#e42127,#b91c1c);color:#fff;border:none;border-radius:var(--radius-xl);font-family:Montserrat,sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 15px rgba(228,33,39,.4)">
-                    DROP STAR <span class="material-symbols-outlined" style="font-size:18px">send</span>
+
+                <!-- Large Drop Orb -->
+                <button id="plinkoDropBtn" onclick="dropPlinkoBall()" class="glass-orb"
+                    style="width:84px;height:84px;border-radius:50%;border:none;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform 0.1s;margin-top:4px">
+                    <span class="material-symbols-outlined" style="font-size:32px;margin-bottom:-4px">stars</span>
+                    <span
+                        style="font-family:Montserrat,sans-serif;font-size:13px;font-weight:900;letter-spacing:-0.5px;font-style:italic">DROP</span>
                 </button>
+
             </div>
         </div>
         <!-- Plinko Rules Popup -->
