@@ -5421,45 +5421,7 @@
             ];
         }
 
-        function renderBanners() {
-            var track = document.getElementById('heroTrack');
-            var dotsContainer = document.getElementById('heroDots');
-            if (!track || !dotsContainer) return;
-            var banners = getBanners();
-            var trackHtml = '';
-            var dotsHtml = '';
-            banners.forEach(function (b, i) {
-                var bgCss = b.bgStyle ? 'background:' + b.bgStyle + ';' : '';
-                var tagStyle = '';
-                if (b.tagBg || b.tagColor) {
-                    tagStyle = 'style="';
-                    if (b.tagBg) tagStyle += 'background:' + b.tagBg + ';';
-                    if (b.tagColor) tagStyle += 'color:' + b.tagColor + ';';
-                    tagStyle += '"';
-                }
-                var btnCss = b.btnStyle ? b.btnStyle : '';
-                trackHtml += '<div class="hero-banner" style="min-width:100%;margin:0;border-radius:0;padding-bottom:20px;' + bgCss + '">' +
-                    '<div class="hero-tag" ' + tagStyle + '>' +
-                    '<span class="material-symbols-outlined">' + b.tagIcon + '</span><span>' + b.tagText + '</span>' +
-                    '</div>' +
-                    '<h2 class="hero-title">' + b.titleHtml + '</h2>' +
-                    '<div style="display:flex;align-items:center;gap:12px;margin-top:4px">' +
-                    '<p class="hero-sub" style="margin:0">' + b.subHtml + '</p>' +
-                    '<button class="hero-btn" onclick="' + b.btnAction + '" style="padding:10px 20px;font-size:11px;margin:0;border-radius:8px;' + btnCss + '">' + b.btnText + '</button>' +
-                    '</div>' +
-                    '</div>';
-
-                var act = i === 0 ? 'active' : '';
-                var dotStyle = i === 0
-                    ? 'width:8px;height:8px;border-radius:50%;background:var(--red);opacity:1;cursor:pointer;transition:all .3s'
-                    : 'width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s';
-                dotsHtml += '<div class="hero-dot ' + act + '" onclick="goSlide(' + i + ')" style="' + dotStyle + '"></div>';
-            });
-            track.style.width = (banners.length * 100) + '%';
-            track.innerHTML = trackHtml;
-            dotsContainer.innerHTML = dotsHtml;
-        }
-
+        // Duplicate renderBanners removed
         /* Balance functions are defined later in the file with full dual-balance support */
         function getActiveBalance() {
             if (activeWallet === 'stars') return balanceStars;
@@ -5841,18 +5803,21 @@
         /* === PROFILE === */
         async function loadProfile() {
             try {
-                var r = await fetch(API + '/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
-                document.getElementById('profName').textContent = d.first_name || d.username || 'Player';
+                var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? window.Telegram.WebApp.initDataUnsafe.user : null;
+                var displayName = 'Player';
+                if (u && (u.first_name || u.username)) displayName = u.first_name || u.username;
+                document.getElementById('profName').textContent = displayName;
                 document.getElementById('profId').textContent = 'ID: ' + (UID ? UID.toString().slice(-8) : '...');
 
-                var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? window.Telegram.WebApp.initDataUnsafe.user : null;
                 if (u && u.photo_url) {
                     document.getElementById('profAvatarInner').innerHTML = '<img src="' + u.photo_url + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover">';
                 } else {
-                    document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + (d.first_name ? d.first_name.charAt(0).toUpperCase() : 'U') + '</div>';
+                    document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + displayName.charAt(0).toUpperCase() + '</div>';
                 }
 
-                document.getElementById('profVipBadge').textContent = d.vip.name;
+                var r = await fetch(API + '/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
+
+                if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
 
                 var tiers = [
                     { name: 'Bronze', icon: '🥉', cb: '0%', perks: 'Basic access' },
@@ -6713,7 +6678,7 @@
                 }
             } catch (e) {
                 loadBalanceRetries++;
-                if (loadBalanceRetries > 2 && usdtBalance === null) {
+                if (loadBalanceRetries > 2) {
                     // Fallback to demo mode if backend is disconnected
                     balance = 15000; freeSpins = 10;
                     usdtBalance = 150.00; starsBalance = 2500;
@@ -6737,6 +6702,24 @@
                 if (el) el.style.display = t === tab ? 'block' : 'none';
                 if (tb) tb.classList.toggle('active', t === tab);
             });
+            /* Ensure the content is visible by hiding other sections in the new layout if applicable */
+            var histListWrapper = document.getElementById('txHistoryList');
+            if (histListWrapper && histListWrapper.parentElement) {
+                var histContainer = histListWrapper.parentElement;
+                if (!histContainer.id.startsWith('cash')) {
+                    /* If the new design doesn't use cashHistory, toggle visibility manually */
+                    histContainer.style.display = tab === 'history' ? 'block' : 'none';
+                    if (tab === 'deposit') {
+                        document.getElementById('depositCryptoSection').style.display = activeWallet === 'usdt' ? 'block' : 'none';
+                        document.getElementById('depositStarsSection').style.display = activeWallet === 'stars' ? 'block' : 'none';
+                    } else {
+                        var cDepo = document.getElementById('depositCryptoSection');
+                        if (cDepo) cDepo.style.display = 'none';
+                        var sDepo = document.getElementById('depositStarsSection');
+                        if (sDepo) sDepo.style.display = 'none';
+                    }
+                }
+            }
             if (tab === 'history') loadTransactionHistory();
             if (tab === 'withdraw') updateWithdrawInfo();
         }
@@ -7124,8 +7107,10 @@
             var p = document.getElementById('balPopup');
             p.style.display = 'block';
             /* Update active state */
-            document.getElementById('bpUsdt').classList.toggle('active', activeWallet === 'usdt');
-            document.getElementById('bpStars').classList.toggle('active', activeWallet === 'stars');
+            var bcUsdt = document.getElementById('bpUsdtCard');
+            var bcStars = document.getElementById('bpStarsCard');
+            if (bcUsdt) bcUsdt.classList.toggle('active', activeWallet === 'usdt');
+            if (bcStars) bcStars.classList.toggle('active', activeWallet === 'stars');
             updateBalanceUI();
             /* Update currency pills */
             document.querySelectorAll('#bpCurrencies .pill').forEach(function (b) {
@@ -7145,8 +7130,10 @@
         }
         function switchBalPopup(type) {
             activeWallet = type;
-            document.getElementById('bpUsdt').classList.toggle('active', type === 'usdt');
-            document.getElementById('bpStars').classList.toggle('active', type === 'stars');
+            var bcUsdt = document.getElementById('bpUsdtCard');
+            var bcStars = document.getElementById('bpStarsCard');
+            if (bcUsdt) bcUsdt.classList.toggle('active', type === 'usdt');
+            if (bcStars) bcStars.classList.toggle('active', type === 'stars');
             document.getElementById('bpCurrencies').style.display = type === 'usdt' ? 'grid' : 'none';
             document.getElementById('bpDeposit').textContent = type === 'stars' ? 'BUY STARS' : 'DEPOSIT';
             updateBalPopupContent();
@@ -7477,6 +7464,7 @@
                 loadTopWinnings('day');
                 initBonuses();
                 updateLiveDrops();
+                if (typeof buildWalletPackages === 'function') buildWalletPackages();
                 buildGameGrid();
             }
             initApp();
