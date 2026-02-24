@@ -3607,8 +3607,20 @@
             <div class="logo-text">RUBY<span>BET</span></div>
         </div>
         <div class="header-right">
-            <div class="header-bal" onclick="openBalancePopup()"><span id="headerBal">...</span><span class="amt"
-                    id="headerUnit">coins</span></div>
+            <div class="header-bal" onclick="openBalancePopup()" style="display:flex;align-items:center;gap:6px">
+                <div id="headerBalCrypto"
+                    style="display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all .15s"
+                    class="bal-active">
+                    <span style="font-size:12px">💵</span>
+                    <span id="headerBal" style="font-weight:800;font-size:13px">...</span>
+                </div>
+                <div style="width:1px;height:16px;background:var(--border)"></div>
+                <div id="headerBalStars"
+                    style="display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all .15s">
+                    <span style="font-size:12px">⭐</span>
+                    <span id="headerBalStarsVal" style="font-weight:800;font-size:13px">0</span>
+                </div>
+            </div>
             <div class="header-notif"><span class="material-symbols-outlined">notifications</span>
                 <div class="dot"></div>
             </div>
@@ -3620,39 +3632,67 @@
         <div id="balPopupBg" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)"
             onclick="closeBalancePopup()"></div>
         <div id="balPopupCard"
-            style="position:absolute;top:var(--header-h);right:12px;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:0 16px 48px rgba(0,0,0,.6);transform:translateY(-8px) scale(.95);opacity:0;transition:all .2s cubic-bezier(.34,1.56,.64,1)">
-            <!-- Wallet type toggle -->
-            <div style="display:flex;gap:6px;margin-bottom:14px">
-                <button class="pill" id="bpUsdt" onclick="switchBalPopup('usdt')"
-                    style="flex:1;justify-content:center;height:36px;font-size:12px">💵 USDT</button>
-                <button class="pill" id="bpStars" onclick="switchBalPopup('stars')"
-                    style="flex:1;justify-content:center;height:36px;font-size:12px">⭐ Stars</button>
+            style="position:absolute;top:var(--header-h);right:12px;width:300px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:0 16px 48px rgba(0,0,0,.6);transform:translateY(-8px) scale(.95);opacity:0;transition:all .2s cubic-bezier(.34,1.56,.64,1)">
+
+            <!-- Both balances side by side -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+                <div onclick="switchActiveWallet('usdt');closeBalancePopup()"
+                    style="padding:12px;background:rgba(34,197,94,.05);border:1.5px solid rgba(34,197,94,.2);border-radius:var(--radius);cursor:pointer;text-align:center;transition:all .15s"
+                    id="bpUsdtCard">
+                    <div style="font-size:20px;margin-bottom:4px">💵</div>
+                    <div
+                        style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:2px">
+                        CRYPTO</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff"
+                        id="bpUsdtVal">$0.00</div>
+                </div>
+                <div onclick="switchActiveWallet('stars');closeBalancePopup()"
+                    style="padding:12px;background:rgba(255,215,0,.03);border:1.5px solid rgba(255,215,0,.15);border-radius:var(--radius);cursor:pointer;text-align:center;transition:all .15s"
+                    id="bpStarsCard">
+                    <div style="font-size:20px;margin-bottom:4px">⭐</div>
+                    <div
+                        style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:2px">
+                        STARS</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#FFD700"
+                        id="bpStarsVal">0</div>
+                </div>
             </div>
-            <!-- Balance display -->
-            <div style="text-align:center;margin-bottom:14px">
-                <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif"
-                    id="bpLabel">USDT BALANCE</div>
-                <div style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;margin:4px 0"
-                    id="bpAmount">$0.00</div>
-                <div style="font-size:11px;color:var(--dim)" id="bpSub">≈ 0.00 USDT</div>
+
+            <!-- Crypto Bonus badge -->
+            <div
+                style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:var(--radius);margin-bottom:12px">
+                <span style="font-size:16px">🔥</span>
+                <div style="flex:1">
+                    <div style="font-size:11px;font-weight:700;color:var(--green)">+7% Crypto Bonus</div>
+                    <div style="font-size:9px;color:var(--dim)">On every CryptoBot deposit</div>
+                </div>
+                <div
+                    style="font-size:9px;font-weight:800;color:var(--dim);background:var(--surface2);padding:2px 6px;border-radius:4px">
+                    x3 WAGER</div>
             </div>
-            <!-- Currency grid (USDT mode only) -->
-            <div id="bpCurrencies" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:14px">
+
+            <!-- Currency selector (USDT mode) -->
+            <div id="bpCurrencies" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
                 <button class="pill" data-cur="USD" onclick="setCurrencyPopup('USD')"
-                    style="justify-content:center;height:32px;font-size:11px">$ USD</button>
+                    style="justify-content:center;height:30px;font-size:10px">$ USD</button>
                 <button class="pill" data-cur="EUR" onclick="setCurrencyPopup('EUR')"
-                    style="justify-content:center;height:32px;font-size:11px">€ EUR</button>
-                <button class="pill" data-cur="PLN" onclick="setCurrencyPopup('PLN')"
-                    style="justify-content:center;height:32px;font-size:11px">zł PLN</button>
+                    style="justify-content:center;height:30px;font-size:10px">€ EUR</button>
                 <button class="pill" data-cur="UAH" onclick="setCurrencyPopup('UAH')"
-                    style="justify-content:center;height:32px;font-size:11px">₴ UAH</button>
+                    style="justify-content:center;height:30px;font-size:10px">₴ UAH</button>
             </div>
-            <!-- Deposit button -->
-            <button class="btn-primary" onclick="closeBalancePopup();nav('wallet')"
-                style="height:40px;font-size:12px;border-radius:10px">
-                <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                <span id="bpDeposit">DEPOSIT</span>
-            </button>
+
+            <!-- Quick actions -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <button class="btn-primary" onclick="closeBalancePopup();nav('wallet')"
+                    style="height:38px;font-size:11px;border-radius:10px">
+                    <span class="material-symbols-outlined" style="font-size:14px">arrow_downward</span> DEPOSIT
+                </button>
+                <button class="btn-outline"
+                    onclick="closeBalancePopup();nav('wallet');setTimeout(function(){switchCashierTab('withdraw')},100)"
+                    style="height:38px;font-size:11px;border-radius:10px;color:var(--dim)">
+                    <span class="material-symbols-outlined" style="font-size:14px">arrow_upward</span> WITHDRAW
+                </button>
+            </div>
         </div>
     </div>
 
@@ -3940,125 +3980,257 @@
         </div>
     </div>
 
-    <!-- ===== SCREEN: WALLET ===== -->
+    <!-- ===== SCREEN: WALLET (CASHIER) ===== -->
     <div class="screen" id="scrWallet">
-        <!-- Balance switcher: USDT / Stars -->
-        <div style="display:flex;gap:8px;padding:12px 16px 4px">
-            <button class="pill active" id="walTabUsdt" onclick="switchWalletTab('usdt')"
-                style="flex:1;justify-content:center">💵 USDT</button>
-            <button class="pill" id="walTabStars" onclick="switchWalletTab('stars')"
-                style="flex:1;justify-content:center">⭐ Stars</button>
+        <!-- Cashier Header -->
+        <div style="padding:16px 16px 8px">
+            <h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;margin:0">Cashier</h2>
         </div>
 
-        <!-- USDT balance -->
-        <div id="walUsdt">
-            <div class="wallet-balance">
-                <div class="wallet-balance-label" id="wBalLabel">TOTAL BALANCE</div>
-                <div class="wallet-balance-amount">
-                    <h1 id="wBalAmount">0.00</h1>
-                    <div class="unit" id="wBalUnit">USDT</div>
+        <!-- Dual balance cards -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px">
+            <div onclick="switchActiveWallet('usdt')"
+                style="padding:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s"
+                id="cashierUsdtCard">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                    <span style="font-size:16px">💵</span>
+                    <span
+                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)">CRYPTO</span>
                 </div>
-                <div style="font-size:12px;color:var(--dim);margin-top:2px" id="wBalLocal"></div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#fff"
+                    id="wBalAmount">0.00</div>
+                <div style="font-size:10px;color:var(--dim);margin-top:2px" id="wBalUnit">USDT</div>
             </div>
-            <!-- Currency display switcher -->
-            <div style="display:flex;gap:6px;padding:0 16px 12px;justify-content:center;flex-wrap:wrap"
-                id="currencyRow">
-                <button class="pill active" onclick="setCurrency('USDT')" data-cur="USDT"
-                    style="font-size:11px;height:28px;padding:0 12px">USDT</button>
-                <button class="pill" onclick="setCurrency('USD')" data-cur="USD"
-                    style="font-size:11px;height:28px;padding:0 12px">USD</button>
-                <button class="pill" onclick="setCurrency('PLN')" data-cur="PLN"
-                    style="font-size:11px;height:28px;padding:0 12px">PLN</button>
-                <button class="pill" onclick="setCurrency('UAH')" data-cur="UAH"
-                    style="font-size:11px;height:28px;padding:0 12px">UAH</button>
-                <button class="pill" onclick="setCurrency('EUR')" data-cur="EUR"
-                    style="font-size:11px;height:28px;padding:0 12px">EUR</button>
+            <div onclick="switchActiveWallet('stars')"
+                style="padding:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s"
+                id="cashierStarsCard">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                    <span style="font-size:16px">⭐</span>
+                    <span
+                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim)">STARS</span>
+                </div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#FFD700"
+                    id="wStarsAmount">0</div>
+                <div style="font-size:10px;color:var(--dim);margin-top:2px">Stars</div>
             </div>
+        </div>
 
-            <div class="wallet-actions">
-                <button class="btn-primary" onclick="openDepositModal('usdt')"><span class="material-symbols-outlined"
-                        style="font-size:18px">arrow_downward</span><span id="wDeposit">DEPOSIT</span></button>
-                <button class="btn-outline" style="color:var(--red)"><span class="material-symbols-outlined"
-                        style="font-size:18px">arrow_upward</span><span id="wWithdraw">WITHDRAW</span></button>
-            </div>
+        <!-- Currency display switcher -->
+        <div style="display:flex;gap:6px;padding:0 16px 12px;justify-content:center;flex-wrap:wrap" id="currencyRow">
+            <button class="pill active" onclick="setCurrency('USDT')" data-cur="USDT"
+                style="font-size:10px;height:26px;padding:0 10px">USDT</button>
+            <button class="pill" onclick="setCurrency('USD')" data-cur="USD"
+                style="font-size:10px;height:26px;padding:0 10px">USD</button>
+            <button class="pill" onclick="setCurrency('PLN')" data-cur="PLN"
+                style="font-size:10px;height:26px;padding:0 10px">PLN</button>
+            <button class="pill" onclick="setCurrency('UAH')" data-cur="UAH"
+                style="font-size:10px;height:26px;padding:0 10px">UAH</button>
+            <button class="pill" onclick="setCurrency('EUR')" data-cur="EUR"
+                style="font-size:10px;height:26px;padding:0 10px">EUR</button>
+        </div>
 
-            <button class="wallet-history-btn"><span class="material-symbols-outlined">history</span><span
-                    id="wHistory">View Transaction History</span></button>
+        <!-- 3 Main Tabs: Deposit / Withdraw / History -->
+        <div
+            style="display:flex;gap:0;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+            <div class="tw-tab active" onclick="switchCashierTab('deposit')" id="cashTabDeposit"
+                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)">
+                Deposit</div>
+            <div class="tw-tab" onclick="switchCashierTab('withdraw')" id="cashTabWithdraw"
+                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)">
+                Withdraw</div>
+            <div class="tw-tab" onclick="switchCashierTab('history')" id="cashTabHistory"
+                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s">
+                History</div>
+        </div>
 
+        <!-- ====== DEPOSIT TAB ====== -->
+        <div id="cashDeposit">
             <!-- Payment methods -->
-            <div class="section" style="margin-top:8px">
-                <div class="section-head">
-                    <div class="section-title" id="wMethodLabel">PAYMENT METHOD</div>
+            <div style="padding:0 16px;margin-bottom:12px">
+                <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:10px"
+                    id="wMethodLabel">PAYMENT METHOD</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <!-- CryptoBot -->
+                    <button class="card"
+                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:1.5px solid var(--red);transition:all .15s"
+                        id="pmCrypto" onclick="selectPayMethod('crypto')">
+                        <div
+                            style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <span style="font-size:20px">💎</span>
+                        </div>
+                        <div style="flex:1">
+                            <div style="display:flex;align-items:center;gap:6px">
+                                <span style="font-size:13px;font-weight:700">CryptoBot</span>
+                                <span
+                                    style="font-size:9px;font-weight:800;color:var(--green);background:rgba(34,197,94,.1);padding:2px 6px;border-radius:4px">🔥
+                                    +7%</span>
+                            </div>
+                            <div style="font-size:10px;color:var(--dim)">USDT, BTC, TON · Min $1.00</div>
+                        </div>
+                        <span class="material-symbols-outlined"
+                            style="color:var(--red);font-size:18px">check_circle</span>
+                    </button>
+                    <!-- Telegram Stars -->
+                    <button class="card"
+                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s"
+                        id="pmStars" onclick="selectPayMethod('stars')">
+                        <div
+                            style="width:40px;height:40px;border-radius:10px;background:rgba(255,215,0,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <span style="font-size:20px">⭐</span>
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-size:13px;font-weight:700">Telegram Stars</div>
+                            <div style="font-size:10px;color:var(--dim)">Instant · In-app payment</div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px"
+                            id="pmStarsCheck">radio_button_unchecked</span>
+                    </button>
+                    <!-- Bank Card -->
+                    <button class="card"
+                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s;opacity:.5"
+                        id="pmCard" onclick="selectPayMethod('card')">
+                        <div
+                            style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <span style="font-size:20px">💳</span>
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-size:13px;font-weight:700" id="pmCardTitle">Bank Card</div>
+                            <div style="font-size:10px;color:var(--dim)">Visa, Mastercard · Coming soon</div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px"
+                            id="pmCardCheck">radio_button_unchecked</span>
+                    </button>
                 </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:16px">
-                <button class="card"
-                    style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:1.5px solid var(--red);transition:all .15s"
-                    id="pmCrypto" onclick="selectPayMethod('crypto')">
-                    <div
-                        style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                        <span style="font-size:20px">💎</span>
-                    </div>
-                    <div style="flex:1">
-                        <div style="font-size:13px;font-weight:700">CryptoBot</div>
-                        <div style="font-size:10px;color:var(--dim)">USDT, BTC, TON</div>
-                    </div>
-                    <span class="material-symbols-outlined" style="color:var(--red);font-size:18px">check_circle</span>
-                </button>
-                <button class="card"
-                    style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s"
-                    id="pmCard" onclick="selectPayMethod('card')">
-                    <div
-                        style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                        <span style="font-size:20px">💳</span>
-                    </div>
-                    <div style="flex:1">
-                        <div style="font-size:13px;font-weight:700" id="pmCardTitle">Bank Card</div>
-                        <div style="font-size:10px;color:var(--dim)">Visa, Mastercard</div>
-                    </div>
-                    <span class="material-symbols-outlined" style="color:var(--dim);font-size:18px"
-                        id="pmCardCheck">radio_button_unchecked</span>
-                </button>
-            </div>
 
-            <!-- Deposit packages -->
-            <div class="wallet-assets">
-                <div class="wallet-assets-label" id="wPkgLabel">SELECT PACKAGE</div>
-                <div class="asset-row" id="assetRow"></div>
-            </div>
-        </div>
-
-        <!-- Stars balance -->
-        <div id="walStars" style="display:none">
-            <div class="wallet-balance">
-                <div class="wallet-balance-label">⭐ STARS BALANCE</div>
-                <div class="wallet-balance-amount">
-                    <h1 id="wStarsAmount">0</h1>
-                    <div class="unit" style="color:#FFD700">Stars</div>
+            <!-- Deposit packages (crypto) -->
+            <div id="depositCryptoSection">
+                <div class="wallet-assets">
+                    <div class="wallet-assets-label" id="wPkgLabel">SELECT PACKAGE</div>
+                    <div class="asset-row" id="assetRow"></div>
                 </div>
-            </div>
-
-            <div class="wallet-actions">
-                <button class="btn-primary"
-                    style="background:#FFD700;color:#000;box-shadow:0 4px 16px rgba(255,215,0,.3)"
-                    onclick="openDepositModal('stars')"><span class="material-symbols-outlined"
-                        style="font-size:18px">star</span><span>BUY STARS</span></button>
-            </div>
-
-            <div style="padding:0 16px;margin-top:8px">
-                <div class="dc-note">
-                    <span class="material-symbols-outlined">info</span>
-                    <p id="starsNote">Stars are purchased via Telegram and can be used to play separately. Stars balance
-                        is independent from USDT.</p>
+                <!-- Crypto bonus info -->
+                <div
+                    style="margin:8px 16px 12px;padding:10px 12px;background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.12);border-radius:var(--radius);display:flex;align-items:center;gap:8px">
+                    <span style="font-size:14px">🎁</span>
+                    <div style="font-size:10px;color:var(--dim);line-height:1.4">Your deposit will receive <b
+                            style="color:var(--green)">+7% bonus</b> with <b>x3 wager</b> requirement</div>
                 </div>
             </div>
 
             <!-- Stars packages -->
-            <div class="wallet-assets" style="margin-top:16px">
-                <div class="wallet-assets-label">SELECT STARS PACKAGE</div>
-                <div class="asset-row" id="starsRow"></div>
+            <div id="depositStarsSection" style="display:none">
+                <div class="wallet-assets">
+                    <div class="wallet-assets-label">SELECT STARS PACKAGE</div>
+                    <div class="asset-row" id="starsRow"></div>
+                </div>
+                <div style="padding:0 16px;margin-top:8px">
+                    <div class="dc-note"><span class="material-symbols-outlined">info</span>
+                        <p>Stars are purchased via Telegram. Stars balance is independent from USDT/Crypto.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deposit Button -->
+            <div style="padding:16px">
+                <button class="btn-primary" onclick="openDepositModal(payMethod === 'stars' ? 'stars' : 'usdt')"
+                    style="height:48px;font-size:14px;border-radius:12px;width:100%">
+                    <span class="material-symbols-outlined" style="font-size:18px">arrow_downward</span>
+                    <span id="wDeposit">DEPOSIT NOW</span>
+                </button>
             </div>
         </div>
+
+        <!-- ====== WITHDRAW TAB ====== -->
+        <div id="cashWithdraw" style="display:none;padding:0 16px">
+            <div style="padding:12px 0">
+                <div
+                    style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:12px">
+                    WITHDRAW FUNDS</div>
+
+                <!-- Method selector -->
+                <div style="display:flex;gap:8px;margin-bottom:16px">
+                    <button class="pill active" id="wdCrypto" onclick="selectWithdrawMethod('crypto')"
+                        style="flex:1;justify-content:center;height:36px">💎 CryptoBot</button>
+                    <button class="pill" id="wdStars" onclick="selectWithdrawMethod('stars')"
+                        style="flex:1;justify-content:center;height:36px">⭐ Stars</button>
+                </div>
+
+                <!-- Amount input -->
+                <div
+                    style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px">
+                    <div
+                        style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:8px">
+                        AMOUNT</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <input type="number" id="withdrawAmount" value="10.00" min="1" step="0.01"
+                            style="flex:1;background:transparent;border:none;color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:24px;outline:none;width:100%">
+                        <span
+                            style="font-family:'Montserrat',sans-serif;font-weight:800;color:var(--dim);font-size:14px"
+                            id="wdUnit">USDT</span>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:10px">
+                        <button class="pill" onclick="setWithdrawPct(25)"
+                            style="flex:1;justify-content:center;height:28px;font-size:10px">25%</button>
+                        <button class="pill" onclick="setWithdrawPct(50)"
+                            style="flex:1;justify-content:center;height:28px;font-size:10px">50%</button>
+                        <button class="pill" onclick="setWithdrawPct(75)"
+                            style="flex:1;justify-content:center;height:28px;font-size:10px">75%</button>
+                        <button class="pill" onclick="setWithdrawPct(100)"
+                            style="flex:1;justify-content:center;height:28px;font-size:10px">MAX</button>
+                    </div>
+                </div>
+
+                <!-- Withdraw info -->
+                <div
+                    style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:11px;color:var(--dim)">Available</span>
+                        <span style="font-size:11px;font-weight:700;color:#fff" id="wdAvailable">0.00 USDT</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:11px;color:var(--dim)">Min withdrawal</span>
+                        <span style="font-size:11px;font-weight:700;color:var(--dim)">$5.00</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                        <span style="font-size:11px;color:var(--dim)">Fee</span>
+                        <span style="font-size:11px;font-weight:700;color:var(--green)">FREE</span>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="submitWithdraw()"
+                    style="height:48px;font-size:14px;border-radius:12px;width:100%">
+                    <span class="material-symbols-outlined" style="font-size:18px">arrow_upward</span>
+                    WITHDRAW
+                </button>
+
+                <!-- Wager warning -->
+                <div
+                    style="margin-top:12px;padding:10px;background:rgba(227,30,36,.04);border:1px solid rgba(227,30,36,.1);border-radius:var(--radius);display:flex;align-items:center;gap:8px">
+                    <span class="material-symbols-outlined" style="font-size:16px;color:var(--red)">warning</span>
+                    <div style="font-size:10px;color:var(--dim);line-height:1.4">Bonus funds require <b>x3 wagering</b>
+                        before withdrawal. Active bonuses will be forfeited.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== HISTORY TAB ====== -->
+        <div id="cashHistory" style="display:none;padding:0 16px">
+            <div style="padding:12px 0">
+                <div
+                    style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-family:'Montserrat',sans-serif;margin-bottom:12px">
+                    TRANSACTION HISTORY</div>
+                <div id="txHistoryList">
+                    <div style="text-align:center;padding:40px 0;opacity:.4">
+                        <span class="material-symbols-outlined"
+                            style="font-size:40px;display:block;margin-bottom:6px">receipt_long</span>
+                        <span style="font-size:12px">No transactions yet</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="height:20px"></div>
     </div>
 
     <!-- ===== SCREEN: REFERRAL ===== -->
@@ -5529,6 +5701,7 @@
             }
             /* Game balance — always show active wallet */
             var gb = document.getElementById('gameBal');
+            var cb = document.getElementById('crashBal');
             if (gb) {
                 if (activeWallet === 'stars') {
                     gb.textContent = starsBalance + ' ⭐';
@@ -5536,6 +5709,29 @@
                     gb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
                 }
             }
+            if (cb) {
+                if (activeWallet === 'stars') {
+                    cb.textContent = starsBalance + ' ⭐';
+                } else {
+                    cb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
+                }
+            }
+            /* Header dual balance */
+            var hb = document.getElementById('headerBal');
+            var hsv = document.getElementById('headerBalStarsVal');
+            if (hb) {
+                if (usdtBalance !== null && usdtBalance !== undefined) {
+                    hb.textContent = displayCurrency === 'USDT' ? usdtBalance.toFixed(2) : formatCurrency(usdtBalance);
+                } else {
+                    hb.textContent = '...';
+                }
+            }
+            if (hsv) hsv.textContent = starsBalance;
+            /* Popup values */
+            var pu = document.getElementById('bpUsdtVal');
+            var ps = document.getElementById('bpStarsVal');
+            if (pu) pu.textContent = '$' + (usdtBalance || 0).toFixed(2);
+            if (ps) ps.textContent = starsBalance || 0;
             var fb = document.getElementById('freeBadge'); if (fb) fb.textContent = freeSpins > 0 ? '⚡ ' + freeSpins + ' ' + T.freeSpins : '';
             updateSpinBtn();
         }
@@ -5557,23 +5753,134 @@
             setTimeout(loadBalance, 2000);
         }
 
-        /* === WALLET TAB SWITCH === */
+        /* === WALLET TAB SWITCH (legacy — now using cashier tabs) === */
         function switchWalletTab(tab) {
-            document.getElementById('walUsdt').style.display = tab === 'usdt' ? 'block' : 'none';
-            document.getElementById('walStars').style.display = tab === 'stars' ? 'block' : 'none';
-            document.getElementById('walTabUsdt').classList.toggle('active', tab === 'usdt');
-            document.getElementById('walTabStars').classList.toggle('active', tab === 'stars');
+            /* Legacy compatibility */
+        }
+
+        /* === CASHIER TAB SYSTEM === */
+        function switchCashierTab(tab) {
+            ['deposit', 'withdraw', 'history'].forEach(function (t) {
+                var el = document.getElementById('cash' + t.charAt(0).toUpperCase() + t.slice(1));
+                var tb = document.getElementById('cashTab' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (el) el.style.display = t === tab ? 'block' : 'none';
+                if (tb) tb.classList.toggle('active', t === tab);
+            });
+            if (tab === 'history') loadTransactionHistory();
+            if (tab === 'withdraw') updateWithdrawInfo();
+        }
+
+        function switchActiveWallet(w) {
+            activeWallet = w;
+            updateBalanceUI(); updateWallet();
+            /* Highlight active card in cashier */
+            var uc = document.getElementById('cashierUsdtCard');
+            var sc = document.getElementById('cashierStarsCard');
+            if (uc) uc.style.borderColor = w === 'usdt' ? 'var(--red)' : 'var(--border)';
+            if (sc) sc.style.borderColor = w === 'stars' ? '#FFD700' : 'var(--border)';
+            /* Header highlight */
+            var hc = document.getElementById('headerBalCrypto');
+            var hs = document.getElementById('headerBalStars');
+            if (hc) hc.style.background = w === 'usdt' ? 'rgba(227,30,36,.1)' : 'transparent';
+            if (hs) hs.style.background = w === 'stars' ? 'rgba(255,215,0,.1)' : 'transparent';
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
         }
 
         /* === PAYMENT METHOD === */
         function selectPayMethod(method) {
             payMethod = method;
+            /* Crypto */
             document.getElementById('pmCrypto').style.borderColor = method === 'crypto' ? 'var(--red)' : 'var(--border)';
-            document.getElementById('pmCard').style.borderColor = method === 'card' ? 'var(--red)' : 'var(--border)';
             document.querySelector('#pmCrypto .material-symbols-outlined:last-child').textContent = method === 'crypto' ? 'check_circle' : 'radio_button_unchecked';
             document.querySelector('#pmCrypto .material-symbols-outlined:last-child').style.color = method === 'crypto' ? 'var(--red)' : 'var(--dim)';
+            /* Stars */
+            var pmStars = document.getElementById('pmStars');
+            if (pmStars) {
+                pmStars.style.borderColor = method === 'stars' ? '#FFD700' : 'var(--border)';
+                document.getElementById('pmStarsCheck').textContent = method === 'stars' ? 'check_circle' : 'radio_button_unchecked';
+                document.getElementById('pmStarsCheck').style.color = method === 'stars' ? '#FFD700' : 'var(--dim)';
+            }
+            /* Card */
+            document.getElementById('pmCard').style.borderColor = method === 'card' ? 'var(--red)' : 'var(--border)';
             document.getElementById('pmCardCheck').textContent = method === 'card' ? 'check_circle' : 'radio_button_unchecked';
             document.getElementById('pmCardCheck').style.color = method === 'card' ? 'var(--red)' : 'var(--dim)';
+            /* Show/hide sections */
+            var cs = document.getElementById('depositCryptoSection');
+            var ss = document.getElementById('depositStarsSection');
+            if (cs) cs.style.display = (method === 'crypto' || method === 'card') ? 'block' : 'none';
+            if (ss) ss.style.display = method === 'stars' ? 'block' : 'none';
+        }
+
+        /* === WITHDRAW === */
+        var withdrawMethod = 'crypto';
+        function selectWithdrawMethod(m) {
+            withdrawMethod = m;
+            document.getElementById('wdCrypto').classList.toggle('active', m === 'crypto');
+            document.getElementById('wdStars').classList.toggle('active', m === 'stars');
+            document.getElementById('wdUnit').textContent = m === 'crypto' ? displayCurrency : 'Stars';
+            updateWithdrawInfo();
+        }
+        function setWithdrawPct(pct) {
+            var bal = withdrawMethod === 'crypto' ? usdtBalance : starsBalance;
+            var amt = (bal * pct / 100);
+            document.getElementById('withdrawAmount').value = withdrawMethod === 'crypto' ? amt.toFixed(2) : Math.floor(amt);
+        }
+        function updateWithdrawInfo() {
+            var bal = withdrawMethod === 'crypto' ? usdtBalance : starsBalance;
+            var unit = withdrawMethod === 'crypto' ? displayCurrency : 'Stars';
+            document.getElementById('wdAvailable').textContent = (withdrawMethod === 'crypto' ? bal.toFixed(2) : bal) + ' ' + unit;
+        }
+        async function submitWithdraw() {
+            var amt = parseFloat(document.getElementById('withdrawAmount').value);
+            if (!amt || amt <= 0) { showToast('❌', 'Enter valid amount', 'OK', '', function () { closeToast() }); return; }
+            if (withdrawMethod === 'crypto' && amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
+            if (withdrawMethod === 'crypto' && amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
+            if (withdrawMethod === 'stars' && amt > starsBalance) { showToast('❌', 'Insufficient Stars', 'OK', '', function () { closeToast() }); return; }
+            try {
+                showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
+                var r = await fetch(API + '/api/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
+                var d = await r.json(); closeToast();
+                if (d.ok) {
+                    showToast('✅', 'Withdrawal request submitted! ' + (withdrawMethod === 'crypto' ? '$' + amt.toFixed(2) : amt + ' ⭐'), 'OK', '', function () { closeToast() });
+                    loadBalance();
+                } else {
+                    showToast('❌', d.error || 'Withdrawal failed', 'OK', '', function () { closeToast() });
+                }
+            } catch (e) { closeToast(); showToast('❌', 'Network error', 'OK', '', function () { closeToast() }); }
+        }
+
+        /* === TRANSACTION HISTORY === */
+        async function loadTransactionHistory() {
+            var el = document.getElementById('txHistoryList');
+            if (!el) return;
+            el.innerHTML = '<div style="text-align:center;padding:30px 0;opacity:.5"><span class="material-symbols-outlined" style="font-size:24px;animation:spin 1s linear infinite">sync</span></div>';
+            try {
+                var r = await fetch(API + '/api/transactions?' + qs());
+                var d = await r.json();
+                if (d.ok && d.transactions && d.transactions.length > 0) {
+                    renderTransactions(d.transactions);
+                    return;
+                }
+            } catch (e) { }
+            /* Demo fallback */
+            el.innerHTML = '<div style="text-align:center;padding:40px 0;opacity:.4"><span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:6px">receipt_long</span><span style="font-size:12px">No transactions yet</span></div>';
+        }
+        function renderTransactions(txs) {
+            var el = document.getElementById('txHistoryList');
+            var html = '';
+            txs.forEach(function (tx) {
+                var isDeposit = tx.type === 'deposit';
+                var icon = isDeposit ? 'arrow_downward' : 'arrow_upward';
+                var color = isDeposit ? 'var(--green)' : 'var(--red)';
+                var sign = isDeposit ? '+' : '-';
+                var statusColor = tx.status === 'completed' ? 'var(--green)' : tx.status === 'pending' ? '#FFD700' : 'var(--dim)';
+                html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">';
+                html += '<div style="width:36px;height:36px;border-radius:50%;background:' + (isDeposit ? 'rgba(34,197,94,.08)' : 'rgba(227,30,36,.08)') + ';display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:' + color + '">' + icon + '</span></div>';
+                html += '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff;text-transform:capitalize">' + tx.type + '</div><div style="font-size:10px;color:var(--dim)">' + (tx.method || '') + ' · ' + (tx.date || '') + '</div></div>';
+                html += '<div style="text-align:right"><div style="font-size:13px;font-weight:800;color:' + color + ';font-family:\'Montserrat\',sans-serif">' + sign + (tx.amount || 0) + '</div><div style="font-size:9px;font-weight:700;color:' + statusColor + ';text-transform:uppercase">' + (tx.status || '') + '</div></div>';
+                html += '</div>';
+            });
+            el.innerHTML = html;
         }
 
         /* === DEPOSIT FLOW (inside miniapp) === */
@@ -6026,7 +6333,7 @@
             const tg = window.Telegram.WebApp;
             tg.ready();
 
-            // Loop to ensure expansion stays active
+            // Fullsize mode (like BotFather) — expand + requestFullscreen
             const ensureExpand = () => {
                 tg.expand();
                 if (tg.isExpanded === false) {
@@ -6035,9 +6342,11 @@
             };
             ensureExpand();
 
-            // NOTE: Using expand() only — NOT requestFullscreen()
-            // expand() = maximizes within bottom sheet, keeps TG header visible
-            // requestFullscreen() = hides ALL TG elements (not what we want)
+            // Request fullscreen for fullsize experience on modern Telegram clients
+            // This makes the app fill the entire screen like BotFather mini-apps
+            if (tg.requestFullscreen) {
+                try { tg.requestFullscreen(); } catch (e) { }
+            }
 
             tg.enableClosingConfirmation();
             tg.setHeaderColor('#000000');
