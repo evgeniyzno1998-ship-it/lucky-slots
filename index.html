@@ -5251,6 +5251,73 @@
         /* ================================================================
            RubyBet Mini App — Full JS (preserving all original game logic)
            ================================================================ */
+        function renderBanners() {
+            var el = document.getElementById('heroTrack');
+            if (!el) return;
+            var banners = getBanners();
+            el.innerHTML = banners.map(function (b, i) {
+                var bg = b.bgStyle || (i === 1 ? 'linear-gradient(135deg,#121212 0%,#1a1a1a 100%)' : 'linear-gradient(135deg,#1a1a1a 0%,#121212 100%)');
+                var btnBg = b.btnStyle || 'background:var(--red)';
+                return `
+                <div class="hero-slide" style="flex:0 0 100%;padding:24px;background:${bg};display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden">
+                    <div style="position:absolute;top:10px;left:10px;padding:4px 8px;background:${b.tagBg || 'rgba(0,0,0,0.3)'};border-radius:4px;display:flex;align-items:center;gap:4px;z-index:3">
+                        <span class="material-symbols-outlined" style="font-size:12px;color:${b.tagColor || 'white'}">${b.tagIcon}</span>
+                        <span style="font-size:10px;font-weight:800;color:${b.tagColor || 'white'}">${b.tagText}</span>
+                    </div>
+                    <div style="position:relative;z-index:2">
+                        <h2 style="font-family:'Montserrat',sans-serif;font-weight:900;font-size:28px;line-height:1.1;margin-bottom:8px;color:white;text-transform:uppercase">${b.titleHtml}</h2>
+                        <p style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:20px">${b.subHtml}</p>
+                        <button class="btn-primary" style="width:fit-content;padding:10px 24px;border-radius:20px;font-size:12px;font-weight:800;${btnBg}" onclick="${b.btnAction}">${b.btnText}</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Re-init dots
+            var dots = document.getElementById('heroDots');
+            if (dots) {
+                dots.innerHTML = banners.map(function (_, i) {
+                    return `<div class="hero-dot" style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);transition:all .3s" onclick="goSlide(${i})"></div>`;
+                }).join('');
+            }
+            goSlide(0);
+        }
+        function getBanners() {
+            return [
+                {
+                    tagIcon: 'local_fire_department',
+                    tagText: T.hot || 'HOT',
+                    tagColor: '#ff416c',
+                    tagBg: 'rgba(255, 65, 108, 0.1)',
+                    titleHtml: 'RUBY <span style="color:var(--red)">JACKPOT</span>',
+                    subHtml: T.heroSub || 'Win up to 10,000x your bet!',
+                    btnText: T.playNow || 'PLAY NOW',
+                    btnAction: 'nav(\'game\')',
+                    bgStyle: 'linear-gradient(135deg, #1a1a1a 0%, #121212 100%)'
+                },
+                {
+                    tagIcon: 'rocket_launch',
+                    tagText: 'NEW',
+                    tagColor: '#38ef7d',
+                    tagBg: 'rgba(56, 239, 125, 0.1)',
+                    titleHtml: 'CRASH <span style="color:#38ef7d">ROCKET</span>',
+                    subHtml: 'Multiply your coins in real-time!',
+                    btnText: 'TRY NOW',
+                    btnAction: 'nav(\'crash\')',
+                    bgStyle: 'linear-gradient(135deg, #121212 0%, #1a1a1a 100%)'
+                },
+                {
+                    tagIcon: 'casino',
+                    tagText: 'NEW',
+                    tagColor: '#FFD700',
+                    tagBg: 'rgba(255, 215, 0, 0.1)',
+                    titleHtml: 'GALACTIC <span style="color:#FFD700">PLINKO</span>',
+                    subHtml: 'Drop the ball and win big rewards!',
+                    btnText: 'PLAY NOW',
+                    btnAction: 'nav(\'plinko\')',
+                    bgStyle: 'linear-gradient(135deg, #1a1a1a 0%, #000 100%)'
+                }
+            ];
+        }
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
         try { tg.setHeaderColor('#121212'); tg.setBackgroundColor('#121212') } catch (e) { }
         const P = new URLSearchParams(location.search);
@@ -7446,10 +7513,8 @@
         }
 
         /* === INIT === */
+        /* === INIT === */
         if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-
             // Main Mini App — Fullsize mode (configured in BotFather)
             // expand() as fallback for older clients or menu button launches
             tg.expand();
@@ -7464,8 +7529,10 @@
 
             // Dark casino theme
             tg.setHeaderColor('#000000');
+            tg.setBackgroundColor('#121212');
+
             /* === LIVE DROPS AUTO-UPDATE === */
-            async function updateLiveDrops() {
+            window.updateLiveDrops = async function () {
                 try {
                     var r = await fetch(API + '/api/live-drops?' + qs());
                     var d = await r.json();
@@ -7473,13 +7540,12 @@
                         renderLiveDrops(d.drops);
                     }
                 } catch (e) { }
-            }
+            };
             setInterval(updateLiveDrops, 5000);
-            updateLiveDrops();
 
             /* === INITIAL LOAD === */
             async function initApp() {
-                loadUserData();
+                await loadUserData(); // ensure user data is loaded before rendering
                 initLocale();
                 buildCategories();
                 buildProviders();
@@ -7489,7 +7555,6 @@
                 buildGameGrid();
             }
             initApp();
-            tg.setBackgroundColor('#121212');
         }
 
         async function loadUserData() {
@@ -7500,7 +7565,6 @@
             loadReferral();
         }
 
-        buildLiveDrops();
         initCarousel();
 
         /* === HERO CAROUSEL === */
