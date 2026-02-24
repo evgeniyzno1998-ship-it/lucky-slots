@@ -884,6 +884,303 @@
             margin-bottom: 20px
         }
 
+        /* === SEARCH OVERLAY === */
+        .search-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 250;
+            background: var(--bg);
+            display: none;
+            flex-direction: column
+        }
+
+        .search-overlay.open {
+            display: flex
+        }
+
+        .search-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            font-family: Inter, sans-serif
+        }
+
+        .search-input:focus {
+            border-color: var(--red)
+        }
+
+        .search-input::placeholder {
+            color: var(--dim2)
+        }
+
+        .search-results {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px
+        }
+
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        .search-result-item:active {
+            transform: scale(.98);
+            border-color: var(--red)
+        }
+
+        .search-result-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px
+        }
+
+        .search-result-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff
+        }
+
+        .search-result-tag {
+            font-size: 10px;
+            color: var(--dim);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: .5px
+        }
+
+        .search-empty {
+            text-align: center;
+            padding: 60px 0;
+            color: var(--dim2);
+            font-size: 13px
+        }
+
+        /* === TOP WINNINGS LEADERBOARD === */
+        .top-wins-section {
+            margin: 0 16px 20px
+        }
+
+        .top-wins-tabs {
+            display: flex;
+            gap: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 12px
+        }
+
+        .tw-tab {
+            flex: 1;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: var(--dim);
+            cursor: pointer;
+            transition: all .15s;
+            border-right: 1px solid var(--border)
+        }
+
+        .tw-tab:last-child {
+            border-right: none
+        }
+
+        .tw-tab.active {
+            background: rgba(227, 30, 36, .08);
+            color: var(--red)
+        }
+
+        .tw-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 6px;
+            gap: 10px
+        }
+
+        .tw-rank {
+            width: 24px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 900;
+            color: var(--dim)
+        }
+
+        .tw-rank.gold {
+            color: #FFD700
+        }
+
+        .tw-rank.silver {
+            color: #C0C0C0
+        }
+
+        .tw-rank.bronze {
+            color: #CD7F32
+        }
+
+        .tw-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff
+        }
+
+        .tw-info {
+            flex: 1
+        }
+
+        .tw-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff
+        }
+
+        .tw-game {
+            font-size: 10px;
+            color: var(--dim)
+        }
+
+        .tw-amount {
+            text-align: right
+        }
+
+        .tw-val {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--green)
+        }
+
+        .tw-mult {
+            font-size: 10px;
+            color: var(--dim)
+        }
+
+        /* === PROVIDERS SECTION === */
+        .providers-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            -ms-overflow-style: none;
+            scrollbar-width: none
+        }
+
+        .providers-row::-webkit-scrollbar {
+            display: none
+        }
+
+        .provider-pill {
+            flex-shrink: 0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--dim);
+            cursor: pointer;
+            transition: all .15s;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            white-space: nowrap
+        }
+
+        .provider-pill.active,
+        .provider-pill:active {
+            background: rgba(227, 30, 36, .08);
+            border-color: var(--red);
+            color: var(--red)
+        }
+
+        /* === FAVORITES HEART === */
+        .fav-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 10;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, .5);
+            backdrop-filter: blur(4px);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all .15s
+        }
+
+        .fav-btn .material-symbols-outlined {
+            font-size: 16px;
+            color: var(--dim);
+            transition: all .15s
+        }
+
+        .fav-btn.liked .material-symbols-outlined {
+            color: var(--red);
+            font-variation-settings: 'FILL' 1
+        }
+
+        /* === NAV BADGE === */
+        .nav-badge {
+            position: absolute;
+            top: 2px;
+            right: 50%;
+            transform: translateX(calc(50% + 10px));
+            min-width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: var(--red);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            box-shadow: 0 0 6px var(--red-glow)
+        }
+
         .game-tile {
             border-radius: var(--radius-lg);
             overflow: hidden;
@@ -3359,10 +3656,28 @@
         </div>
     </div>
 
+    <!-- ===== SEARCH OVERLAY ===== -->
+    <div class="search-overlay" id="searchOverlay">
+        <div class="search-header">
+            <button onclick="closeSearch()"
+                style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px"><span
+                    class="material-symbols-outlined">arrow_back</span></button>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search games..."
+                oninput="onSearchInput(this.value)">
+            <button onclick="document.getElementById('searchInput').value='';onSearchInput('')"
+                style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px"><span
+                    class="material-symbols-outlined">close</span></button>
+        </div>
+        <div class="search-results" id="searchResults">
+            <div class="search-empty"><span class="material-symbols-outlined"
+                    style="font-size:48px;display:block;margin-bottom:8px">search</span>Type to search games</div>
+        </div>
+    </div>
+
     <!-- ===== SCREEN: LOBBY ===== -->
     <div class="screen active" id="scrLobby">
-        <div class="lobby-search" onclick="/* future search */"><span
-                class="material-symbols-outlined">search</span><span id="searchPlaceholder">Search games...</span></div>
+        <div class="lobby-search" onclick="openSearch()"><span class="material-symbols-outlined">search</span><span
+                id="searchPlaceholder">Search games...</span></div>
 
         <div class="hero-banner">
             <div class="hero-tag"><span class="material-symbols-outlined">local_fire_department</span><span
@@ -3410,12 +3725,40 @@
             </div>
         </div>
 
+        <!-- TOP WINNINGS LEADERBOARD -->
+        <div class="section">
+            <div class="section-head">
+                <div class="section-title"><span class="material-symbols-outlined"
+                        style="color:#FFD700;font-size:16px;margin-right:4px">emoji_events</span><span
+                        id="secTopWins">TOP WINNINGS</span></div>
+            </div>
+            <div class="top-wins-section">
+                <div class="top-wins-tabs">
+                    <div class="tw-tab active" onclick="switchTopWins('day',this)" id="twDay">Day</div>
+                    <div class="tw-tab" onclick="switchTopWins('week',this)" id="twWeek">Week</div>
+                    <div class="tw-tab" onclick="switchTopWins('month',this)" id="twMonth">Month</div>
+                    <div class="tw-tab" onclick="switchTopWins('all',this)" id="twAll">All Time</div>
+                </div>
+                <div id="topWinsList"></div>
+            </div>
+        </div>
+
         <div class="section">
             <div class="section-head">
                 <div class="section-title" id="secCat">CATEGORIES</div>
                 <div class="section-more" id="secCatMore">VIEW ALL</div>
             </div>
             <div class="cat-row" id="catRow"></div>
+        </div>
+
+        <!-- GAME PROVIDERS -->
+        <div class="section">
+            <div class="section-head">
+                <div class="section-title"><span class="material-symbols-outlined"
+                        style="color:var(--red);font-size:16px;margin-right:4px">sports_esports</span><span
+                        id="secProviders">PROVIDERS</span></div>
+            </div>
+            <div class="providers-row" id="providersRow"></div>
         </div>
 
         <div class="section" style="margin-bottom:0">
@@ -3939,9 +4282,10 @@
             <div class="nav-label" id="navGame">Games</div>
             <div class="nav-indicator"></div>
         </div>
-        <div class="nav-item group" data-screen="bonuses"
+        <div class="nav-item group" data-screen="bonuses" style="position:relative"
             onclick="nav('bonuses'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('light')}">
             <span class="material-symbols-outlined">redeem</span>
+            <div class="nav-badge" id="bonusBadge" style="display:none">0</div>
             <div class="nav-label" id="navBonuses">Bonuses</div>
             <div class="nav-indicator"></div>
         </div>
@@ -4708,43 +5052,196 @@
                 { icon: 'casino', label: T.slots, screen: 'game' },
                 { icon: 'stream', label: T.live, screen: null },
                 { icon: 'trending_up', label: T.crash, screen: 'crash' },
-                { icon: 'playing_cards', label: T.table, screen: null }
+                { icon: 'playing_cards', label: T.table, screen: null },
+                { icon: 'favorite', label: '❤️ ' + (LANG === 'ru' ? 'Избранные' : LANG === 'ua' ? 'Обрані' : LANG === 'pl' ? 'Ulubione' : 'Favorites'), screen: null, filterFav: true }
             ];
             document.getElementById('catRow').innerHTML = cats.map(function (c, index) {
                 var isActive = index === 0 ? ' active' : '';
-                return '<div class="cat-item' + isActive + '" onclick="' + (c.screen ? 'nav(\'' + c.screen + '\')' : '') + '">'
+                var onclick = c.filterFav ? 'filterFavorites()' : (c.screen ? 'nav(\'' + c.screen + '\')' : '');
+                return '<div class="cat-item' + isActive + '" onclick="' + onclick + '">'
                     + '<div class="cat-icon"><span class="material-symbols-outlined">' + c.icon + '</span></div>'
                     + '<div class="cat-label">' + c.label + '</div></div>';
             }).join('');
         }
 
+        /* === FAVORITES SYSTEM === */
+        var favorites = JSON.parse(localStorage.getItem('rb_favorites') || '[]');
+        function toggleFavorite(gameId, el) {
+            var idx = favorites.indexOf(gameId);
+            if (idx > -1) { favorites.splice(idx, 1); if (el) el.classList.remove('liked'); }
+            else { favorites.push(gameId); if (el) el.classList.add('liked'); }
+            localStorage.setItem('rb_favorites', JSON.stringify(favorites));
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
+        function filterFavorites() {
+            /* Show only favorite games in grid */
+            var tiles = document.querySelectorAll('#gameGrid > div');
+            var anyVisible = false;
+            tiles.forEach(function (t) {
+                var gid = t.getAttribute('data-game-id');
+                if (favorites.indexOf(gid) > -1) { t.style.display = ''; anyVisible = true; }
+                else { t.style.display = 'none'; }
+            });
+            if (!anyVisible) {
+                showToast('❤️', LANG === 'ru' ? 'Нет избранных игр' : LANG === 'ua' ? 'Немає обраних ігор' : LANG === 'pl' ? 'Brak ulubionych' : 'No favorites yet', 'OK', '', function () { closeToast(); /* restore all */ tiles.forEach(function (t) { t.style.display = '' }) });
+            }
+        }
+
+        /* === GAME PROVIDERS === */
+        var PROVIDERS = [
+            { id: 'all', name: 'All' },
+            { id: 'rubybet', name: 'RubyBet' },
+            { id: 'pragmatic', name: 'Pragmatic' },
+            { id: 'pgsoft', name: 'PGSoft' },
+            { id: 'netent', name: 'NetEnt' },
+            { id: 'evolution', name: 'Evolution' },
+            { id: 'hacksaw', name: 'Hacksaw' },
+            { id: 'nolimit', name: 'No Limit' }
+        ];
+        function buildProviders() {
+            var el = document.getElementById('providersRow');
+            if (!el) return;
+            el.innerHTML = PROVIDERS.map(function (p, i) {
+                return '<div class="provider-pill' + (i === 0 ? ' active' : '') + '" onclick="selectProvider(\'' + p.id + '\', this)">' + p.name + '</div>';
+            }).join('');
+        }
+        function selectProvider(id, el) {
+            document.querySelectorAll('.provider-pill').forEach(function (p) { p.classList.remove('active') });
+            if (el) el.classList.add('active');
+            /* Filter game grid by provider */
+            var tiles = document.querySelectorAll('#gameGrid > div');
+            tiles.forEach(function (t) {
+                if (id === 'all') { t.style.display = ''; return; }
+                var prov = t.getAttribute('data-provider') || '';
+                t.style.display = prov === id ? '' : 'none';
+            });
+        }
+
+        /* === TOP WINNINGS LEADERBOARD === */
+        var topWinsCache = {};
+        function switchTopWins(period, el) {
+            document.querySelectorAll('.tw-tab').forEach(function (t) { t.classList.remove('active') });
+            if (el) el.classList.add('active');
+            loadTopWinnings(period);
+        }
+        async function loadTopWinnings(period) {
+            if (!period) period = 'day';
+            /* Try API first, fallback to demo data */
+            try {
+                var r = await fetch(API + '/api/top-winnings?period=' + period + '&' + qs());
+                var d = await r.json();
+                if (d.ok && d.winners && d.winners.length > 0) { renderTopWinnings(d.winners); return; }
+            } catch (e) { }
+            /* Demo fallback */
+            var demoNames = ['Ton***99', 'Max***23', 'Luc***77', 'Pro***88', 'Vip***33', 'Ace***11', 'Win***42', 'Bet***55'];
+            var demoGames = ['Ruby Slots', 'Crash', 'Lucky Bonanza', 'Crash', 'Mines', 'Ruby Slots', 'Plinko', 'Crash'];
+            var demoColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+            var demoData = [];
+            for (var i = 0; i < 5; i++) {
+                var mult = (Math.random() * 50 + 1.5).toFixed(1);
+                var amt = (Math.random() * 500 + 10).toFixed(2);
+                demoData.push({
+                    username: demoNames[i % demoNames.length],
+                    game: demoGames[i % demoGames.length],
+                    win_amount: parseFloat(amt),
+                    multiplier: parseFloat(mult),
+                    color: demoColors[i % demoColors.length]
+                });
+            }
+            demoData.sort(function (a, b) { return b.win_amount - a.win_amount });
+            renderTopWinnings(demoData);
+        }
+        function renderTopWinnings(winners) {
+            var el = document.getElementById('topWinsList');
+            if (!el) return;
+            var html = '';
+            winners.forEach(function (w, i) {
+                var rank = i + 1;
+                var rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+                var color = w.color || '#6366f1';
+                var initials = (w.username || 'U').substring(0, 2).toUpperCase();
+                html += '<div class="tw-row">';
+                html += '<div class="tw-rank ' + rankClass + '">' + (rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank) + '</div>';
+                html += '<div class="tw-avatar" style="background:' + color + '">' + initials + '</div>';
+                html += '<div class="tw-info"><div class="tw-name">' + (w.username || 'Player') + '</div><div class="tw-game">' + (w.game || 'Casino') + '</div></div>';
+                html += '<div class="tw-amount"><div class="tw-val">+' + (w.win_amount || 0).toFixed(2) + '</div><div class="tw-mult">x' + (w.multiplier || 0).toFixed(1) + '</div></div>';
+                html += '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        /* === SEARCH === */
+        var ALL_GAMES = [
+            { id: 'ruby_slots', name: T.slotName || 'Ruby Slots', emoji: '🎰', tag: T.slotTag || 'POPULAR', screen: 'game', bg: '#ff416c', provider: 'rubybet' },
+            { id: 'crash', name: T.crashName || 'Crash', emoji: '📈', tag: T.hot || 'HOT', screen: 'crash', bg: '#38ef7d', provider: 'rubybet' },
+            { id: 'dice', name: T.diceName || 'Ruby Dice', emoji: '🎲', tag: T.comingTag || 'SOON', screen: null, bg: '#4A00E0', provider: 'rubybet' },
+            { id: 'mines', name: T.mineName || 'Mines', emoji: '💣', tag: T.comingTag || 'SOON', screen: null, bg: '#1565C0', provider: 'rubybet' },
+            { id: 'plinko', name: 'Plinko', emoji: '⚪', tag: 'SOON', screen: null, bg: '#f59e0b', provider: 'pragmatic' },
+            { id: 'roulette', name: 'Roulette', emoji: '🎡', tag: 'SOON', screen: null, bg: '#ef4444', provider: 'evolution' },
+            { id: 'blackjack', name: 'Blackjack', emoji: '🃏', tag: 'SOON', screen: null, bg: '#10b981', provider: 'evolution' },
+            { id: 'sweet_bonanza', name: 'Sweet Bonanza', emoji: '🍬', tag: 'SOON', screen: null, bg: '#ec4899', provider: 'pragmatic' },
+            { id: 'gates_olympus', name: 'Gates of Olympus', emoji: '⚡', tag: 'SOON', screen: null, bg: '#6366f1', provider: 'pragmatic' },
+            { id: 'big_bass', name: 'Big Bass Bonanza', emoji: '🐟', tag: 'SOON', screen: null, bg: '#14b8a6', provider: 'pragmatic' },
+            { id: 'starlight', name: 'Starlight Princess', emoji: '👸', tag: 'SOON', screen: null, bg: '#8b5cf6', provider: 'pgsoft' },
+            { id: 'wanted', name: 'Wanted Dead or Wild', emoji: '🤠', tag: 'SOON', screen: null, bg: '#b92b27', provider: 'hacksaw' }
+        ];
+        function openSearch() {
+            document.getElementById('searchOverlay').classList.add('open');
+            setTimeout(function () { document.getElementById('searchInput').focus(); }, 100);
+        }
+        function closeSearch() {
+            document.getElementById('searchOverlay').classList.remove('open');
+            document.getElementById('searchInput').value = '';
+        }
+        function onSearchInput(val) {
+            var el = document.getElementById('searchResults');
+            if (!val || val.length < 1) {
+                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search</span>' + (LANG === 'ru' ? 'Введите название игры' : LANG === 'ua' ? 'Введіть назву гри' : LANG === 'pl' ? 'Wpisz nazwę gry' : 'Type to search games') + '</div>';
+                return;
+            }
+            var q = val.toLowerCase();
+            var results = ALL_GAMES.filter(function (g) { return g.name.toLowerCase().indexOf(q) > -1 });
+            if (results.length === 0) {
+                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search_off</span>' + (LANG === 'ru' ? 'Ничего не найдено' : LANG === 'ua' ? 'Нічого не знайдено' : LANG === 'pl' ? 'Nie znaleziono' : 'No results found') + '</div>';
+                return;
+            }
+            el.innerHTML = results.map(function (g) {
+                var isFav = favorites.indexOf(g.id) > -1;
+                return '<div class="search-result-item" onclick="' + (g.screen ? 'closeSearch();nav(\'' + g.screen + '\')' : '') + '">'
+                    + '<div class="search-result-icon" style="background:' + g.bg + '">' + g.emoji + '</div>'
+                    + '<div style="flex:1"><div class="search-result-name">' + g.name + '</div><div class="search-result-tag">' + g.tag + (g.provider ? ' · ' + g.provider : '') + '</div></div>'
+                    + '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)" style="position:static"><span class="material-symbols-outlined">favorite</span></button>'
+                    + '</div>';
+            }).join('');
+        }
+
+        /* === NOTIFICATION BADGE === */
+        function updateBonusBadge() {
+            var badge = document.getElementById('bonusBadge');
+            if (!badge) return;
+            var count = userBonuses && userBonuses.active ? userBonuses.active.length : 0;
+            if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+            else { badge.style.display = 'none'; }
+        }
+
         function buildGameGrid() {
-            var IMG = {
-                slots: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6ohZpAhMhQlsEN84latpHmJh9r7dfdWo9zYOsB4JI0',
-                cubes: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNt9FwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw',
-                chips: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ',
-                diamond: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y'
-            };
-            var games = [
-                { name: T.slotName, emoji: '🎰', tag: T.slotTag, screen: 'game', bg: 'linear-gradient(135deg,#ff4b2b,#ff416c)' },
-                { name: T.crashName, emoji: '📈', tag: T.hot, screen: 'crash', bg: 'linear-gradient(135deg,#11998e,#38ef7d)' },
-                { name: T.diceName, emoji: '🎲', tag: T.comingTag, screen: null, bg: 'linear-gradient(135deg,#8E2DE2,#4A00E0)' },
-                { name: T.mineName, emoji: '💣', tag: T.comingTag, screen: null, bg: 'linear-gradient(135deg,#b92b27,#1565C0)' }
-            ];
+            var games = ALL_GAMES.slice(0, 4); /* First 4 main games */
             var html = '';
             for (var i = 0; i < 4; i++) {
-                html += games.map(function (g) {
+                html += ALL_GAMES.map(function (g) {
                     var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
-                    var badgeHtml = g.tag ? '<div class="absolute top-2 right-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
-                    return '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
-                        + badgeHtml
+                    var isFav = favorites.indexOf(g.id) > -1;
+                    var badgeHtml = g.tag ? '<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
+                    var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)"><span class="material-symbols-outlined">favorite</span></button>';
+                    return '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
+                        + badgeHtml + favHtml
                         + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
-                        + '<div class="absolute inset-0 opacity-40" style="background:' + g.bg + '"></div>'
+                        + '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div>'
                         + '<div class="relative z-10">' + g.emoji + '</div>'
                         + '</div>'
                         + '<div class="p-[10px]">'
                         + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
-                        + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + g.tag + '</div>'
+                        + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
                         + '</div></div>';
                 }).join('');
             }
@@ -4803,7 +5300,7 @@
                     if (d.history && d.history.length > 0) userBonuses.history = d.history;
                 }
             } catch (e) { }
-            renderActiveBonuses(); renderBonusHistory();
+            renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
         }
 
         function renderActiveBonuses() {
@@ -5538,10 +6035,9 @@
             };
             ensureExpand();
 
-            // Try new Fullscreen API if available (Bot API 7.0+)
-            if (tg.requestFullscreen) {
-                tg.requestFullscreen();
-            }
+            // NOTE: Using expand() only — NOT requestFullscreen()
+            // expand() = maximizes within bottom sheet, keeps TG header visible
+            // requestFullscreen() = hides ALL TG elements (not what we want)
 
             tg.enableClosingConfirmation();
             tg.setHeaderColor('#000000');
@@ -5550,11 +6046,14 @@
         initLocale();
         initLangDisplay();
         buildCategories();
+        buildProviders();
         buildGameGrid();
         initBonuses();
         buildWalletPackages();
         loadBalance();
         checkWheel();
+        loadTopWinnings('day');
+        updateBonusBadge();
         buildLiveDrops();
         loadReferral();
     </script>
