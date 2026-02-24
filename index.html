@@ -5845,13 +5845,13 @@
             el.innerHTML = results.map(function (g) {
                 var isFav = favorites.indexOf(g.id) > -1;
                 var iconStyle = g.bg ? 'background:' + g.bg : '';
-                if (g.icon) iconStyle += ';background-image:url(\\'' + g.icon + '\\');background-size:cover';
-                return '<div class="search-result-item" onclick="' + (g.screen ? 'closeSearch();nav(\\'' + g.screen + '\\')' : '') + '">'
-                + '<div class="search-result-icon" style="' + iconStyle + '">' + (g.icon ? '' : g.emoji) + '</div>'
-                + '<div style="flex:1"><div class="search-result-name">' + g.name + '</div><div class="search-result-tag">' + g.tag + (g.provider ? ' · ' + g.provider : '') + '</div></div>'
-                + '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\\'' + g.id + '\\',this)" style="position:static"><span class="material-symbols-outlined">favorite</span></button>'
-                    + '</div>';
-        }).join('');
+                if (g.icon) iconStyle += ';background-image:url("' + g.icon + '");background-size:cover';
+                return `<div class="search-result-item" onclick="${g.screen ? "closeSearch();nav('" + g.screen + "')" : ""}">`
+                    + `<div class="search-result-icon" style="${iconStyle}">${g.icon ? '' : g.emoji}</div>`
+                    + `<div style="flex:1"><div class="search-result-name">${g.name}</div><div class="search-result-tag">${g.tag}${g.provider ? ' · ' + g.provider : ''}</div></div>`
+                    + `<button class="fav-btn${isFav ? ' liked' : ''}" onclick="event.stopPropagation();toggleFavorite('${g.id}',this)" style="position:static"><span class="material-symbols-outlined">favorite</span></button>`
+                    + `</div>`;
+            }).join('');
         }
 
         /* === NOTIFICATION BADGE === */
@@ -5870,23 +5870,23 @@
             games.forEach(function (g) {
                 var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
                 var isFav = favorites.indexOf(g.id) > -1;
-                var badgeHtml = g.tag ? '<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
-                var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\\'' + g.id + '\\',this)"><span class="material-symbols-outlined">favorite</span></button>';
+                var badgeHtml = g.tag ? `<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ${isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white'}">${g.tag}</div>` : '';
+                var favHtml = `<button class="fav-btn${isFav ? ' liked' : ''}" onclick="event.stopPropagation();toggleFavorite('${g.id}',this)"><span class="material-symbols-outlined">favorite</span></button>`;
                 var visualHtml = g.icon
-                    ? '<div class="absolute inset-0 border-b border-border" style="background:url(\\'' + g.icon + '\\') center/cover"></div>'
-                    : '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div><div class="relative z-10">' + g.emoji + '</div>';
+                    ? `<div class="absolute inset-0 border-b border-border" style="background:url('${g.icon}') center/cover"></div>`
+                    : `<div class="absolute inset-0 opacity-40" style="background:${g.bg || '#333'}"></div><div class="relative z-10">${g.emoji}</div>`;
 
-                html += '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" data-cat="' + (g.category || 'slots') + '" onclick="' + (g.screen ? 'nav(\\'' + g.screen + '\\')' : '') + '">'
-                + badgeHtml + favHtml
-                + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
-                + visualHtml
-                + '</div>'
-                + '<div class="p-[10px]">'
-                + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
-                + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
-                + '</div></div>';
-        });
-        target.innerHTML = html;
+                html += `<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="${g.id}" data-provider="${g.provider || ''}" data-cat="${g.category || 'slots'}" onclick="${g.screen ? "nav('" + g.screen + "')" : ""}">`
+                    + badgeHtml + favHtml
+                    + `<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">`
+                    + visualHtml
+                    + `</div>`
+                    + '<div class="p-[10px]">'
+                    + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
+                    + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
+                    + '</div></div>';
+            });
+            target.innerHTML = html;
         }
 
         var allPromos = [];
