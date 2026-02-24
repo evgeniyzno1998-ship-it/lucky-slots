@@ -3864,8 +3864,8 @@
             <div class="w-2 h-2 rounded-full bg-[#E91E3F] animate-pulse shadow-[0_0_8px_#E91E3F]"></div>
             <h1 class="font-bold text-[12px] tracking-widest uppercase text-gray-400">LIVE DROPS</h1>
         </div>
-        <div class="live-drops-scroll no-scrollbar px-4 space-y-3 mb-6" id="liveDropsScroll"
-            style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="live-drops-scroll no-scrollbar px-4 mb-6" id="liveDropsScroll"
+            style="display: flex; flex-direction: row; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
             <!-- Rendered by JS -->
         </div>
 
@@ -4028,6 +4028,28 @@
         </div>
 
         <div id="bonusAvailableSection">
+            <!-- Featured Promotion Banner (Relocated from Wallet) -->
+            <div class="relative w-full rounded-2xl bg-gradient-to-br from-[#1a1c22] to-black overflow-hidden border border-gray-800/50 mb-6 mx-auto max-w-[calc(100%-32px)]"
+                id="bonusPromoTop">
+                <div
+                    class="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center">
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-transparent"></div>
+                <div class="relative p-6 z-10">
+                    <span
+                        class="inline-block bg-[#e62e3d] text-white text-[10px] font-bold px-2 py-0.5 rounded mb-3 tracking-wider uppercase">OFFER
+                        OF THE DAY</span>
+                    <div class="mb-4">
+                        <h2 class="text-2xl font-black italic text-white mb-0 leading-none">100% MATCH</h2>
+                        <h2 class="text-2xl font-black italic text-[#e62e3d] leading-none uppercase">UP TO $500</h2>
+                    </div>
+                    <button
+                        class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-3 rounded-lg text-xs transition-colors uppercase tracking-wider shadow-lg shadow-red-900/20"
+                        onclick="selectPayMethod('crypto')">
+                        Claim Bonus
+                    </button>
+                </div>
+            </div>
             <div class="pill-row" id="bonusPills"></div>
             <div id="promoList" style="padding-bottom:100px;"></div>
         </div>
@@ -4108,29 +4130,6 @@
                         </div>
                         <div class="text-xl font-bold text-yellow-500 tracking-tight" id="wStarsAmount">0</div>
                         <div class="absolute -right-2 -bottom-2 opacity-5 text-4xl transform rotate-12">STARS</div>
-                    </div>
-                </div>
-
-                <!-- Featured Promotion Banner (from design-84c234ff) -->
-                <div class="relative w-full rounded-2xl bg-gradient-to-br from-[#1a1c22] to-black overflow-hidden border border-gray-800/50 mb-6"
-                    id="walletPromoTop">
-                    <div
-                        class="absolute inset-0 opacity-30 bg-[url('https://images.unsplash.com/photo-1596838132731-3301c3fd4317?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center">
-                    </div>
-                    <div class="absolute inset-0 bg-gradient-to-r from-black via-black/90 to-transparent"></div>
-                    <div class="relative p-6 z-10">
-                        <span
-                            class="inline-block bg-[#e62e3d] text-white text-[10px] font-bold px-2 py-0.5 rounded mb-3 tracking-wider">OFFER
-                            OF THE DAY</span>
-                        <div class="mb-4">
-                            <h2 class="text-2xl font-black italic text-white mb-0 leading-none">100% MATCH</h2>
-                            <h2 class="text-2xl font-black italic text-[#e62e3d] leading-none">UP TO $500</h2>
-                        </div>
-                        <button
-                            class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-3 rounded-lg text-xs transition-colors uppercase tracking-wider shadow-lg shadow-red-900/20"
-                            onclick="selectPayMethod('crypto')">
-                            Claim Bonus
-                        </button>
                     </div>
                 </div>
 
@@ -5178,6 +5177,14 @@
         function getBanners() {
             return [
                 {
+                    tagIcon: 'local_offer', tagText: 'SPECIAL', tagBg: 'rgba(230,46,61,.15)', tagColor: '#e62e3d',
+                    titleHtml: `100% MATCH<br><span>UP TO $500</span>`,
+                    subHtml: `Offer of the day · 100% Bonus`,
+                    btnText: 'CLAIM NOW', btnAction: "nav('bonuses')",
+                    bgStyle: 'linear-gradient(135deg,#1a0a0f 0%,#0f0f12 50%,#1a0505 100%)',
+                    btnStyle: 'background:linear-gradient(135deg,#e62e3d,#b91c1c)'
+                },
+                {
                     tagIcon: 'local_fire_department', tagText: T.hot || 'HOT', tagBg: '', tagColor: '',
                     titleHtml: `RUBY<br><span>JACKPOT</span>`,
                     subHtml: T.heroSub || `5,000 TON<br><span style="font-size:9px;text-transform:uppercase;letter-spacing:1px">PRIZE POOL</span>`,
@@ -5540,33 +5547,84 @@
         function buildLiveDrops() {
             var el = document.getElementById('liveDropsScroll');
             if (!el) return;
-            var html = '';
-            for (var i = 0; i < 18; i++) {
-                var name = LIVE_DROP_NAMES[Math.floor(Math.random() * LIVE_DROP_NAMES.length)];
-                var game = LIVE_DROP_GAMES[Math.floor(Math.random() * LIVE_DROP_GAMES.length)];
-                var icon = LIVE_DROP_ICONS[game] || 'casino';
-                var isBig = Math.random() > 0.7;
-                var amt = isBig ? (Math.floor(Math.random() * 250) / 10 + 0.5).toFixed(1) : (Math.floor(Math.random() * 2500) + 10);
-                var unit = isBig ? 'TON' : 'Stars';
-                var mult = isBig ? 'x' + (Math.floor(Math.random() * 450) / 10 + 1.1).toFixed(1) : 'x' + (Math.floor(Math.random() * 40) / 10 + 1.1).toFixed(1);
-                var avatarColor = LIVE_DROP_COLORS[Math.floor(Math.random() * LIVE_DROP_COLORS.length)];
-                var initials = name.substring(0, 2).toUpperCase();
-                html += '<div class="live-drop-card' + (isBig ? ' big' : '') + '">';
-                html += '<div class="live-drop-user">';
-                html += '<div class="live-drop-avatar" style="background:' + avatarColor + ';color:#fff">' + initials + '</div>';
-                html += '<div class="live-drop-name">' + name + '</div>';
-                html += '</div>';
-                html += '<div class="live-drop-amount">+ ' + amt + ' ' + unit + '</div>';
-                html += '<div class="live-drop-game"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;margin-right:2px">' + icon + '</span>' + game + ' · ' + mult + '</div>';
-                html += '</div>';
+            // Clear and build initial set
+            el.innerHTML = '';
+            for (var i = 0; i < 10; i++) {
+                addRandomLiveDrop();
             }
-            el.innerHTML = html;
         }
 
-        /* Auto-refresh Live Drops every 3 seconds */
+        function addRandomLiveDrop() {
+            var name = LIVE_DROP_NAMES[Math.floor(Math.random() * LIVE_DROP_NAMES.length)];
+            var game = LIVE_DROP_GAMES[Math.floor(Math.random() * LIVE_DROP_GAMES.length)];
+            var icon = LIVE_DROP_ICONS[game] || 'casino';
+            var isBig = Math.random() > 0.7;
+            var amt = isBig ? (Math.floor(Math.random() * 250) / 10 + 0.5).toFixed(1) : (Math.floor(Math.random() * 2500) + 10);
+            var unit = isBig ? 'TON' : 'Stars';
+            var mult = isBig ? 'x' + (Math.floor(Math.random() * 450) / 10 + 1.1).toFixed(1) : 'x' + (Math.floor(Math.random() * 40) / 10 + 1.1).toFixed(1);
+            var avatarColor = LIVE_DROP_COLORS[Math.floor(Math.random() * LIVE_DROP_COLORS.length)];
+            var initials = name.substring(0, 2).toUpperCase();
+
+            // Map game name to screen
+            var screenMap = { 'Slots': 'game', 'Crash': 'crash', 'Plinko': 'plinko', 'Mines': 'mines', 'Wheel': 'wheel', 'Dice': 'dice' };
+            var screen = screenMap[game] || 'game';
+
+            var drop = {
+                username: name,
+                game: game,
+                amount: amt,
+                currency: unit.toLowerCase(),
+                multiplier: mult.replace('x', ''),
+                color: avatarColor,
+                screen: screen
+            };
+
+            renderSingleLiveDrop(drop);
+        }
+
+        function renderSingleLiveDrop(d) {
+            var el = document.getElementById('liveDropsScroll');
+            if (!el) return;
+
+            var isBig = parseFloat(d.multiplier) >= 10;
+            var color = d.color || '#E91E3F';
+            var unit = d.currency === 'stars' ? 'Stars' : 'TON';
+            var initials = (d.username || 'U').substring(0, 2).toUpperCase();
+
+            var card = document.createElement('div');
+            card.className = `flex-shrink-0 w-[240px] bg-gradient-to-r from-[#1A1A1A] to-[#0F0F0F] p-3.5 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden group cursor-pointer transition-transform active:scale-95 ${isBig ? 'border-[#E91E3F]/40 shadow-[0_0_20px_rgba(233,30,63,0.1)]' : ''}`;
+            card.onclick = function () { nav(d.screen); };
+
+            card.innerHTML = `
+                ${isBig ? `<div class="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#E91E3F] to-transparent opacity-40"></div>` : ''}
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-[#252525] p-0.5 flex items-center justify-center border border-white/5 overflow-hidden">
+                         <div class="w-full h-full rounded-full flex items-center justify-center text-xs font-bold" style="background:${color}; color:white">${initials}</div>
+                    </div>
+                    <div class="flex flex-col gap-0.5">
+                        <div class="font-bold text-sm text-gray-100">${d.username}</div>
+                        <div class="text-[10px] text-gray-500 font-medium flex items-center gap-1 uppercase tracking-wider">
+                            <span class="material-symbols-outlined text-[12px]" style="color:${color}">stars</span> ${d.game}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right flex flex-col items-end gap-1">
+                    <div class="font-bold text-[14px] flex items-center gap-1 ${isBig ? 'text-[#E91E3F] drop-shadow-[0_0_5px_rgba(233,30,63,0.3)]' : 'text-[#FFD700]'}">
+                        + ${d.amount} ${unit}
+                    </div>
+                    <div class="text-[10px] font-mono ${isBig ? 'bg-[#E91E3F]/10 text-[#E91E3F]' : 'bg-white/5 text-gray-400'} px-1.5 py-0.5 rounded border ${isBig ? 'border-[#E91E3F]/20' : 'border-white/5'}">x${d.multiplier}</div>
+                </div>`;
+
+            el.insertBefore(card, el.firstChild);
+            if (el.children.length > 20) {
+                el.removeChild(el.lastChild);
+            }
+        }
+
+        /* Auto-refresh Live Drops every 0.7 seconds */
         setInterval(function () {
-            if (currentScreen === 'lobby') buildLiveDrops();
-        }, 3000);
+            if (currentScreen === 'lobby') addRandomLiveDrop();
+        }, 700);
 
         /* === PROFILE === */
         async function loadProfile() {
@@ -5970,9 +6028,12 @@
                 var r = await fetch(API + '/api/wheel-spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getAuth()) });
                 var d = await r.json();
                 if (d.ok) {
-                    var finalDeg = (720 * 3) + (d.index * 60) + 30; // 6 segments, 60deg each
                     var wheelDisc = document.getElementById('wheelDisc');
-                    wheelDisc.style.transform = 'rotate(' + finalDeg + 'deg)';
+                    // Calculate rotation to land on the correct segment
+                    // Segments are at 30, 90, 150, 210, 270, 330 degrees
+                    // To bring segment at angle A to top (0deg), we rotate by (360 - A)
+                    var targetRotation = (360 * 5) + (330 - (d.index * 60));
+                    wheelDisc.style.transform = 'rotate(' + targetRotation + 'deg)';
 
                     setTimeout(function () {
                         document.getElementById('wheelWinAmount').textContent = d.win_val;
@@ -7169,6 +7230,7 @@
                 loadTopWinnings('day');
                 initBonuses();
                 updateLiveDrops();
+                buildGameGrid();
             }
             initApp();
             tg.setBackgroundColor('#121212');
