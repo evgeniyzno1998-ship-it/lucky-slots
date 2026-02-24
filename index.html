@@ -7,6 +7,7 @@
     <title>RubyBet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="casino_math.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -6974,7 +6975,7 @@
             if (el) el.textContent = PLINKO_BET_STEPS[plinkoBetIdx];
         }
 
-        function dropPlinkoBall() {
+        async function dropPlinkoBall() {
             if (!plinkoCanvas) initPlinko();
             var betAmt = PLINKO_BET_STEPS[plinkoBetIdx];
             /* Check balance */
@@ -6987,14 +6988,22 @@
             updateBalanceUI();
             if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
 
-            /* Create ball */
+            /* Request Provably Fair logic from Math Engine */
+            var outcome = await window.casinoMath.calculatePlinkoDrop(PLINKO_ROWS, PLINKO_MULTS);
+
+            /* Create deterministic mathematical ball */
             var ball = {
-                x: plinkoW / 2 + (Math.random() - 0.5) * 20,
+                x: plinkoW / 2 + (Math.random() - 0.5) * 10,
                 y: 10,
                 vx: 0,
                 vy: 0,
                 done: false,
-                bet: betAmt
+                bet: betAmt,
+                plannedPath: outcome.path,
+                finalBucketIdx: outcome.bucketIndex,
+                finalMultiplier: outcome.multiplier,
+                currentRowIndex: 0,
+                lastHitPeg: null
             };
             plinkoBalls.push(ball);
             if (!plinkoAnimId) animatePlinko();
@@ -7013,7 +7022,7 @@
                 b.vx *= friction;
                 b.x += b.vx;
                 b.y += b.vy;
-                /* Peg collisions */
+                /* Peg collisions using Provably Fair paths */
                 plinkoPegs.forEach(function (p) {
                     var dx = b.x - p.x;
                     var dy = b.y - p.y;
@@ -7022,22 +7031,31 @@
                         var angle = Math.atan2(dy, dx);
                         b.x = p.x + Math.cos(angle) * (p.r + 9);
                         b.y = p.y + Math.sin(angle) * (p.r + 9);
-                        b.vx = Math.cos(angle) * 2 + (Math.random() - 0.5) * 1.5;
-                        b.vy = Math.abs(Math.sin(angle)) * 2;
+
+                        if (b.lastHitPeg !== p) {
+                            var pathDir = b.plannedPath[b.currentRowIndex] !== undefined ? b.plannedPath[b.currentRowIndex] : (Math.random() > 0.5 ? 1 : 0);
+
+                            // 0 = bounce left, 1 = bounce right
+                            var forceVx = pathDir === 1 ? 1.8 : -1.8;
+                            b.vx = forceVx + (Math.random() - 0.5) * 0.4;
+                            b.vy = Math.abs(Math.sin(angle)) * 2;
+
+                            b.lastHitPeg = p;
+                            b.currentRowIndex++;
+                        }
                     }
                 });
                 /* Wall bounds */
                 if (b.x < 10) { b.x = 10; b.vx = Math.abs(b.vx) * bounce; }
                 if (b.x > plinkoW - 10) { b.x = plinkoW - 10; b.vx = -Math.abs(b.vx) * bounce; }
-                /* Hit bottom — determine bucket */
+                /* Hit bottom — apply PRECALCULATED mathematically sound outcome */
                 if (b.y > plinkoH - 10) {
                     b.done = true;
-                    var bucketWidth = plinkoW / PLINKO_MULTS.length;
-                    var bucketIdx = Math.floor(b.x / bucketWidth);
-                    if (bucketIdx < 0) bucketIdx = 0;
-                    if (bucketIdx >= PLINKO_MULTS.length) bucketIdx = PLINKO_MULTS.length - 1;
-                    var mult = PLINKO_MULTS[bucketIdx];
+                    // Snapping purely visual path into precise target bucket
+                    var bucketIdx = b.finalBucketIdx !== undefined ? b.finalBucketIdx : 0;
+                    var mult = b.finalMultiplier !== undefined ? b.finalMultiplier : 0.5;
                     var winnings = Math.floor(b.bet * mult);
+
                     starsBalance += winnings;
                     updateBalanceUI();
                     if (mult >= 50 && winnings > 0) {
