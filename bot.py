@@ -104,6 +104,8 @@ def init_db():
             last_game TEXT DEFAULT '',
             last_login TEXT DEFAULT '',
             last_bot_interaction TEXT DEFAULT '',
+            admin_note TEXT DEFAULT '',
+            is_blocked INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )''')
         # Migration: add new columns to existing DB
@@ -125,6 +127,8 @@ def init_db():
             ("total_won_usdt_cents","INTEGER DEFAULT 0"),
             ("total_wagered_stars","INTEGER DEFAULT 0"),
             ("total_won_stars","INTEGER DEFAULT 0"),
+            ("admin_note","TEXT DEFAULT ''"),
+            ("is_blocked","INTEGER DEFAULT 0"),
         ]
         for col, d in new_cols:
             try: c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
@@ -985,6 +989,8 @@ async def start_api():
         ("/admin/auth/delete", admin_auth_delete),
         ("/admin/bonus/templates", admin_bonus_templates_post),
         ("/admin/bonus/issue", admin_bonus_issue),
+        ("/admin/user/{uid}/update", admin_player_update),
+        ("/admin/user/{uid}/note", admin_player_note),
     ]:
         app.router.add_post(path, handler)
     app.router.add_options("/{tail:.*}",opts)
@@ -1292,6 +1298,36 @@ async def admin_user_payments(req):
     rows = await db("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit), fetch=True)
     total = await db("SELECT COUNT(*) as cnt FROM payments WHERE user_id=?", (uid,), one=True)
     return web.json_response({"ok": True, "total": total['cnt'], "payments": [dict(r) for r in rows] if rows else []}, headers=H)
+
+async def admin_player_update(req):
+    """POST /admin/user/{uid}/update — update player stats/status."""
+    admin, err = _require_admin(req, "players")
+    if err: return err
+    uid = int(req.match_info['uid'])
+    data = await req.json()
+    updates = []; params = []
+    if "coins" in data:
+        updates.append("coins=?"); params.append(int(data["coins"]))
+    if "balance_usdt_cents" in data:
+        updates.append("balance_usdt_cents=?"); params.append(int(data["balance_usdt_cents"]))
+    if "free_spins" in data:
+        updates.append("free_spins=?"); params.append(int(data["free_spins"]))
+    if "is_blocked" in data:
+        updates.append("is_blocked=?"); params.append(1 if data["is_blocked"] else 0)
+    if not updates: return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
+    params.append(uid)
+    await db(f"UPDATE users SET {','.join(updates)} WHERE user_id=?", tuple(params))
+    return web.json_response({"ok": True}, headers=H)
+
+async def admin_player_note(req):
+    """POST /admin/user/{uid}/note — save admin note for player."""
+    admin, err = _require_admin(req, "players")
+    if err: return err
+    uid = int(req.match_info['uid'])
+    data = await req.json()
+    note = data.get("note", "").strip()
+    await db("UPDATE users SET admin_note=? WHERE user_id=?", (note, uid))
+    return web.json_response({"ok": True}, headers=H)
 
 async def admin_games(req):
     """GET /admin/games — per-game analytics."""
