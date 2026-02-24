@@ -3719,13 +3719,56 @@
         <div class="lobby-search" onclick="openSearch()"><span class="material-symbols-outlined">search</span><span
                 id="searchPlaceholder">Search games...</span></div>
 
-        <div class="hero-banner">
-            <div class="hero-tag"><span class="material-symbols-outlined">local_fire_department</span><span
-                    id="heroTag">HOT</span></div>
-            <h2 class="hero-title" id="heroTitle">RUBY <span>JACKPOT</span></h2>
-            <p class="hero-sub" id="heroSub">5,000 coins prize pool</p>
-            <button class="hero-btn" onclick="nav('game')"><span class="material-symbols-outlined">play_arrow</span>
-                <span id="heroPlay">PLAY NOW</span></button>
+        <!-- HERO CAROUSEL -->
+        <div class="hero-carousel"
+            style="position:relative;overflow:hidden;border-radius:var(--radius-xl);margin:0 16px 12px">
+            <div class="hero-track" id="heroTrack"
+                style="display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);width:300%">
+                <!-- Slide 1: Ruby Jackpot -->
+                <div class="hero-banner" style="min-width:100%;margin:0;border-radius:0">
+                    <div class="hero-tag"><span
+                            class="material-symbols-outlined">local_fire_department</span><span>HOT</span></div>
+                    <h2 class="hero-title">RUBY <span>JACKPOT</span></h2>
+                    <p class="hero-sub">5,000 coins prize pool</p>
+                    <button class="hero-btn" onclick="nav('game')"><span
+                            class="material-symbols-outlined">play_arrow</span> PLAY NOW</button>
+                </div>
+                <!-- Slide 2: Galactic Plinko -->
+                <div class="hero-banner"
+                    style="min-width:100%;margin:0;border-radius:0;background:linear-gradient(135deg,#1a0a0f 0%,#0a0a1a 50%,#1a0505 100%)">
+                    <div class="hero-tag" style="background:rgba(228,33,39,.15);color:#e42127"><span
+                            class="material-symbols-outlined">rocket_launch</span><span>NEW</span></div>
+                    <h2 class="hero-title">GALACTIC <span>PLINKO</span></h2>
+                    <p class="hero-sub">Drop stars, hit multipliers!</p>
+                    <button class="hero-btn" onclick="nav('plinko')"
+                        style="background:linear-gradient(135deg,#e42127,#b91c1c)"><span
+                            class="material-symbols-outlined">arrow_downward</span> DROP NOW</button>
+                </div>
+                <!-- Slide 3: Crypto Bonus -->
+                <div class="hero-banner"
+                    style="min-width:100%;margin:0;border-radius:0;background:linear-gradient(135deg,#0a1a0f 0%,#0a0a1a 50%,#051a0a 100%)">
+                    <div class="hero-tag" style="background:rgba(34,197,94,.15);color:#22c55e"><span
+                            class="material-symbols-outlined">payments</span><span>BONUS</span></div>
+                    <h2 class="hero-title" style="font-size:22px">+7% <span>CRYPTO BONUS</span></h2>
+                    <p class="hero-sub">On every CryptoBot deposit · x3 wager</p>
+                    <button class="hero-btn" onclick="nav('wallet')"
+                        style="background:linear-gradient(135deg,#22c55e,#16a34a)"><span
+                            class="material-symbols-outlined">account_balance_wallet</span> DEPOSIT</button>
+                </div>
+            </div>
+            <!-- Dots -->
+            <div
+                style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:5">
+                <div class="hero-dot active" onclick="goSlide(0)"
+                    style="width:8px;height:8px;border-radius:50%;background:var(--red);opacity:1;cursor:pointer;transition:all .3s">
+                </div>
+                <div class="hero-dot" onclick="goSlide(1)"
+                    style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s">
+                </div>
+                <div class="hero-dot" onclick="goSlide(2)"
+                    style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s">
+                </div>
+            </div>
         </div>
 
         <div class="wheel-banner" id="wheelBanner" onclick="openWheel()"
@@ -4440,6 +4483,138 @@
         <button class="prof-signout" id="profSignout">Sign Out</button>
     </div>
 
+    <!-- ===== SCREEN: GAMES CATALOG ===== -->
+    <div class="screen" id="scrGames">
+        <div style="padding:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                <div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer"
+                    onclick="openSearch()">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:var(--dim)">search</span>
+                    <input type="text" id="gamesSearchInput" placeholder="Search games..."
+                        oninput="filterGamesScreen(this.value)"
+                        style="background:none;border:none;color:#fff;font-size:13px;width:100%;outline:none;font-family:Inter,sans-serif">
+                </div>
+            </div>
+            <div class="cat-row" id="gamesCatRow"
+                style="margin-bottom:16px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch"></div>
+            <div id="gamesGrid" class="grid grid-cols-2 gap-[12px]"></div>
+        </div>
+    </div>
+
+    <!-- ===== SCREEN: PLINKO ===== -->
+    <div class="screen" id="scrPlinko">
+        <div
+            style="display:flex;flex-direction:column;height:calc(100vh - var(--header-h) - var(--nav-h));background:linear-gradient(180deg,#0a0a1a 0%,#120818 50%,#0a0a1a 100%);position:relative;overflow:hidden">
+            <!-- Plinko Header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;z-index:10">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div
+                        style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#e42127,#b91c1c);display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined" style="color:#fff;font-size:20px">rocket_launch</span>
+                    </div>
+                    <div>
+                        <div
+                            style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase">
+                            GALACTIC PLINKO</div>
+                        <div
+                            style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:1.5px;text-transform:uppercase">
+                            RUBYBET EXCLUSIVE</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button onclick="openPlinkoLeaderboard()"
+                        style="width:36px;height:36px;border-radius:50%;background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.2);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#FFD700">emoji_events</span>
+                    </button>
+                    <button onclick="openPlinkoRules()"
+                        style="width:36px;height:36px;border-radius:50%;background:rgba(227,30,36,.1);border:1px solid rgba(227,30,36,.2);display:flex;align-items:center;justify-content:center;cursor:pointer">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:var(--red)">info</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Nebula background glow -->
+            <div style="position:absolute;inset:0;pointer-events:none;z-index:0">
+                <div
+                    style="position:absolute;top:25%;left:25%;width:250px;height:250px;background:rgba(228,33,39,.12);border-radius:50%;filter:blur(100px)">
+                </div>
+                <div
+                    style="position:absolute;bottom:25%;right:25%;width:300px;height:300px;background:rgba(139,92,246,.08);border-radius:50%;filter:blur(120px)">
+                </div>
+            </div>
+            <!-- Plinko Canvas -->
+            <div
+                style="flex:1;position:relative;z-index:5;display:flex;align-items:center;justify-content:center;padding:0 16px">
+                <canvas id="plinkoCanvas"
+                    style="width:100%;max-width:360px;aspect-ratio:4/5;border-radius:12px"></canvas>
+            </div>
+            <!-- Multiplier Buckets -->
+            <div id="plinkoBuckets" style="display:flex;gap:3px;padding:0 16px;z-index:5;margin-top:-10px"></div>
+            <!-- Bet Controls -->
+            <div style="padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:10">
+                <div
+                    style="flex:1;display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);height:48px;overflow:hidden">
+                    <button onclick="changePlinkoBet(-1)"
+                        style="width:48px;height:48px;background:none;border:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined">remove</span>
+                    </button>
+                    <div style="flex:1;text-align:center">
+                        <span style="font-size:10px;color:#FFD700;margin-right:2px">⭐</span>
+                        <span id="plinkoBetDisplay"
+                            style="font-family:Montserrat,sans-serif;font-size:16px;font-weight:800">50</span>
+                    </div>
+                    <button onclick="changePlinkoBet(1)"
+                        style="width:48px;height:48px;background:none;border:none;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined">add</span>
+                    </button>
+                </div>
+                <button id="plinkoDropBtn" onclick="dropPlinkoBall()"
+                    style="height:48px;padding:0 28px;background:linear-gradient(135deg,#e42127,#b91c1c);color:#fff;border:none;border-radius:var(--radius-xl);font-family:Montserrat,sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 15px rgba(228,33,39,.4)">
+                    DROP STAR <span class="material-symbols-outlined" style="font-size:18px">send</span>
+                </button>
+            </div>
+        </div>
+        <!-- Plinko Rules Popup -->
+        <div id="plinkoRulesPopup"
+            style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:300;align-items:center;justify-content:center">
+            <div
+                style="background:var(--bg);border:2px solid var(--red);border-radius:var(--radius-xl);max-width:320px;width:90%;padding:28px 20px;text-align:center;box-shadow:0 0 40px rgba(227,28,35,.4)">
+                <div
+                    style="width:60px;height:60px;border-radius:50%;background:rgba(227,30,36,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+                    <span class="material-symbols-outlined" style="font-size:28px;color:var(--red)">star</span>
+                </div>
+                <h3
+                    style="font-family:Montserrat,sans-serif;font-size:18px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">
+                    GALACTIC RULES</h3>
+                <div style="width:40px;height:3px;background:var(--red);margin:0 auto 16px;border-radius:2px"></div>
+                <p style="font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:20px">Drop <b
+                        style="color:#fff">Stars</b>,<br>Hit <b style="color:var(--red)">Multipliers</b>,<br>Win Big!
+                </p>
+                <button onclick="closePlinkoRules()"
+                    style="width:100%;height:44px;background:linear-gradient(135deg,#e42127,#b91c1c);color:#fff;border:none;border-radius:var(--radius);font-family:Montserrat,sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 15px rgba(228,33,39,.4)">PLAY
+                    NOW</button>
+            </div>
+        </div>
+        <!-- Plinko Leaderboard Popup -->
+        <div id="plinkoLeaderPopup"
+            style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:300;align-items:flex-end;justify-content:center">
+            <div
+                style="background:var(--bg);border-top:2px solid #FFD700;border-radius:var(--radius-xl) var(--radius-xl) 0 0;width:100%;max-width:480px;padding:20px 16px 32px;max-height:60vh;overflow-y:auto">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="material-symbols-outlined" style="color:#FFD700;font-size:22px">emoji_events</span>
+                        <h3
+                            style="font-family:Montserrat,sans-serif;font-size:16px;font-weight:900;text-transform:uppercase">
+                            TOP DROPS</h3>
+                    </div>
+                    <button onclick="closePlinkoLeaderboard()"
+                        style="background:none;border:none;color:var(--dim);cursor:pointer"><span
+                            class="material-symbols-outlined">close</span></button>
+                </div>
+                <div id="plinkoLeaderList"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== BOTTOM NAV ===== -->
     <div class="bottom-nav">
         <div class="nav-item active group" data-screen="lobby"
@@ -4448,8 +4623,8 @@
             <div class="nav-label" id="navLobby">Home</div>
             <div class="nav-indicator"></div>
         </div>
-        <div class="nav-item group" data-screen="game"
-            onclick="nav('game'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('light')}">
+        <div class="nav-item group" data-screen="games"
+            onclick="nav('games'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('light')}">
             <span class="material-symbols-outlined">casino</span>
             <div class="nav-label" id="navGame">Games</div>
             <div class="nav-indicator"></div>
@@ -4746,11 +4921,13 @@
             if (s === 'deposit') { s = 'wallet' } /* deposit → wallet page */
             document.querySelectorAll('.screen').forEach(function (e) { e.classList.remove('active') });
             document.querySelectorAll('.nav-item').forEach(function (e) { e.classList.remove('active') });
-            var map = { lobby: 'scrLobby', game: 'scrGame', crash: 'scrCrash', bonuses: 'scrBonuses', wallet: 'scrWallet', referral: 'scrReferral', profile: 'scrProfile' };
+            var map = { lobby: 'scrLobby', game: 'scrGame', games: 'scrGames', crash: 'scrCrash', plinko: 'scrPlinko', bonuses: 'scrBonuses', wallet: 'scrWallet', referral: 'scrReferral', profile: 'scrProfile' };
             var scr = document.getElementById(map[s]); if (scr) scr.classList.add('active');
             var ni = document.querySelector('.nav-item[data-screen="' + s + '"]'); if (ni) ni.classList.add('active');
             currentScreen = s;
             if (s === 'game') initGame();
+            if (s === 'games') initGamesScreen();
+            if (s === 'plinko') initPlinko();
             if (s === 'profile') loadProfile();
             if (s === 'referral') loadReferral();
             if (s === 'wallet') { updateWallet(); switchWalletTab(activeWallet) }
@@ -5348,7 +5525,7 @@
             { id: 'crash', name: T.crashName || 'Crash', emoji: '📈', tag: T.hot || 'HOT', screen: 'crash', bg: '#38ef7d', provider: 'rubybet' },
             { id: 'dice', name: T.diceName || 'Ruby Dice', emoji: '🎲', tag: T.comingTag || 'SOON', screen: null, bg: '#4A00E0', provider: 'rubybet' },
             { id: 'mines', name: T.mineName || 'Mines', emoji: '💣', tag: T.comingTag || 'SOON', screen: null, bg: '#1565C0', provider: 'rubybet' },
-            { id: 'plinko', name: 'Plinko', emoji: '⚪', tag: 'SOON', screen: null, bg: '#f59e0b', provider: 'pragmatic' },
+            { id: 'plinko', name: 'Galactic Plinko', emoji: '🚀', tag: 'NEW', screen: 'plinko', bg: '#e42127', provider: 'rubybet', category: 'plinko' },
             { id: 'roulette', name: 'Roulette', emoji: '🎡', tag: 'SOON', screen: null, bg: '#ef4444', provider: 'evolution' },
             { id: 'blackjack', name: 'Blackjack', emoji: '🃏', tag: 'SOON', screen: null, bg: '#10b981', provider: 'evolution' },
             { id: 'sweet_bonanza', name: 'Sweet Bonanza', emoji: '🍬', tag: 'SOON', screen: null, bg: '#ec4899', provider: 'pragmatic' },
@@ -5396,28 +5573,27 @@
             else { badge.style.display = 'none'; }
         }
 
-        function buildGameGrid() {
-            var games = ALL_GAMES.slice(0, 4); /* First 4 main games */
+        function buildGameGrid(targetEl, filter) {
+            var games = filter ? ALL_GAMES.filter(filter) : ALL_GAMES;
+            var target = typeof targetEl === 'string' ? document.getElementById(targetEl) : document.getElementById('gameGrid');
             var html = '';
-            for (var i = 0; i < 4; i++) {
-                html += ALL_GAMES.map(function (g) {
-                    var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
-                    var isFav = favorites.indexOf(g.id) > -1;
-                    var badgeHtml = g.tag ? '<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
-                    var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)"><span class="material-symbols-outlined">favorite</span></button>';
-                    return '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
-                        + badgeHtml + favHtml
-                        + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
-                        + '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div>'
-                        + '<div class="relative z-10">' + g.emoji + '</div>'
-                        + '</div>'
-                        + '<div class="p-[10px]">'
-                        + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
-                        + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
-                        + '</div></div>';
-                }).join('');
-            }
-            document.getElementById('gameGrid').innerHTML = html;
+            games.forEach(function (g) {
+                var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
+                var isFav = favorites.indexOf(g.id) > -1;
+                var badgeHtml = g.tag ? '<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
+                var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)"><span class="material-symbols-outlined">favorite</span></button>';
+                html += '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" data-cat="' + (g.category || 'slots') + '" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
+                    + badgeHtml + favHtml
+                    + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
+                    + '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div>'
+                    + '<div class="relative z-10">' + g.emoji + '</div>'
+                    + '</div>'
+                    + '<div class="p-[10px]">'
+                    + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
+                    + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
+                    + '</div></div>';
+            });
+            target.innerHTML = html;
         }
 
         function initBonuses() {
@@ -6362,6 +6538,302 @@
         updateBonusBadge();
         buildLiveDrops();
         loadReferral();
+        initCarousel();
+
+        /* === HERO CAROUSEL === */
+        var heroSlide = 0;
+        var heroTotal = 3;
+        var heroTimer = null;
+        function goSlide(n) {
+            heroSlide = n;
+            var track = document.getElementById('heroTrack');
+            if (track) track.style.transform = 'translateX(-' + (heroSlide * 100 / heroTotal) + '%)';
+            document.querySelectorAll('.hero-dot').forEach(function (d, i) {
+                d.style.background = i === heroSlide ? 'var(--red)' : 'rgba(255,255,255,.3)';
+                d.style.opacity = i === heroSlide ? '1' : '0.6';
+            });
+        }
+        function initCarousel() {
+            if (heroTimer) clearInterval(heroTimer);
+            heroTimer = setInterval(function () {
+                goSlide((heroSlide + 1) % heroTotal);
+            }, 4000);
+        }
+
+        /* === GAMES CATALOG SCREEN === */
+        var gamesCat = 'all';
+        function initGamesScreen() {
+            var cats = [
+                { id: 'all', label: 'All', icon: 'apps' },
+                { id: 'slots', label: T.slots || 'Slots', icon: 'casino' },
+                { id: 'crash', label: T.crash || 'Crash', icon: 'trending_up' },
+                { id: 'plinko', label: 'Plinko', icon: 'rocket_launch' },
+                { id: 'table', label: T.table || 'Table', icon: 'playing_cards' },
+                { id: 'live', label: T.live || 'Live', icon: 'stream' }
+            ];
+            var cr = document.getElementById('gamesCatRow');
+            if (cr) {
+                cr.innerHTML = cats.map(function (c) {
+                    return '<div class="pill' + (c.id === gamesCat ? ' active' : '') + '" onclick="filterGamesCat(\'' + c.id + '\',this)" style="display:flex;align-items:center;gap:4px;white-space:nowrap"><span class="material-symbols-outlined" style="font-size:14px">' + c.icon + '</span>' + c.label + '</div>';
+                }).join('');
+            }
+            buildGameGrid('gamesGrid');
+        }
+        function filterGamesCat(cat, el) {
+            gamesCat = cat;
+            if (el) {
+                el.parentNode.querySelectorAll('.pill').forEach(function (p) { p.classList.remove('active') });
+                el.classList.add('active');
+            }
+            var filter = cat === 'all' ? null : function (g) {
+                if (cat === 'slots') return g.id === 'ruby_slots' || g.id === 'sweet_bonanza' || g.id === 'gates_olympus' || g.id === 'big_bass' || g.id === 'starlight' || g.id === 'wanted';
+                if (cat === 'crash') return g.id === 'crash';
+                if (cat === 'plinko') return g.id === 'plinko';
+                if (cat === 'table') return g.id === 'roulette' || g.id === 'blackjack' || g.id === 'dice';
+                if (cat === 'live') return false;
+                return true;
+            };
+            buildGameGrid('gamesGrid', filter);
+        }
+        function filterGamesScreen(val) {
+            if (!val || val.length < 1) {
+                buildGameGrid('gamesGrid');
+                return;
+            }
+            var q = val.toLowerCase();
+            buildGameGrid('gamesGrid', function (g) { return g.name.toLowerCase().indexOf(q) > -1 });
+        }
+
+        /* === PLINKO GAME === */
+        var PLINKO_ROWS = 8;
+        var PLINKO_MULTS = [100, 10, 5, 2, 1, 0.5, 1, 2, 5, 10, 100];
+        var PLINKO_BET_STEPS = [10, 25, 50, 100, 250, 500];
+        var plinkoBetIdx = 2;
+        var plinkoPlaying = false;
+        var plinkoBalls = [];
+        var plinkoPegs = [];
+        var plinkoCanvas, plinkoCtx, plinkoW, plinkoH;
+        var plinkoAnimId = null;
+        var plinkoFirstOpen = true;
+
+        function initPlinko() {
+            if (plinkoFirstOpen) {
+                plinkoFirstOpen = false;
+                setTimeout(openPlinkoRules, 300);
+            }
+            plinkoCanvas = document.getElementById('plinkoCanvas');
+            if (!plinkoCanvas) return;
+            var parent = plinkoCanvas.parentElement;
+            plinkoCanvas.width = parent.clientWidth;
+            plinkoCanvas.height = plinkoCanvas.width * 1.25;
+            plinkoCtx = plinkoCanvas.getContext('2d');
+            plinkoW = plinkoCanvas.width;
+            plinkoH = plinkoCanvas.height;
+            buildPegs();
+            buildBuckets();
+            drawPlinko();
+            updatePlinkoBetDisplay();
+            buildPlinkoLeaderboard();
+        }
+
+        function buildPegs() {
+            plinkoPegs = [];
+            var padX = 30, padY = 40;
+            var areaW = plinkoW - padX * 2;
+            var areaH = plinkoH - padY * 2;
+            for (var row = 0; row < PLINKO_ROWS; row++) {
+                var cols = row + 3;
+                var y = padY + (row / (PLINKO_ROWS - 1)) * areaH;
+                for (var col = 0; col < cols; col++) {
+                    var x = (plinkoW / 2) - ((cols - 1) * (areaW / (PLINKO_ROWS + 2)) / 2) + col * (areaW / (PLINKO_ROWS + 2));
+                    plinkoPegs.push({ x: x, y: y, r: 4 });
+                }
+            }
+        }
+
+        function buildBuckets() {
+            var el = document.getElementById('plinkoBuckets');
+            if (!el) return;
+            var colors = ['#e42127', '#f97316', '#eab308', '#22c55e', '#60a5fa', '#22c55e', '#eab308', '#f97316', '#e42127'];
+            var mults = PLINKO_MULTS;
+            el.innerHTML = mults.map(function (m, i) {
+                var c = m >= 10 ? '#e42127' : m >= 5 ? '#f97316' : m >= 2 ? '#eab308' : '#22c55e';
+                return '<div style="flex:1;height:36px;background:' + c + '20;border:1px solid ' + c + '50;border-radius:6px;display:flex;align-items:center;justify-content:center"><span style="font-size:9px;font-weight:800;color:' + c + ';font-style:italic">' + m + 'x</span></div>';
+            }).join('');
+        }
+
+        function drawPlinko() {
+            if (!plinkoCtx) return;
+            plinkoCtx.clearRect(0, 0, plinkoW, plinkoH);
+            /* Draw pegs */
+            plinkoPegs.forEach(function (p) {
+                plinkoCtx.beginPath();
+                plinkoCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                plinkoCtx.fillStyle = '#e42127';
+                plinkoCtx.fill();
+                plinkoCtx.shadowColor = '#e42127';
+                plinkoCtx.shadowBlur = 8;
+                plinkoCtx.fill();
+                plinkoCtx.shadowBlur = 0;
+            });
+            /* Draw balls */
+            plinkoBalls.forEach(function (b) {
+                if (!b.done) {
+                    plinkoCtx.beginPath();
+                    plinkoCtx.arc(b.x, b.y, 8, 0, Math.PI * 2);
+                    var grad = plinkoCtx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, 8);
+                    grad.addColorStop(0, '#FFD700');
+                    grad.addColorStop(1, '#f59e0b');
+                    plinkoCtx.fillStyle = grad;
+                    plinkoCtx.fill();
+                    plinkoCtx.shadowColor = '#FFD700';
+                    plinkoCtx.shadowBlur = 12;
+                    plinkoCtx.fill();
+                    plinkoCtx.shadowBlur = 0;
+                }
+            });
+        }
+
+        function changePlinkoBet(dir) {
+            plinkoBetIdx += dir;
+            if (plinkoBetIdx < 0) plinkoBetIdx = 0;
+            if (plinkoBetIdx >= PLINKO_BET_STEPS.length) plinkoBetIdx = PLINKO_BET_STEPS.length - 1;
+            updatePlinkoBetDisplay();
+        }
+        function updatePlinkoBetDisplay() {
+            var el = document.getElementById('plinkoBetDisplay');
+            if (el) el.textContent = PLINKO_BET_STEPS[plinkoBetIdx];
+        }
+
+        function dropPlinkoBall() {
+            if (!plinkoCanvas) initPlinko();
+            var betAmt = PLINKO_BET_STEPS[plinkoBetIdx];
+            /* Check balance */
+            if (starsBalance < betAmt) {
+                showToast('❌', 'Not enough Stars!', 'OK', '', function () { closeToast() });
+                return;
+            }
+            /* Deduct bet */
+            starsBalance -= betAmt;
+            updateBalanceUI();
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+
+            /* Create ball */
+            var ball = {
+                x: plinkoW / 2 + (Math.random() - 0.5) * 20,
+                y: 10,
+                vx: 0,
+                vy: 0,
+                done: false,
+                bet: betAmt
+            };
+            plinkoBalls.push(ball);
+            if (!plinkoAnimId) animatePlinko();
+        }
+
+        function animatePlinko() {
+            var gravity = 0.3;
+            var friction = 0.98;
+            var bounce = 0.5;
+            var allDone = true;
+
+            plinkoBalls.forEach(function (b) {
+                if (b.done) return;
+                allDone = false;
+                b.vy += gravity;
+                b.vx *= friction;
+                b.x += b.vx;
+                b.y += b.vy;
+                /* Peg collisions */
+                plinkoPegs.forEach(function (p) {
+                    var dx = b.x - p.x;
+                    var dy = b.y - p.y;
+                    var dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < p.r + 8) {
+                        var angle = Math.atan2(dy, dx);
+                        b.x = p.x + Math.cos(angle) * (p.r + 9);
+                        b.y = p.y + Math.sin(angle) * (p.r + 9);
+                        b.vx = Math.cos(angle) * 2 + (Math.random() - 0.5) * 1.5;
+                        b.vy = Math.abs(Math.sin(angle)) * 2;
+                    }
+                });
+                /* Wall bounds */
+                if (b.x < 10) { b.x = 10; b.vx = Math.abs(b.vx) * bounce; }
+                if (b.x > plinkoW - 10) { b.x = plinkoW - 10; b.vx = -Math.abs(b.vx) * bounce; }
+                /* Hit bottom — determine bucket */
+                if (b.y > plinkoH - 10) {
+                    b.done = true;
+                    var bucketWidth = plinkoW / PLINKO_MULTS.length;
+                    var bucketIdx = Math.floor(b.x / bucketWidth);
+                    if (bucketIdx < 0) bucketIdx = 0;
+                    if (bucketIdx >= PLINKO_MULTS.length) bucketIdx = PLINKO_MULTS.length - 1;
+                    var mult = PLINKO_MULTS[bucketIdx];
+                    var winnings = Math.floor(b.bet * mult);
+                    starsBalance += winnings;
+                    updateBalanceUI();
+                    if (mult >= 5) {
+                        showToast('🚀', mult + 'x! +' + winnings + ' ⭐', 'OK', '', function () { closeToast() });
+                        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    } else if (mult >= 2) {
+                        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                    }
+                    /* Highlight bucket */
+                    var bucketEls = document.querySelectorAll('#plinkoBuckets > div');
+                    if (bucketEls[bucketIdx]) {
+                        bucketEls[bucketIdx].style.transform = 'scale(1.15)';
+                        bucketEls[bucketIdx].style.transition = 'transform .2s';
+                        setTimeout(function () { bucketEls[bucketIdx].style.transform = 'scale(1)'; }, 300);
+                    }
+                }
+            });
+            /* Clean up done balls */
+            plinkoBalls = plinkoBalls.filter(function (b) { return !b.done || b.y < plinkoH + 20 });
+            drawPlinko();
+            if (!allDone) {
+                plinkoAnimId = requestAnimationFrame(animatePlinko);
+            } else {
+                plinkoAnimId = null;
+            }
+        }
+
+        /* Plinko popups */
+        function openPlinkoRules() {
+            var p = document.getElementById('plinkoRulesPopup');
+            if (p) p.style.display = 'flex';
+        }
+        function closePlinkoRules() {
+            var p = document.getElementById('plinkoRulesPopup');
+            if (p) p.style.display = 'none';
+        }
+        function openPlinkoLeaderboard() {
+            var p = document.getElementById('plinkoLeaderPopup');
+            if (p) p.style.display = 'flex';
+        }
+        function closePlinkoLeaderboard() {
+            var p = document.getElementById('plinkoLeaderPopup');
+            if (p) p.style.display = 'none';
+        }
+        function buildPlinkoLeaderboard() {
+            var el = document.getElementById('plinkoLeaderList');
+            if (!el) return;
+            var demo = [
+                { name: 'Cry***66', mult: 100, win: 5000, color: '#FFD700' },
+                { name: 'Win***92', mult: 10, win: 1000, color: '#C0C0C0' },
+                { name: 'Ton***99', mult: 5, win: 500, color: '#CD7F32' },
+                { name: 'Luc***77', mult: 2, win: 200, color: '#6366f1' },
+                { name: 'Max***33', mult: 10, win: 750, color: '#14b8a6' }
+            ];
+            el.innerHTML = demo.map(function (d, i) {
+                var rank = i + 1;
+                var medal = rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank;
+                return '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">'
+                    + '<div style="width:28px;text-align:center;font-size:14px">' + medal + '</div>'
+                    + '<div style="width:32px;height:32px;border-radius:50%;background:' + d.color + ';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800">' + d.name.substring(0, 2) + '</div>'
+                    + '<div style="flex:1"><div style="font-size:12px;font-weight:700">' + d.name + '</div><div style="font-size:10px;color:var(--dim)">' + d.mult + 'x multiplier</div></div>'
+                    + '<div style="font-size:13px;font-weight:800;color:var(--green);font-family:Montserrat,sans-serif">+' + d.win + ' ⭐</div>'
+                    + '</div>';
+            }).join('');
+        }
     </script>
 </body>
 
