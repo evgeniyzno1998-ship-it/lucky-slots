@@ -282,7 +282,27 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
             "UPDATE users SET username=COALESCE(?,username),first_name=COALESCE(?,first_name),last_name=COALESCE(?,last_name),tg_language_code=COALESCE(?,tg_language_code),is_premium=?,last_bot_interaction=? WHERE user_id=?",
             (un, fn, ln, lang_code, 1 if is_prem else 0, _now(), int(uid))
         )
+    # Sync localized menu button
+    await set_user_menu_button(uid, lang_code or 'en')
     return False
+
+async def set_user_menu_button(uid, lang_code):
+    """Sets localized menu button for specific user."""
+    # Mapping for Menu Button labels
+    texts = {
+        'pl': 'Graj 🎰',
+        'ua': 'Грати 🎰',
+        'ru': 'Играть 🎰',
+        'en': 'Play 🎰'
+    }
+    label = texts.get(lang_code[:2] if lang_code else 'en', 'Play 🎰')
+    try:
+        await bot.set_chat_menu_button(
+            chat_id=int(uid),
+            menu_button=MenuButtonWebApp(text=label, web_app=WebAppInfo(url=WEBAPP_URL))
+        )
+    except Exception as e:
+        logging.debug(f"Menu button skip for {uid}: {e}")
 
 async def assign_welcome_bonuses(uid):
     """Assign default bonuses for a new user."""
@@ -1516,14 +1536,11 @@ async def admin_bonus_issue(req):
 async def setup_bot_menu():
     """Sets the permanent Menu Button next to the attachment clip."""
     try:
-        bi = await bot.get_me()
-        # The menu button doesn't need UID/Token here because the Mini-App 
-        # should use Telegram.WebApp.initData for auth.
-        url = WEBAPP_URL
+        # url = WEBAPP_URL
         await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="Play 🎰", web_app=WebAppInfo(url=url))
+            menu_button=MenuButtonWebApp(text="Play 🎰", web_app=WebAppInfo(url=WEBAPP_URL))
         )
-        logging.info("✅ Bot Menu Button set to 'Play 🎰'")
+        logging.info("✅ Bot Menu Button set globally")
     except Exception as e:
         logging.error(f"Failed to set menu button: {e}")
 
