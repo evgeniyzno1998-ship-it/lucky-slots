@@ -222,6 +222,17 @@ async def init_db():
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
 
+        # === NOTIFICATIONS ===
+        await c.execute('''CREATE TABLE IF NOT EXISTS notifications(
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT,
+            title TEXT,
+            message TEXT,
+            action_url TEXT DEFAULT '',
+            is_read INTEGER DEFAULT 0,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )''')
+
         # === ADMIN_USERS — dashboard operators ===
         await c.execute('''CREATE TABLE IF NOT EXISTS admin_users(
             id SERIAL PRIMARY KEY,
@@ -242,7 +253,15 @@ async def init_db():
             await c.executemany("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES($1,$2,$3,$4)", [
                 ("Welcome Pack 100%", "deposit_bonus", 100.0, "100% bonus on first deposit up to $100"),
                 ("VIP Weekly Cashback", "cashback", 50.0, "Weekly 10% cashback for VIP players"),
-                ("Reactivation Spins", "free_spins", 20.0, "20 free spins for inactive users")
+                ("Reactivation Spins", "free_spins", 20.0, "50 free spins for inactive users")
+            ])
+
+        cam_count = await c.fetchval("SELECT COUNT(*) FROM bonus_campaigns")
+        if not cam_count:
+            await c.executemany("INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment) VALUES($1,$2,$3,$4)", [
+                ("100% Deposit Match", "deposit_bonus", 1, "all"),
+                ("Weekly Cashback", "cashback", 2, "vip"),
+                ("50 Free Spins", "free_spins", 3, "new")
             ])
             
         # Create default owner if no admins exist
@@ -341,19 +360,19 @@ async def get_user(uid):
     return await db("SELECT * FROM users WHERE user_id=?", (int(uid),), one=True)
 
 async def add_coins(uid, delta):
-    await db("UPDATE users SET coins=MAX(0,coins+?) WHERE user_id=?", (delta, int(uid)))
+    await db("UPDATE users SET coins=GREATEST(0,coins+?) WHERE user_id=?", (delta, int(uid)))
     r = await db("SELECT coins FROM users WHERE user_id=?", (int(uid),), one=True)
     return r['coins'] if r else 0
 
 async def add_usdt(uid, delta_cents):
     """Add/subtract USDT balance in cents. delta_cents can be negative."""
-    await db("UPDATE users SET balance_usdt_cents=MAX(0,balance_usdt_cents+?) WHERE user_id=?", (int(delta_cents), int(uid)))
+    await db("UPDATE users SET balance_usdt_cents=GREATEST(0,balance_usdt_cents+?) WHERE user_id=?", (int(delta_cents), int(uid)))
     r = await db("SELECT balance_usdt_cents FROM users WHERE user_id=?", (int(uid),), one=True)
     return r['balance_usdt_cents'] if r else 0
 
 async def add_stars(uid, delta):
     """Add/subtract Stars balance."""
-    await db("UPDATE users SET balance_stars=MAX(0,balance_stars+?) WHERE user_id=?", (int(delta), int(uid)))
+    await db("UPDATE users SET balance_stars=GREATEST(0,balance_stars+?) WHERE user_id=?", (int(delta), int(uid)))
     r = await db("SELECT balance_stars FROM users WHERE user_id=?", (int(uid),), one=True)
     return r['balance_stars'] if r else 0
 
@@ -378,7 +397,7 @@ async def record_bet(uid, game, bet_type, bet_amt, win_amt, balance_after, multi
     )
     # Обновляем агрегаты в users
     await db(
-        "UPDATE users SET total_spins=total_spins+1,total_wagered=total_wagered+?,total_won=total_won+?,biggest_win=MAX(biggest_win,?) WHERE user_id=?",
+        "UPDATE users SET total_spins=total_spins+1,total_wagered=total_wagered+?,total_won=total_won+?,biggest_win=GREATEST(biggest_win,?) WHERE user_id=?",
         (bet_amt, win_amt, win_amt, int(uid))
     )
 
@@ -673,10 +692,11 @@ async def api_wheel(req):
     if req.method=="OPTIONS": return web.Response(headers=H)
     data=await req.json(); uid=get_uid(data)
     if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
-    u=await get_user(uid); today=time.strftime("%Y-%m-%d")
-    if u['last_wheel']==today: return web.json_response({"ok":False,"error":"done"},headers=H)
+    u=await get_user(uid)
+    last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
+    if time.time() - last_spin < 86400: return web.json_response({"ok":False,"error":"done"},headers=H)
     prize=spin_wheel()
-    await db("UPDATE users SET last_wheel=? WHERE user_id=?",(today,uid))
+    await db("UPDATE users SET last_wheel=? WHERE user_id=?",(str(int(time.time())),uid))
     if prize['type']=='coins':
         await add_coins(uid,prize['value'])
     else:
@@ -689,8 +709,9 @@ async def api_wheel(req):
 async def api_wheel_status(req):
     uid=get_uid(query=dict(req.rel_url.query))
     if not uid: return web.json_response({"ok":False},headers=H)
-    u=await get_user(uid); today=time.strftime("%Y-%m-%d")
-    return web.json_response({"ok":True,"available":u['last_wheel']!=today},headers=H)
+    u=await get_user(uid)
+    last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
+    return web.json_response({"ok":True,"available":(time.time() - last_spin >= 86400)},headers=H)
 
 async def api_profile(req):
     uid=get_uid(query=dict(req.rel_url.query))
@@ -767,6 +788,61 @@ async def api_webhook(req):
         except: pass
         return web.json_response({"ok":True})
     except Exception as e: logging.error(f"WH: {e}", exc_info=True); return web.json_response({"ok":False})
+
+async def api_promos(req):
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    uid = get_uid(query=dict(req.rel_url.query))
+    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    
+    # Fetch active campaigns with their template info
+    campaigns = await db("SELECT c.id, c.title, c.bonus_type, t.description, t.amount FROM bonus_campaigns c LEFT JOIN bonus_templates t ON c.template_id = t.id WHERE c.status = 'active'", fetch=True)
+    
+    promos = []
+    for c in campaigns:
+        p = dict(c)
+        if c['bonus_type'] == 'deposit_bonus':
+            p.update({
+                "category": "Deposit",
+                "ui_type": "featured",
+                "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ",
+                "tag": "EXCLUSIVE",
+                "timer": "Expires in 24h",
+                "wager": "x30",
+                "btnText": "Activate",
+                "action": "nav('wallet')"
+            })
+        elif c['bonus_type'] == 'free_spins':
+            p.update({
+                "category": "Free Spins",
+                "ui_type": "card",
+                "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ",
+                "btnText": "Claim Now",
+                "action": "claimPromo(" + str(c['id']) + ")"
+            })
+        elif c['bonus_type'] == 'cashback':
+            p.update({
+                "category": "Cashback",
+                "ui_type": "card",
+                "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNtFwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw",
+                "btnText": "Join Club",
+                "action": "nav('profile')"
+            })
+        promos.append(p)
+    
+    # VIP is usually permanent, so append it manually
+    promos.append({
+        "id": "vip_locked",
+        "title": "Diamond VIP Status",
+        "description": "Unlock exclusive tournaments and rewards.",
+        "bonus_type": "vip",
+        "category": "VIP",
+        "ui_type": "locked",
+        "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y",
+        "progress": "Level 4/10",
+        "progress_pct": 45
+    })
+    
+    return web.json_response({"ok": True, "promos": promos}, headers=H)
 
 async def api_bonuses(req):
     """GET /api/bonuses — get user's personal bonuses (active + history)"""
@@ -942,7 +1018,7 @@ async def api_top_winnings(req):
         f"SELECT b.user_id, b.game, b.win_amount, b.multiplier, u.username, u.first_name "
         f"FROM bet_history b LEFT JOIN users u ON b.user_id=u.user_id "
         f"WHERE b.win_amount > 0 AND b.created_at >= {since} "
-        f"ORDER BY b.win_amount DESC LIMIT 10",
+        f"ORDER BY b.win_amount DESC LIMIT 15",
         fetch=True
     )
     colors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6']
@@ -1088,11 +1164,31 @@ async def apply_crypto_bonus(uid, deposit_usd):
     )
     logging.info(f"🎁 Crypto bonus: uid={uid}, deposit=${deposit_usd:.2f}, bonus=${bonus_usd:.2f}, wager=${wager_req:.2f}")
 
+async def api_notifications(req):
+    """GET /api/notifications"""
+    uid = get_uid(query=req.rel_url.query)
+    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    rows = await db("SELECT id, title, message, action_url, is_read, created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
+    notifs = [dict(r) for r in (rows or [])]
+    return web.json_response({"ok": True, "notifications": notifs}, headers=H)
+
+async def api_notifications_read(req):
+    """POST /api/notifications/read"""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    nid = data.get("id")
+    if nid:
+        await db("UPDATE notifications SET is_read=1 WHERE id=$1 AND user_id=$2", (nid, uid))
+    else:
+        await db("UPDATE notifications SET is_read=1 WHERE user_id=$1", (uid,))
+    return web.json_response({"ok": True}, headers=H)
+
 async def start_api():
-    app=web.Application()
-    for path,handler in [("/api/balance",api_balance),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions)]:
+    app=web.Application(client_max_size=200*1024*1024)
+    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read)]:
         app.router.add_post(path,handler)
     # Admin API routes (JWT protected)
     # Admin API (GET)
