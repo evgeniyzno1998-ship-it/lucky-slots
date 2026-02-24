@@ -5845,7 +5845,7 @@
             el.innerHTML = results.map(function (g) {
                 var isFav = favorites.indexOf(g.id) > -1;
                 var iconStyle = g.bg ? 'background:' + g.bg : '';
-                if (g.icon) iconStyle += ';background-image:url("' + g.icon + '");background-size:cover';
+                if (g.icon) iconStyle += `;background-image:url('${g.icon}');background-size:cover`;
                 return `<div class="search-result-item" onclick="${g.screen ? "closeSearch();nav('" + g.screen + "')" : ""}">`
                     + `<div class="search-result-icon" style="${iconStyle}">${g.icon ? '' : g.emoji}</div>`
                     + `<div style="flex:1"><div class="search-result-name">${g.name}</div><div class="search-result-tag">${g.tag}${g.provider ? ' · ' + g.provider : ''}</div></div>`
