@@ -67,7 +67,8 @@
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
             overflow-x: hidden;
-            padding-bottom: calc(var(--nav-h) + 12px)
+            padding-bottom: calc(var(--nav-h) + 12px);
+            overscroll-behavior: none;
         }
 
         ::-webkit-scrollbar {
@@ -5526,10 +5527,11 @@
         /* === INIT === */
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
+            tg.ready();
             tg.expand();
             tg.enableClosingConfirmation();
             tg.setHeaderColor('#000000');
-            tg.ready();
+            tg.setBackgroundColor('#121212');
         }
         initLocale();
         initLangDisplay();
