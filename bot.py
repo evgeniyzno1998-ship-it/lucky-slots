@@ -3,7 +3,7 @@ import jwt as pyjwt
 import bcrypt
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, LabeledPrice
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, LabeledPrice, MenuButtonWebApp
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 
@@ -1513,9 +1513,27 @@ async def admin_bonus_issue(req):
             
     return web.json_response({"ok": True, "assigned_count": count, "notif_sent": notif_count}, headers=H)
 
+async def setup_bot_menu():
+    """Sets the permanent Menu Button next to the attachment clip."""
+    try:
+        bi = await bot.get_me()
+        # The menu button doesn't need UID/Token here because the Mini-App 
+        # should use Telegram.WebApp.initData for auth.
+        url = WEBAPP_URL
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(text="Play 🎰", web_app=WebAppInfo(url=url))
+        )
+        logging.info("✅ Bot Menu Button set to 'Play 🎰'")
+    except Exception as e:
+        logging.error(f"Failed to set menu button: {e}")
+
 async def main():
     init_db()
     await start_api()
+    
+    # Set the Menu Button on startup
+    await setup_bot_menu()
+    
     api_only = os.getenv("API_ONLY", "") == "1" or "--api-only" in sys.argv
     if api_only:
         logging.info("🖥️  Running in API-ONLY mode (no Telegram polling)")
