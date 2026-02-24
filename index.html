@@ -3632,8 +3632,28 @@
                     <span id="headerBalStarsVal" style="font-weight:800;font-size:13px">0</span>
                 </div>
             </div>
-            <div class="header-notif"><span class="material-symbols-outlined">notifications</span>
-                <div class="dot"></div>
+            <div class="header-notif" onclick="openNotifPopup()"><span
+                    class="material-symbols-outlined">notifications</span>
+                <div class="dot" id="notifDot" style="display:none"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications Popup -->
+    <div id="notifPopup" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:200">
+        <div id="notifPopupBg" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)"
+            onclick="closeNotifPopup()"></div>
+        <div id="notifPopupCard"
+            style="position:absolute;top:var(--header-h);right:12px;width:300px;max-height:400px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;box-shadow:0 16px 48px rgba(0,0,0,.6);transform:translateY(-8px) scale(.95);opacity:0;transition:all .2s cubic-bezier(.34,1.56,.64,1)">
+            <div
+                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:12px">
+                <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px">Notifications</div>
+                <button onclick="readAllNotifs()"
+                    style="font-size:11px;color:var(--red);background:rgba(227,30,36,.1);padding:4px 8px;border-radius:12px;font-weight:700">Mark
+                    all read</button>
+            </div>
+            <div id="notifList" style="display:flex;flex-direction:column;gap:12px">
+                <!-- Data goes here -->
             </div>
         </div>
     </div>
@@ -3735,56 +3755,10 @@
             style="position:relative;overflow:hidden;border-radius:var(--radius-xl);margin:0 16px 12px">
             <div class="hero-track" id="heroTrack"
                 style="display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);width:300%">
-                <!-- Slide 1: Ruby Jackpot -->
-                <div class="hero-banner" style="min-width:100%;margin:0;border-radius:0;padding-bottom:20px">
-                    <div class="hero-tag"><span
-                            class="material-symbols-outlined">local_fire_department</span><span>HOT</span></div>
-                    <h2 class="hero-title">RUBY<br><span>JACKPOT</span></h2>
-                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-                        <p class="hero-sub" style="margin:0">5,000 TON<br><span
-                                style="font-size:9px;text-transform:uppercase;letter-spacing:1px">PRIZE POOL</span></p>
-                        <button class="hero-btn" onclick="nav('game')"
-                            style="padding:10px 20px;font-size:11px;margin:0;border-radius:8px">PLAY NOW</button>
-                    </div>
-                </div>
-                <!-- Slide 2: Galactic Plinko -->
-                <div class="hero-banner"
-                    style="min-width:100%;margin:0;border-radius:0;background:linear-gradient(135deg,#1a0a0f 0%,#0a0a1a 50%,#1a0505 100%);padding-bottom:20px">
-                    <div class="hero-tag" style="background:rgba(228,33,39,.15);color:#e42127"><span
-                            class="material-symbols-outlined">rocket_launch</span><span>NEW</span></div>
-                    <h2 class="hero-title">GALACTIC<br><span>PLINKO</span></h2>
-                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-                        <p class="hero-sub" style="margin:0">Drop Stars, Win Big!</p>
-                        <button class="hero-btn" onclick="nav('plinko')"
-                            style="padding:10px 20px;font-size:11px;margin:0;border-radius:8px;background:linear-gradient(135deg,#e42127,#b91c1c)">DROP
-                            NOW</button>
-                    </div>
-                </div>
-                <!-- Slide 3: Crypto Bonus -->
-                <div class="hero-banner"
-                    style="min-width:100%;margin:0;border-radius:0;background:linear-gradient(135deg,#0a1a0f 0%,#0a0a1a 50%,#051a0a 100%);padding-bottom:20px">
-                    <div class="hero-tag" style="background:rgba(34,197,94,.15);color:#22c55e"><span
-                            class="material-symbols-outlined">payments</span><span>BONUS</span></div>
-                    <h2 class="hero-title" style="font-size:22px">+7%<br><span>CRYPTO BONUS</span></h2>
-                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
-                        <p class="hero-sub" style="margin:0">CryptoBot deposit · x3 wager</p>
-                        <button class="hero-btn" onclick="nav('wallet')"
-                            style="padding:10px 20px;font-size:11px;margin:0;border-radius:8px;background:linear-gradient(135deg,#22c55e,#16a34a)">DEPOSIT</button>
-                    </div>
-                </div>
             </div>
             <!-- Dots -->
-            <div
+            <div id="heroDots"
                 style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:5">
-                <div class="hero-dot active" onclick="goSlide(0)"
-                    style="width:8px;height:8px;border-radius:50%;background:var(--red);opacity:1;cursor:pointer;transition:all .3s">
-                </div>
-                <div class="hero-dot" onclick="goSlide(1)"
-                    style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s">
-                </div>
-                <div class="hero-dot" onclick="goSlide(2)"
-                    style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s">
-                </div>
             </div>
         </div>
 
@@ -3811,18 +3785,6 @@
                 <div class="live-drops-title">LIVE DROPS</div>
             </div>
             <div class="live-drops-scroll" id="liveDropsScroll"></div>
-        </div>
-
-        <div class="vip-strip" id="vipStrip">
-            <div class="vip-strip-info">
-                <div class="vip-strip-top">
-                    <div class="vip-strip-name"><span id="vipIcon">🥉</span> <span id="vipName">Bronze</span></div>
-                    <div class="vip-strip-pct" id="vipPct"></div>
-                </div>
-                <div class="vip-bar">
-                    <div class="vip-bar-fill" id="vipBar" style="width:0%"></div>
-                </div>
-            </div>
         </div>
 
         <!-- TOP WINNINGS LEADERBOARD -->
@@ -3971,72 +3933,47 @@
         <div style="padding:16px 16px 8px">
             <h2 style="font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900" id="bonusTitle">Bonuses</h2>
         </div>
-        <div class="pill-row" id="bonusPills"></div>
 
-        <div class="bonus-featured">
-            <div
-                style="position:absolute;inset:0;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuAV67NDOkqHDYuJOwD9Je6tBpmvW3RSI4HF0XkpQdgV_iaaVZYQdnLiQU89PymnRn5IxYBRn0BekcKrZ7NHIYjIugI9wO6OBWtjh95WkV_gWTsuQYmVQBUUNzx_4PBG6K0GmTJ0X4UIHtuR-300bhj-NrT24I4jFK3PVoXbEiArjjbMMNC2Z1gegewHMhPAo6Jv8jx7YoLzIBfS7qP7BZW6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover;opacity:.4">
-            </div>
-            <div
-                style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)">
-            </div>
-            <div class="bonus-featured-content">
-                <div class="bf-tags">
-                    <div class="bf-tag" id="bfTag">EXCLUSIVE</div>
-                    <div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span
-                            id="bfTimer">Expires in 24h</span></div>
-                </div>
-                <div class="bf-title" id="bfTitle">100% Deposit Match</div>
-                <div class="bf-desc" id="bfDesc">Get up to 1 BTC on your first deposit. Double your playing money
-                    instantly.</div>
-                <div class="bf-bottom">
-                    <div>
-                        <div class="bf-wager-label" id="bfWagerL">WAGER</div>
-                        <div class="bf-wager-val">x30</div>
-                    </div>
-                    <button class="bf-activate" onclick="nav('wallet')"><span id="bfActivate">Activate</span><span
-                            class="material-symbols-outlined">arrow_forward</span></button>
-                </div>
-            </div>
+        <!-- Bonus Tabs -->
+        <div
+            style="display:flex;margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+            <div class="tw-tab active" id="tabBonusAvailable" onclick="switchBonusTab('available')"
+                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border)">
+                Available</div>
+            <div class="tw-tab" id="tabBonusMy" onclick="switchBonusTab('my')"
+                style="flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);cursor:pointer;transition:all .15s">
+                My Bonuses</div>
         </div>
 
-        <div class="bonus-card" id="bonusCard1">
-            <div class="bonus-card-img"
-                style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuCGPEWfXzJNFUB_EXtz51yNIgZjSz3ob9Sd6-OvSGCEov_UGnbjxRwxMthy3MaZd1y3sSKFQxwzinGVFSSUX6MX9LyQcbKOBjS5_h1pMDeP_qC8HgHFFIgVYK41U0IvGrywNBdnYg_6F9KYsRPzmehtL1exPYlIBqyl0I_OSqEwsbDA2rCwRGfu5u_cfHLtbQ7-BRMS0J7mw0JvhGp8lvR9IZ4OtqySVweNv6Egl5S2nvhVfyUlcT7IWmtAyp3Nmk9-kJ1ey0wszCI9yv8Z5gVji0xsQ') center/cover">
-            </div>
-            <div class="bonus-card-body">
-                <div class="bonus-card-title" id="bc1Title">50 Free Spins</div>
-                <div class="bonus-card-desc" id="bc1Desc">Valid for Ruby Slots. No deposit required for new players.
-                </div>
-                <button class="bonus-card-btn" id="bc1Btn">Claim Now</button>
-            </div>
+        <div id="bonusAvailableSection">
+            <div class="pill-row" id="bonusPills"></div>
+            <div id="promoList" style="padding-bottom:100px;"></div>
         </div>
 
-        <div class="bonus-card" id="bonusCard2">
-            <div class="bonus-card-img"
-                style="background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuDaEolN36F7I9DO5xzDpZJT44gKy0UqcrJkYSpxyvjhw60tyAD7Gy1Bh8-CCjn0wUqGk1dsU3gdG_wlCSodYaiglPb9p8QgUqGUehCxqDwVJx93ersDjvbFa3lgxVwIN2gd29K0ZxblLEP1EkgNZjgTh-fyy3QTKfOvEz8y3gytYBMe2jAJiNryHDsJPpexYxJRkJes_Fb1dmeQ8JqtUOssDqpIUiDNtFwWXyXoN3at4S1zDC3DhMbXR_TZYjG8VkEpKZFQ2t4ucw') center/cover">
-            </div>
-            <div class="bonus-card-body">
-                <div class="bonus-card-title" id="bc2Title">Weekly Cashback</div>
-                <div class="bonus-card-desc" id="bc2Desc">Get 10% back on all losses every Monday. VIP tiers get up to
-                    20%.</div>
-                <button class="bonus-card-btn" id="bc2Btn">Join Club</button>
-            </div>
-        </div>
-
-        <div class="bonus-locked" style="position:relative">
+        <div id="bonusMySection" style="display:none;padding:0 16px 100px;">
+            <!-- Active balance card -->
             <div
-                style="width:33%;min-height:100px;background:url('https://lh3.googleusercontent.com/aida-public/AB6AXuB75EFJ8WIHV-d3TCC0alchWDHTnjGNxWnlJ-CXg6bUaiLzn5to-juivqE1pzeF5TptEeGKwMiKm5NxX5ceNXqUF8x0mTtKAGfHxwEB7-N6TDbNSBxzgVPMLvcPL-WfAIfpJ7o2OL92a__p0S8W_kps90q9TiQ29-7BWlUNCnuZz77-TLZDCiNaUpGKDAs2Tg67FuFyipOljK3xuYXjy0Ak2HIjQODAxVnZH8zc-AO4k8AV6WfqGNcUV0aOMUDJQ77HTwTifyNSP3Y') center/cover;filter:grayscale(1);flex-shrink:0">
-            </div>
-            <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
-            <div class="bonus-locked-body">
-                <div class="bl-title" id="blTitle">Diamond VIP Status</div>
-                <div class="bl-desc" id="blDesc">Unlock exclusive tournaments.</div>
-                <div class="bl-progress">
-                    <div class="bl-progress-fill" style="width:45%"></div>
+                style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)">
+                <div
+                    style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
+                    <span class="material-symbols-outlined" style="color:var(--red)">redeem</span>
                 </div>
-                <div class="bl-progress-label">Level 4/10</div>
+                <div>
+                    <div
+                        style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">
+                        Bonus Balance</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff"
+                        id="bonusBalAmount">$0.00</div>
+                </div>
             </div>
+
+            <div id="activeBonusList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px"></div>
+
+            <!-- History section -->
+            <h3
+                style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:#fff;margin-bottom:12px">
+                History</h3>
+            <div id="bonusHistoryList" style="display:flex;flex-direction:column;gap:8px"></div>
         </div>
     </div>
 
@@ -4050,7 +3987,7 @@
         <!-- Dual balance cards -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px">
             <div onclick="switchActiveWallet('usdt')"
-                style="padding:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s"
+                style="padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative;overflow:hidden"
                 id="cashierUsdtCard">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
                     <span style="font-size:16px">💵</span>
@@ -4062,7 +3999,7 @@
                 <div style="font-size:10px;color:var(--dim);margin-top:2px" id="wBalUnit">USDT</div>
             </div>
             <div onclick="switchActiveWallet('stars')"
-                style="padding:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .15s"
+                style="padding:16px;background:rgba(255,215,0,0.03);backdrop-filter:blur(10px);border:1px solid rgba(255,215,0,0.15);border-radius:var(--radius-xl);cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative;overflow:hidden"
                 id="cashierStarsCard">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
                     <span style="font-size:16px">⭐</span>
@@ -4112,7 +4049,7 @@
                 <div style="display:flex;flex-direction:column;gap:8px">
                     <!-- CryptoBot -->
                     <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;border:1.5px solid var(--red);transition:all .15s"
+                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(34,197,94,0.3);border-radius:var(--radius-xl);transition:all .2s"
                         id="pmCrypto" onclick="selectPayMethod('crypto')">
                         <div
                             style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -4132,7 +4069,7 @@
                     </button>
                     <!-- Telegram Stars -->
                     <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s"
+                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);transition:all .2s"
                         id="pmStars" onclick="selectPayMethod('stars')">
                         <div
                             style="width:40px;height:40px;border-radius:10px;background:rgba(255,215,0,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -4147,7 +4084,7 @@
                     </button>
                     <!-- Bank Card -->
                     <button class="card"
-                        style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:all .15s;opacity:.5"
+                        style="display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);backdrop-filter:blur(10px);cursor:pointer;border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius-xl);transition:all .2s;opacity:.5"
                         id="pmCard" onclick="selectPayMethod('card')">
                         <div
                             style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -4392,16 +4329,10 @@
             </div>
         </div>
 
-        <div class="prof-level">
-            <div class="prof-level-top">
-                <div class="prof-level-name" id="profLevelName">Bronze</div>
-                <div class="prof-level-val" id="profLevelVal">Level 1</div>
-            </div>
-            <div class="vip-bar">
-                <div class="vip-bar-fill" id="profVipBar" style="width:0%"></div>
-            </div>
-            <div class="prof-level-xp"><span id="profXpLabel">Current XP</span><span id="profXpVal">0 / 1000</span>
-            </div>
+        <!-- VIP Tier Cards -->
+        <div id="vipCardsContainer"
+            style="margin:20px 0;padding:0 16px;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none">
+            <!-- Rendered by JS -->
         </div>
 
         <div class="prof-stats">
@@ -4419,36 +4350,7 @@
             </div>
         </div>
 
-        <div
-            style="margin:20px 16px 12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-                <h3 style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:800;color:#fff">My Bonuses
-                </h3>
-                <span style="font-size:10px;color:var(--dim2);text-transform:uppercase;font-weight:800">Available</span>
-            </div>
-
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                <div
-                    style="width:40px;height:40px;border-radius:10px;background:rgba(227,30,36,.1);display:flex;align-items:center;justify-content:center">
-                    <span class="material-symbols-outlined" style="color:var(--red)">redeem</span>
-                </div>
-                <div>
-                    <div
-                        style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:2px">
-                        Bonus Balance</div>
-                    <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;color:#fff"
-                        id="bonusBalAmount">$0.00</div>
-                </div>
-            </div>
-
-            <div id="activeBonusList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
-
-            <button onclick="nav('bonuses')"
-                style="width:100%;padding:12px;background:none;border:1px solid rgba(227,30,36,.3);border-radius:var(--radius);color:var(--red);font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s">VIEW
-                ALL OFFERS</button>
-        </div>
-
-        <div class="prof-referral-btn" onclick="nav('referral')">
+        <div <div class="prof-referral-btn" onclick="nav('referral')">
             <div class="prof-ref-left">
                 <div class="prof-ref-icon"><span class="material-symbols-outlined">diversity_3</span></div>
                 <div class="prof-ref-text">
@@ -5135,6 +5037,8 @@
         </div>
     </div>
 
+    <script src="games.js"></script>
+
     <script>
         /* ================================================================
            RubyBet Mini App — Full JS (preserving all original game logic)
@@ -5150,10 +5054,10 @@
 
         /* === LOCALIZATION === */
         const LC = {
-            pl: { home: "Home", games: "Gry", bonuses: "Bonusy", wallet: "Portfel", profile: "Profil", spin: "ZAKRĘĆ", deposit: "DEPOZYT", searchPlaceholder: "Szukaj gier...", categories: "KATEGORIE", viewAll: "ZOBACZ WSZYSTKO", trending: "NA TOPIE", playNow: "GRAJ TERAZ", hot: "GORĄCE", heroTitle: "RUBY JACKPOT", heroSub: "5,000 żetonów w puli nagród", wheel: "Koło Dnia", wheelSub: "Kręć za darmowe monety!", wheelSpin: "KRĘĆ!", collect: "ODBIERZ", bonusRound: "🎰 RUNDA BONUSOWA 🎰", spinL: "SPIN", winL: "WYGRANA", buyBonus: "Kup Bonus", slotName: "Ruby Slots", slotTag: "GORĄCE", crashName: "Crash", diceName: "Kości", mineName: "Miny", coinName: "Coin Flip", rouletteName: "Ruletka", blackjackName: "Blackjack", comingTag: "WKRÓTCE", freeSpins: "Darmowe spiny", noMoney: "Brak środków!", noMoneyDesc: "Doładuj konto żeby kontynuować grę", depositBtn: "Doładuj", cancelBtn: "Anuluj", lose: "Brak wygranej", win: "WYGRANA", totalBalance: "ŁĄCZNY BALANS", withdraw: "WYPŁATA", transHistory: "Historia transakcji", selectPkg: "WYBIERZ PAKIET", bonusTitle: "Bonusy", exclusive: "EKSKLUZYWNE", bfTitle: "100% Bonus od Depozytu", bfDesc: "Podwój swoją pierwszą wpłatę. Natychmiastowe dodanie.", bfTimer: "Wygasa za 24h", wager: "STAWKA", activate: "Aktywuj", freeSpinsTitle: "50 Darmowych Spinów", freeSpinsDesc: "Do Ruby Slots. Bez depozytu dla nowych graczy.", claimNow: "Odbierz", cashbackTitle: "Tygodniowy Cashback", cashbackDesc: "Odbierz 10% zwrotu co poniedziałek. VIP do 20%.", joinClub: "Dołącz", vipTitle: "Diamentowy VIP", vipDesc: "Odblokuj ekskluzywne turnieje.", inviteEarn: "Zaproś i Zarabiaj", inviteDesc: "Podziel się linkiem i zdobądź 10 żetonów za każdego znajomego.", tapCopy: "NACIŚNIJ ABY SKOPIOWAĆ", copy: "Kopiuj", totalRefs: "Zaproszonych", earnedCoins: "Zarobione żetony", howItWorks: "Jak to działa", step1T: "Podziel się ze znajomymi", step1D: "Wyślij link przez Telegram lub social media.", step2T: "Znajomi zaczynają grać", step2D: "Gdy się zarejestrują, obaj dostajecie bonus.", step3T: "Zbieraj Nagrody", step3D: "Otrzymaj 10 żetonów za każdego zaproszonego.", shareNow: "Udostępnij Link", wins: "WYGRANE", losses: "PRZEGRANE", total: "ŁĄCZNIE", referralProgram: "Program Polecający", inviteFriends: "Zaproś znajomych i zarabiaj", settings: "Ustawienia", security: "Bezpieczeństwo", support: "Pomoc", signOut: "Wyloguj", currentXp: "Aktualne XP", level: "Poziom", slots: "Sloty", live: "Na żywo", crash: "Crash", table: "Stołowe", jackpotLabel: "WIELKA JACKPOT", grandJackpot: "GRAND JACKPOT", coins: "żetonów" },
-            ua: { home: "Домiв", games: "Ігри", bonuses: "Бонуси", wallet: "Гаманець", profile: "Профіль", spin: "ГРАТИ", deposit: "ДЕПОЗИТ", searchPlaceholder: "Пошук ігор...", categories: "КАТЕГОРІЇ", viewAll: "БАЧИТИ ВСЕ", trending: "В ТРЕНДІ", playNow: "ГРАТИ ЗАРАЗ", hot: "ГАРЯЧЕ", heroTitle: "RUBY JACKPOT", heroSub: "5,000 жетонів у призовому пулі", wheel: "Колесо Дня", wheelSub: "Крути за безкоштовні монети!", wheelSpin: "КРУТИ!", collect: "ЗАБРАТИ", bonusRound: "🎰 БОНУС РАУНД 🎰", spinL: "СПІН", winL: "ВИГРАШ", buyBonus: "Купити Бонус", slotName: "Ruby Slots", slotTag: "ГАРЯЧЕ", crashName: "Crash", diceName: "Кості", mineName: "Міни", coinName: "Монетка", rouletteName: "Рулетка", blackjackName: "Блекджек", comingTag: "НЕЗАБАРОМ", freeSpins: "Безкоштовні спіни", noMoney: "Недостатньо коштів!", noMoneyDesc: "Поповніть рахунок", depositBtn: "Поповнити", cancelBtn: "Скасувати", lose: "Без виграшу", win: "ВИГРАШ", totalBalance: "ЗАГАЛЬНИЙ БАЛАНС", withdraw: "ВИВЕСТИ", transHistory: "Історія транзакцій", selectPkg: "ОБЕРІТЬ ПАКЕТ", bonusTitle: "Бонуси", exclusive: "ЕКСКЛЮЗИВНО", bfTitle: "100% Бонус на Депозит", bfDesc: "Подвійте свій перший депозит.", bfTimer: "Закінчується через 24г", wager: "СТАВКА", activate: "Активувати", freeSpinsTitle: "50 Безкоштовних Спінів", freeSpinsDesc: "Для Ruby Slots. Без депозиту для нових гравців.", claimNow: "Отримати", cashbackTitle: "Щотижневий Кешбек", cashbackDesc: "Отримайте 10% повернення щопонеділка.", joinClub: "Приєднатися", vipTitle: "Діамантовий VIP", vipDesc: "Розблокуйте ексклюзивні турніри.", inviteEarn: "Запрошуй та Заробляй", inviteDesc: "Поділись посиланням та отримай 10 жетонів за кожного друга.", tapCopy: "НАТИСНІТЬ ЩОБИ СКОПІЮВАТИ", copy: "Скопіювати", totalRefs: "Запрошено", earnedCoins: "Зароблено жетонів", howItWorks: "Як це працює", step1T: "Поділись з друзями", step1D: "Відправ посилання через Telegram.", step2T: "Друзі починають грати", step2D: "Коли вони зареєструються, обидва отримають бонус.", step3T: "Збирай Нагороди", step3D: "Отримай 10 жетонів за кожного.", shareNow: "Поділитися", wins: "ВИГРАШІ", losses: "ПРОГРАШІ", total: "ВСЬОГО", referralProgram: "Реферальна Програма", inviteFriends: "Запрошуй друзів та заробляй", settings: "Налаштування", security: "Безпека", support: "Підтримка", signOut: "Вийти", currentXp: "Поточний XP", level: "Рівень", slots: "Слоти", live: "Лайв", crash: "Crash", table: "Столи", jackpotLabel: "ВЕЛИКИЙ ДЖЕКПОТ", grandJackpot: "GRAND JACKPOT", coins: "жетонів" },
-            ru: { home: "Главная", games: "Игры", bonuses: "Бонусы", wallet: "Кошелёк", profile: "Профиль", spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", searchPlaceholder: "Поиск игр...", categories: "КАТЕГОРИИ", viewAll: "ВСЕ", trending: "В ТРЕНДЕ", playNow: "ИГРАТЬ", hot: "ГОРЯЧЕЕ", heroTitle: "RUBY JACKPOT", heroSub: "5,000 жетонов в призовом пуле", wheel: "Колесо Дня", wheelSub: "Крути за бесплатные монеты!", wheelSpin: "КРУТИ!", collect: "ЗАБРАТЬ", bonusRound: "🎰 БОНУС РАУНД 🎰", spinL: "СПИН", winL: "ВЫИГРЫШ", buyBonus: "Купить Бонус", slotName: "Ruby Slots", slotTag: "ГОРЯЧЕЕ", crashName: "Crash", diceName: "Кости", mineName: "Мины", coinName: "Монетка", rouletteName: "Рулетка", blackjackName: "Блекджек", comingTag: "СКОРО", freeSpins: "Бесплатные спины", noMoney: "Недостаточно средств!", noMoneyDesc: "Пополните баланс чтобы продолжить", depositBtn: "Пополнить", cancelBtn: "Отмена", lose: "Нет выигрыша", win: "ВЫИГРЫШ", totalBalance: "ОБЩИЙ БАЛАНС", withdraw: "ВЫВЕСТИ", transHistory: "История транзакций", selectPkg: "ВЫБЕРИТЕ ПАКЕТ", bonusTitle: "Бонусы", exclusive: "ЭКСКЛЮЗИВНО", bfTitle: "100% Бонус на Депозит", bfDesc: "Удвойте свой первый депозит. Мгновенное начисление.", bfTimer: "Истекает через 24ч", wager: "СТАВКА", activate: "Активировать", freeSpinsTitle: "50 Бесплатных Спинов", freeSpinsDesc: "Для Ruby Slots. Без депозита для новых игроков.", claimNow: "Получить", cashbackTitle: "Еженедельный Кэшбек", cashbackDesc: "Получите 10% возврат каждый понедельник. VIP до 20%.", joinClub: "Вступить", vipTitle: "Бриллиантовый VIP", vipDesc: "Разблокируйте эксклюзивные турниры.", inviteEarn: "Приглашай и Зарабатывай", inviteDesc: "Поделись ссылкой и получи 10 жетонов за каждого друга.", tapCopy: "НАЖМИТЕ ЧТОБЫ СКОПИРОВАТЬ", copy: "Скопировать", totalRefs: "Приглашено", earnedCoins: "Заработано жетонов", howItWorks: "Как это работает", step1T: "Поделись с друзьями", step1D: "Отправь ссылку через Telegram или соцсети.", step2T: "Друзья начинают играть", step2D: "Когда они зарегистрируются, оба получат бонус.", step3T: "Собирай Награды", step3D: "Получи 10 жетонов за каждого приглашённого.", shareNow: "Поделиться", wins: "ПОБЕДЫ", losses: "ПОРАЖЕНИЯ", total: "ВСЕГО", referralProgram: "Реферальная Программа", inviteFriends: "Приглашай друзей и зарабатывай", settings: "Настройки", security: "Безопасность", support: "Поддержка", signOut: "Выйти", currentXp: "Текущий XP", level: "Уровень", slots: "Слоты", live: "Лайв", crash: "Crash", table: "Столы", jackpotLabel: "ВЕЛИКИЙ ДЖЕКПОТ", grandJackpot: "GRAND JACKPOT", coins: "жетонов" },
-            en: { home: "Home", games: "Games", bonuses: "Bonuses", wallet: "Wallet", profile: "Profile", spin: "SPIN", deposit: "DEPOSIT", searchPlaceholder: "Search games...", categories: "CATEGORIES", viewAll: "VIEW ALL", trending: "TRENDING NOW", playNow: "PLAY NOW", hot: "HOT", heroTitle: "RUBY JACKPOT", heroSub: "5,000 coins prize pool", wheel: "Daily Wheel", wheelSub: "Spin for free coins!", wheelSpin: "SPIN!", collect: "COLLECT", bonusRound: "🎰 BONUS ROUND 🎰", spinL: "SPIN", winL: "WIN", buyBonus: "Buy Bonus", slotName: "Ruby Slots", slotTag: "POPULAR", crashName: "Crash", diceName: "Dice", mineName: "Mines", coinName: "Coin Flip", rouletteName: "Roulette", blackjackName: "Blackjack", comingTag: "SOON", freeSpins: "Free spins", noMoney: "Not enough coins!", noMoneyDesc: "Top up your balance to keep playing", depositBtn: "Deposit", cancelBtn: "Cancel", lose: "No win", win: "WIN", totalBalance: "TOTAL BALANCE", withdraw: "WITHDRAW", transHistory: "View Transaction History", selectPkg: "SELECT PACKAGE", bonusTitle: "Bonuses", exclusive: "EXCLUSIVE", bfTitle: "100% Deposit Match", bfDesc: "Get up to 1 BTC on your first deposit. Double your playing money instantly.", bfTimer: "Expires in 24h", wager: "WAGER", activate: "Activate", freeSpinsTitle: "50 Free Spins", freeSpinsDesc: "Valid for Ruby Slots. No deposit required for new players.", claimNow: "Claim Now", cashbackTitle: "Weekly Cashback", cashbackDesc: "Get 10% back on all losses every Monday. VIP tiers get up to 20%.", joinClub: "Join Club", vipTitle: "Diamond VIP Status", vipDesc: "Unlock exclusive tournaments.", inviteEarn: "Invite & Earn", inviteDesc: "Share your link and earn <b>10 coins</b> for every friend who plays.", tapCopy: "TAP COPY TO SHARE", copy: "Copy", totalRefs: "Total Referrals", earnedCoins: "Earned Coins", howItWorks: "How it Works", step1T: "Share with friends", step1D: "Send your unique link via Telegram or social media.", step2T: "Friends start playing", step2D: "When they register, you both get bonus coins.", step3T: "Earn Rewards", step3D: "Get 10 coins for every friend who joins.", shareNow: "Share Link Now", wins: "WINS", losses: "LOSSES", total: "TOTAL", referralProgram: "Referral Program", inviteFriends: "Invite friends & earn rewards", settings: "Settings", security: "Security", support: "Support", signOut: "Sign Out", currentXp: "Current XP", level: "Level", slots: "Slots", live: "Live", crash: "Crash", table: "Table", jackpotLabel: "GRAND JACKPOT", grandJackpot: "GRAND JACKPOT", coins: "coins" }
+            pl: { home: "Home", games: "Gry", bonuses: "Bonusy", wallet: "Portfel", profile: "Profil", spin: "ZAKRĘĆ", deposit: "DEPOZYT", searchPlaceholder: "Szukaj gier...", categories: "KATEGORIE", viewAll: "ZOBACZ WSZYSTKO", trending: "NA TOPIE", playNow: "GRAJ TERAZ", hot: "GORĄCE", heroTitle: "RUBY JACKPOT", heroSub: "5,000 żetonów w puli nagród", wheel: "Koło Dnia", wheelSub: "Kręć za darmowe monety!", wheelSpin: "KRĘĆ!", collect: "ODBIERZ", bonusRound: "🎰 RUNDA BONUSOWA 🎰", spinL: "SPIN", winL: "WYGRANA", buyBonus: "Kup Bonus", slotName: "Ruby Slots", slotTag: "GORĄCE", crashName: "Crash", diceName: "Kości", mineName: "Miny", coinName: "Coin Flip", rouletteName: "Ruletka", blackjackName: "Blackjack", comingTag: "WKRÓTCE", freeSpins: "Darmowe spiny", noMoney: "Brak środków!", noMoneyDesc: "Doładuj konto żeby kontynuować grę", depositBtn: "Doładuj", cancelBtn: "Anuluj", lose: "Brak wygranej", win: "WYGRANA", totalBalance: "ŁĄCZNY BALANS", withdraw: "WYPŁATA", transHistory: "Historia transakcji", selectPkg: "WYBIERZ PAKIET", bonusTitle: "Bonusy", exclusive: "EKSKLUZYWNE", bfTitle: "100% Bonus od Depozytu", bfDesc: "Podwój swoją pierwszą wpłatę. Natychmiastowe dodanie.", bfTimer: "Wygasa za 24h", wager: "STAWKA", activate: "Aktywuj", freeSpinsTitle: "50 Darmowych Spinów", freeSpinsDesc: "Do Ruby Slots. Bez depozytu dla nowych graczy.", claimNow: "Odbierz", cashbackTitle: "Tygodniowy Cashback", cashbackDesc: "Odbierz 10% zwrotu co poniedziałek. VIP do 20%.", joinClub: "Dołącz", vipTitle: "Diamentowy VIP", vipDesc: "Odblokuj ekskluzywne turnieje.", inviteEarn: "Zaproś i Zarabiaj", inviteDesc: "Podziel się linkiem i zdobądź 10 żetonów za każdego znajomego.", tapCopy: "NACIŚNIJ ABY SKOPIOWAĆ", copy: "Kopiuj", totalRefs: "Zaproszonych", earnedCoins: "Zarobione żetony", howItWorks: "Jak to działa", step1T: "Podziel się ze znajomymi", step1D: "Wyślij link przez Telegram lub social media.", step2T: "Znajomi zaczynają grać", step2D: "Gdy się zarejestrują, obaj dostajecie bonus.", step3T: "Zbieraj Nagrody", step3D: "Otrzymaj 10 żetonów za każdego zaproszonego.", shareNow: "Udostępnij Link", wins: "WYGRANE", losses: "PRZEGRANE", total: "ŁĄCZNIE", referralProgram: "Program Polecający", inviteFriends: "Zaproś znajomych i zarabiaj", settings: "Ustawienia", security: "Bezpieczeństwo", support: "Pomoc", signOut: "Wyloguj", currentXp: "Aktualne XP", level: "Poziom", slots: "Sloty", live: "Na żywo", crash: "Crash", table: "Stołowe", jackpotLabel: "WIELKA JACKPOT", grandJackpot: "GRAND JACKPOT", coins: "żetonów", betAmountLabel: "KWOTA ZAKŁADU", wMethodLabel: "METODA PŁATNOŚCI", pmCardTitle: "Karta bankowa", favs: "Ulubione", noFavs: "Brak ulubionych", searchPrompt: "Wpisz nazwę gry", noResults: "Nie znaleziono", filterAll: "Wszystkie", filterDep: "Depozyt", filterFS: "Darmowe Spiny", filterVIP: "VIP", filterCB: "Cashback", creatingInv: "Tworzenie faktury...", paySuccess: "Płatność przeszła! +", payFail: "Błąd płatności", creatingCrypto: "Tworzenie faktury CryptoBot...", creatingPay: "Tworzenie płatności...", cardSoon: "Płatność kartą wkrótce dostępna", langLabel: "Język" },
+            ua: { home: "Домiв", games: "Ігри", bonuses: "Бонуси", wallet: "Гаманець", profile: "Профіль", spin: "ГРАТИ", deposit: "ДЕПОЗИТ", searchPlaceholder: "Пошук ігор...", categories: "КАТЕГОРІЇ", viewAll: "БАЧИТИ ВСЕ", trending: "В ТРЕНДІ", playNow: "ГРАТИ ЗАРАЗ", hot: "ГАРЯЧЕ", heroTitle: "RUBY JACKPOT", heroSub: "5,000 жетонів у призовому пулі", wheel: "Колесо Дня", wheelSub: "Крути за безкоштовні монети!", wheelSpin: "КРУТИ!", collect: "ЗАБРАТИ", bonusRound: "🎰 БОНУС РАУНД 🎰", spinL: "СПІН", winL: "ВИГРАШ", buyBonus: "Купити Бонус", slotName: "Ruby Slots", slotTag: "ГАРЯЧЕ", crashName: "Crash", diceName: "Кості", mineName: "Міни", coinName: "Монетка", rouletteName: "Рулетка", blackjackName: "Блекджек", comingTag: "НЕЗАБАРОМ", freeSpins: "Безкоштовні спіни", noMoney: "Недостатньо коштів!", noMoneyDesc: "Поповніть рахунок", depositBtn: "Поповнити", cancelBtn: "Скасувати", lose: "Без виграшу", win: "ВИГРАШ", totalBalance: "ЗАГАЛЬНИЙ БАЛАНС", withdraw: "ВИВЕСТИ", transHistory: "Історія транзакцій", selectPkg: "ОБЕРІТЬ ПАКЕТ", bonusTitle: "Бонуси", exclusive: "ЕКСКЛЮЗИВНО", bfTitle: "100% Бонус на Депозит", bfDesc: "Подвійте свій перший депозит.", bfTimer: "Закінчується через 24г", wager: "СТАВКА", activate: "Активувати", freeSpinsTitle: "50 Безкоштовних Спінів", freeSpinsDesc: "Для Ruby Slots. Без депозиту для нових гравців.", claimNow: "Отримати", cashbackTitle: "Щотижневий Кешбек", cashbackDesc: "Отримайте 10% повернення щопонеділка.", joinClub: "Приєднатися", vipTitle: "Діамантовий VIP", vipDesc: "Розблокуйте ексклюзивні турніри.", inviteEarn: "Запрошуй та Заробляй", inviteDesc: "Поділись посиланням та отримай 10 жетонів за кожного друга.", tapCopy: "НАТИСНІТЬ ЩОБИ СКОПІЮВАТИ", copy: "Скопіювати", totalRefs: "Запрошено", earnedCoins: "Зароблено жетонів", howItWorks: "Як це працює", step1T: "Поділись з друзями", step1D: "Відправ посилання через Telegram.", step2T: "Друзі починають грати", step2D: "Коли вони зареєструються, обидва отримають бонус.", step3T: "Збирай Нагороди", step3D: "Отримай 10 жетонів за кожного.", shareNow: "Поділитися", wins: "ВИГРАШІ", losses: "ПРОГРАШІ", total: "ВСЬОГО", referralProgram: "Реферальна Програма", inviteFriends: "Запрошуй друзів та заробляй", settings: "Налаштування", security: "Безпека", support: "Підтримка", signOut: "Вийти", currentXp: "Поточний XP", level: "Рівень", slots: "Слоти", live: "Лайв", crash: "Crash", table: "Столи", jackpotLabel: "ВЕЛИКИЙ ДЖЕКПОТ", grandJackpot: "GRAND JACKPOT", coins: "жетонів", betAmountLabel: "СУМА СТАВКИ", wMethodLabel: "МЕТОД ОПЛАТИ", pmCardTitle: "Банківська картка", favs: "Обрані", noFavs: "Немає обраних ігор", searchPrompt: "Введіть назву гри", noResults: "Нічого не знайдено", filterAll: "Все", filterDep: "Депозит", filterFS: "Фріспіни", filterVIP: "VIP", filterCB: "Кешбек", creatingInv: "Створюємо рахунок...", paySuccess: "Оплата пройшла! +", payFail: "Помилка оплати", creatingCrypto: "Створюємо рахунок CryptoBot...", creatingPay: "Створюємо платіж...", cardSoon: "Оплата карткою скоро буде доступна", langLabel: "Мова" },
+            ru: { home: "Главная", games: "Игры", bonuses: "Бонусы", wallet: "Кошелёк", profile: "Профиль", spin: "ИГРАТЬ", deposit: "ДЕПОЗИТ", searchPlaceholder: "Поиск игр...", categories: "КАТЕГОРИИ", viewAll: "ВСЕ", trending: "В ТРЕНДЕ", playNow: "ИГРАТЬ", hot: "ГОРЯЧЕЕ", heroTitle: "RUBY JACKPOT", heroSub: "5,000 жетонов в призовом пуле", wheel: "Колесо Дня", wheelSub: "Крути за бесплатные монеты!", wheelSpin: "КРУТИ!", collect: "ЗАБРАТЬ", bonusRound: "🎰 БОНУС РАУНД 🎰", spinL: "СПИН", winL: "ВЫИГРЫШ", buyBonus: "Купить Бонус", slotName: "Ruby Slots", slotTag: "ГОРЯЧЕЕ", crashName: "Crash", diceName: "Кости", mineName: "Мины", coinName: "Монетка", rouletteName: "Рулетка", blackjackName: "Блекджек", comingTag: "СКОРО", freeSpins: "Бесплатные спины", noMoney: "Недостаточно средств!", noMoneyDesc: "Пополните баланс чтобы продолжить", depositBtn: "Пополнить", cancelBtn: "Отмена", lose: "Нет выигрыша", win: "ВЫИГРЫШ", totalBalance: "ОБЩИЙ БАЛАНС", withdraw: "ВЫВЕСТИ", transHistory: "История транзакций", selectPkg: "ВЫБЕРИТЕ ПАКЕТ", bonusTitle: "Бонусы", exclusive: "ЭКСКЛЮЗИВНО", bfTitle: "100% Бонус на Депозит", bfDesc: "Удвойте свой первый депозит. Мгновенное начисление.", bfTimer: "Истекает через 24ч", wager: "СТАВКА", activate: "Активировать", freeSpinsTitle: "50 Бесплатных Спинов", freeSpinsDesc: "Для Ruby Slots. Без депозита для новых игроков.", claimNow: "Получить", cashbackTitle: "Еженедельный Кэшбек", cashbackDesc: "Получите 10% возврат каждый понедельник. VIP до 20%.", joinClub: "Вступить", vipTitle: "Бриллиантовый VIP", vipDesc: "Разблокируйте эксклюзивные турниры.", inviteEarn: "Приглашай и Зарабатывай", inviteDesc: "Поделись ссылкой и получи 10 жетонов за каждого друга.", tapCopy: "НАЖМИТЕ ЧТОБЫ СКОПИРОВАТЬ", copy: "Скопировать", totalRefs: "Приглашено", earnedCoins: "Заработано жетонов", howItWorks: "Как это работает", step1T: "Поделись с друзьями", step1D: "Отправь ссылку через Telegram или соцсети.", step2T: "Друзья начинают играть", step2D: "Когда они зарегистрируются, оба получат бонус.", step3T: "Собирай Награды", step3D: "Получи 10 жетонов за каждого приглашённого.", shareNow: "Поделиться", wins: "ПОБЕДЫ", losses: "ПОРАЖЕНИЯ", total: "ВСЕГО", referralProgram: "Реферальная Программа", inviteFriends: "Приглашай друзей и зарабатывай", settings: "Настройки", security: "Безопасность", support: "Поддержка", signOut: "Выйти", currentXp: "Текущий XP", level: "Уровень", slots: "Слоты", live: "Лайв", crash: "Crash", table: "Столы", jackpotLabel: "ВЕЛИКИЙ ДЖЕКПОТ", grandJackpot: "GRAND JACKPOT", coins: "жетонов", betAmountLabel: "СУММА СТАВКИ", wMethodLabel: "МЕТОД ОПЛАТЫ", pmCardTitle: "Банковская карта", favs: "Избранные", noFavs: "Нет избранных игр", searchPrompt: "Введите название игры", noResults: "Ничего не найдено", filterAll: "Все", filterDep: "Депозит", filterFS: "Фриспины", filterVIP: "VIP", filterCB: "Кэшбек", creatingInv: "Создаём счёт...", paySuccess: "Оплата прошла! +", payFail: "Ошибка оплаты", creatingCrypto: "Создаём счёт CryptoBot...", creatingPay: "Создаём платёж...", cardSoon: "Оплата картой скоро будет доступна", langLabel: "Язык" },
+            en: { home: "Home", games: "Games", bonuses: "Bonuses", wallet: "Wallet", profile: "Profile", spin: "SPIN", deposit: "DEPOSIT", searchPlaceholder: "Search games...", categories: "CATEGORIES", viewAll: "VIEW ALL", trending: "TRENDING NOW", playNow: "PLAY NOW", hot: "HOT", heroTitle: "RUBY JACKPOT", heroSub: "5,000 coins prize pool", wheel: "Daily Wheel", wheelSub: "Spin for free coins!", wheelSpin: "SPIN!", collect: "COLLECT", bonusRound: "🎰 BONUS ROUND 🎰", spinL: "SPIN", winL: "WIN", buyBonus: "Buy Bonus", slotName: "Ruby Slots", slotTag: "POPULAR", crashName: "Crash", diceName: "Dice", mineName: "Mines", coinName: "Coin Flip", rouletteName: "Roulette", blackjackName: "Blackjack", comingTag: "SOON", freeSpins: "Free spins", noMoney: "Not enough coins!", noMoneyDesc: "Top up your balance to keep playing", depositBtn: "Deposit", cancelBtn: "Cancel", lose: "No win", win: "WIN", totalBalance: "TOTAL BALANCE", withdraw: "WITHDRAW", transHistory: "View Transaction History", selectPkg: "SELECT PACKAGE", bonusTitle: "Bonuses", exclusive: "EXCLUSIVE", bfTitle: "100% Deposit Match", bfDesc: "Get up to 1 BTC on your first deposit. Double your playing money instantly.", bfTimer: "Expires in 24h", wager: "WAGER", activate: "Activate", freeSpinsTitle: "50 Free Spins", freeSpinsDesc: "Valid for Ruby Slots. No deposit required for new players.", claimNow: "Claim Now", cashbackTitle: "Weekly Cashback", cashbackDesc: "Get 10% back on all losses every Monday. VIP tiers get up to 20%.", joinClub: "Join Club", vipTitle: "Diamond VIP Status", vipDesc: "Unlock exclusive tournaments.", inviteEarn: "Invite & Earn", inviteDesc: "Share your link and earn <b>10 coins</b> for every friend who plays.", tapCopy: "TAP COPY TO SHARE", copy: "Copy", totalRefs: "Total Referrals", earnedCoins: "Earned Coins", howItWorks: "How it Works", step1T: "Share with friends", step1D: "Send your unique link via Telegram or social media.", step2T: "Friends start playing", step2D: "When they register, you both get bonus coins.", step3T: "Earn Rewards", step3D: "Get 10 coins for every friend who joins.", shareNow: "Share Link Now", wins: "WINS", losses: "LOSSES", total: "TOTAL", referralProgram: "Referral Program", inviteFriends: "Invite friends & earn rewards", settings: "Settings", security: "Security", support: "Support", signOut: "Sign Out", currentXp: "Current XP", level: "Level", slots: "Slots", live: "Live", crash: "Crash", table: "Table", jackpotLabel: "GRAND JACKPOT", grandJackpot: "GRAND JACKPOT", coins: "coins", betAmountLabel: "BET AMOUNT", wMethodLabel: "PAYMENT METHOD", pmCardTitle: "Bank Card", favs: "Favorites", noFavs: "No favorites yet", searchPrompt: "Type to search games", noResults: "No results found", filterAll: "All", filterDep: "Deposit", filterFS: "Free Spins", filterVIP: "VIP", filterCB: "Cashback", creatingInv: "Creating invoice...", paySuccess: "Payment successful! +", payFail: "Payment failed", creatingCrypto: "Creating CryptoBot invoice...", creatingPay: "Creating payment...", cardSoon: "Card payment coming soon", langLabel: "Language" }
         };
         const T = LC[LANG] || LC.en;
         const BSYM = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎'];
@@ -5206,6 +5110,73 @@
         }
 
         /* === DATA === */
+
+        function getBanners() {
+            return [
+                {
+                    tagIcon: 'local_fire_department', tagText: T.hot || 'HOT', tagBg: '', tagColor: '',
+                    titleHtml: `RUBY<br><span>JACKPOT</span>`,
+                    subHtml: T.heroSub || `5,000 TON<br><span style="font-size:9px;text-transform:uppercase;letter-spacing:1px">PRIZE POOL</span>`,
+                    btnText: T.playNow || 'PLAY NOW', btnAction: "nav('game')", bgStyle: '', btnStyle: ''
+                },
+                {
+                    tagIcon: 'rocket_launch', tagText: 'NEW', tagBg: 'rgba(228,33,39,.15)', tagColor: '#e42127',
+                    titleHtml: `GALACTIC<br><span>PLINKO</span>`,
+                    subHtml: `Drop Stars, Win Big!`,
+                    btnText: 'DROP NOW', btnAction: "nav('plinko')",
+                    bgStyle: 'linear-gradient(135deg,#1a0a0f 0%,#0a0a1a 50%,#1a0505 100%)',
+                    btnStyle: 'background:linear-gradient(135deg,#e42127,#b91c1c)'
+                },
+                {
+                    tagIcon: 'payments', tagText: 'BONUS', tagBg: 'rgba(34,197,94,.15)', tagColor: '#22c55e',
+                    titleHtml: `<span style="font-size:22px">+7%</span><br><span>CRYPTO BONUS</span>`,
+                    subHtml: `CryptoBot deposit · x3 wager`,
+                    btnText: T.deposit || 'DEPOSIT', btnAction: "nav('wallet')",
+                    bgStyle: 'linear-gradient(135deg,#0a1a0f 0%,#0a0a1a 50%,#051a0a 100%)',
+                    btnStyle: 'background:linear-gradient(135deg,#22c55e,#16a34a)'
+                }
+            ];
+        }
+
+        function renderBanners() {
+            var track = document.getElementById('heroTrack');
+            var dotsContainer = document.getElementById('heroDots');
+            if (!track || !dotsContainer) return;
+            var banners = getBanners();
+            var trackHtml = '';
+            var dotsHtml = '';
+            banners.forEach(function (b, i) {
+                var bgCss = b.bgStyle ? 'background:' + b.bgStyle + ';' : '';
+                var tagStyle = '';
+                if (b.tagBg || b.tagColor) {
+                    tagStyle = 'style="';
+                    if (b.tagBg) tagStyle += 'background:' + b.tagBg + ';';
+                    if (b.tagColor) tagStyle += 'color:' + b.tagColor + ';';
+                    tagStyle += '"';
+                }
+                var btnCss = b.btnStyle ? b.btnStyle : '';
+                trackHtml += '<div class="hero-banner" style="min-width:100%;margin:0;border-radius:0;padding-bottom:20px;' + bgCss + '">' +
+                    '<div class="hero-tag" ' + tagStyle + '>' +
+                    '<span class="material-symbols-outlined">' + b.tagIcon + '</span><span>' + b.tagText + '</span>' +
+                    '</div>' +
+                    '<h2 class="hero-title">' + b.titleHtml + '</h2>' +
+                    '<div style="display:flex;align-items:center;gap:12px;margin-top:4px">' +
+                    '<p class="hero-sub" style="margin:0">' + b.subHtml + '</p>' +
+                    '<button class="hero-btn" onclick="' + b.btnAction + '" style="padding:10px 20px;font-size:11px;margin:0;border-radius:8px;' + btnCss + '">' + b.btnText + '</button>' +
+                    '</div>' +
+                    '</div>';
+
+                var act = i === 0 ? 'active' : '';
+                var dotStyle = i === 0
+                    ? 'width:8px;height:8px;border-radius:50%;background:var(--red);opacity:1;cursor:pointer;transition:all .3s'
+                    : 'width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s';
+                dotsHtml += '<div class="hero-dot ' + act + '" onclick="goSlide(' + i + ')" style="' + dotStyle + '"></div>';
+            });
+            track.style.width = (banners.length * 100) + '%';
+            track.innerHTML = trackHtml;
+            dotsContainer.innerHTML = dotsHtml;
+        }
+
         /* Balance functions are defined later in the file with full dual-balance support */
         function getActiveBalance() {
             if (activeWallet === 'stars') return balanceStars;
@@ -5506,12 +5477,12 @@
             var el = document.getElementById('liveDropsScroll');
             if (!el) return;
             var html = '';
-            for (var i = 0; i < 8; i++) {
+            for (var i = 0; i < 18; i++) {
                 var name = LIVE_DROP_NAMES[Math.floor(Math.random() * LIVE_DROP_NAMES.length)];
                 var game = LIVE_DROP_GAMES[Math.floor(Math.random() * LIVE_DROP_GAMES.length)];
                 var icon = LIVE_DROP_ICONS[game] || 'casino';
                 var isBig = Math.random() > 0.7;
-                var amt = isBig ? (Math.floor(Math.random() * 50) / 10 + 0.5).toFixed(1) : (Math.floor(Math.random() * 900) + 10);
+                var amt = isBig ? (Math.floor(Math.random() * 250) / 10 + 0.5).toFixed(1) : (Math.floor(Math.random() * 2500) + 10);
                 var unit = isBig ? 'TON' : 'Stars';
                 var mult = isBig ? 'x' + (Math.floor(Math.random() * 450) / 10 + 1.1).toFixed(1) : 'x' + (Math.floor(Math.random() * 40) / 10 + 1.1).toFixed(1);
                 var avatarColor = LIVE_DROP_COLORS[Math.floor(Math.random() * LIVE_DROP_COLORS.length)];
@@ -5528,10 +5499,10 @@
             el.innerHTML = html;
         }
 
-        /* Auto-refresh Live Drops every 15 seconds */
+        /* Auto-refresh Live Drops every 3 seconds */
         setInterval(function () {
             if (currentScreen === 'lobby') buildLiveDrops();
-        }, 15000);
+        }, 3000);
 
         /* === PROFILE === */
         async function loadProfile() {
@@ -5539,13 +5510,62 @@
                 var r = await fetch(API + '/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
                 document.getElementById('profName').textContent = d.first_name || d.username || 'Player';
                 document.getElementById('profId').textContent = 'ID: ' + (UID ? UID.toString().slice(-8) : '...');
+
+                var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? window.Telegram.WebApp.initDataUnsafe.user : null;
+                if (u && u.photo_url) {
+                    document.getElementById('profAvatarInner').innerHTML = '<img src="' + u.photo_url + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover">';
+                } else {
+                    document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + (d.first_name ? d.first_name.charAt(0).toUpperCase() : 'U') + '</div>';
+                }
+
                 document.getElementById('profVipBadge').textContent = d.vip.name;
-                document.getElementById('profLevelName').textContent = d.vip.icon + ' ' + d.vip.name;
-                var pct = 0;
-                if (d.vip.next_at) { pct = Math.min(100, Math.round(d.vip.wagered / d.vip.next_at * 100)) } else { pct = 100 }
-                document.getElementById('profVipBar').style.width = pct + '%';
-                document.getElementById('profLevelVal').textContent = T.level + ' ' + (['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'].indexOf(d.vip.name) + 1);
-                document.getElementById('profXpVal').textContent = d.stats.wagered + ' / ' + (d.vip.next_at || 'MAX');
+
+                var tiers = [
+                    { name: 'Bronze', icon: '🥉', cb: '0%', perks: 'Basic access' },
+                    { name: 'Silver', icon: '🥈', cb: '3%', perks: 'Weekly tournaments' },
+                    { name: 'Gold', icon: '🥇', cb: '5%', perks: 'Priority support' },
+                    { name: 'Platinum', icon: '💎', cb: '8%', perks: 'Personal manager' },
+                    { name: 'Diamond', icon: '👑', cb: '10%', perks: 'Exclusive events' }
+                ];
+                var currentIndex = tiers.findIndex(function (t) { return t.name === d.vip.name });
+                if (currentIndex === -1) currentIndex = 0;
+
+                var html = '';
+                tiers.forEach(function (t, i) {
+                    var isCurrent = i === currentIndex;
+                    var isLocked = i > currentIndex;
+                    var isPassed = i < currentIndex;
+
+                    var bg = isCurrent ? 'linear-gradient(135deg, rgba(227,30,36,.15), rgba(227,30,36,.05))' : 'rgba(255,255,255,.02)';
+                    var border = isCurrent ? '1px solid var(--red)' : '1px solid rgba(255,255,255,.05)';
+                    var opacity = isLocked ? '0.5' : '1';
+
+                    var progressHtml = '';
+                    if (isCurrent && d.vip.next_at) {
+                        var pct = Math.min(100, Math.round(d.vip.wagered / d.vip.next_at * 100));
+                        progressHtml = '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-bottom:4px"><span>Wagered</span><span>$' + d.vip.wagered + ' / $' + d.vip.next_at + '</span></div><div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--red);border-radius:2px"></div></div></div>';
+                    } else if (isPassed) {
+                        progressHtml = '<div style="margin-top:12px;font-size:10px;color:var(--green);font-weight:700">• Completed</div>';
+                    }
+
+                    html += '<div style="flex:0 0 240px;scroll-snap-align:center;padding:16px;background:' + bg + ';border:' + border + ';border-radius:var(--radius-xl);opacity:' + opacity + ';position:relative;backdrop-filter:blur(8px)">';
+                    if (isLocked) html += '<div style="position:absolute;top:12px;right:12px;font-size:16px;opacity:0.5">🔒</div>';
+
+                    html += '<div style="font-size:28px;margin-bottom:8px">' + t.icon + '</div>';
+                    html += '<div style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">' + t.name + '</div>';
+                    html += '<div style="font-size:11px;color:var(--dim)">' + t.cb + ' Cashback · ' + t.perks + '</div>';
+                    html += progressHtml;
+                    html += '</div>';
+                });
+
+                var cont = document.getElementById('vipCardsContainer');
+                if (cont) {
+                    cont.innerHTML = html;
+                    setTimeout(function () {
+                        var cardWidth = 240 + 12;
+                        cont.scrollTo({ left: currentIndex * cardWidth - 16, behavior: 'smooth' });
+                    }, 100);
+                }
                 /* Stats: wins = bets with positive profit, losses = bets with zero/negative */
                 var wins = 0, losses = 0;
                 if (d.recent_bets) { d.recent_bets.forEach(function (b) { if (b.profit > 0) wins++; else losses++ }) }
@@ -5592,6 +5612,19 @@
         function initLocale() {
             function setTxt(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; }
             function setHtm(id, htm) { var el = document.getElementById(id); if (el) el.innerHTML = htm; }
+
+            // Re-bind dynamic game configs with new translations
+            if (typeof getGamesConfig !== 'undefined') {
+                ALL_GAMES = getGamesConfig(T);
+                if (document.getElementById('gameGrid')) {
+                    var sGames = document.getElementById('scrGames');
+                    if (sGames && sGames.style.display === 'block') {
+                        // Keep current filter if possible, but safe full re-render is fine
+                        filterGamesScreen(gamesCat || 'all');
+                    }
+                }
+            }
+
             /* Nav */
             setTxt('navLobby', T.home);
             setTxt('navGame', T.games);
@@ -5602,10 +5635,7 @@
             setTxt('headerUnit', T.coins);
             /* Lobby */
             setTxt('searchPlaceholder', T.searchPlaceholder);
-            setTxt('heroTag', T.hot);
-            setHtm('heroTitle', 'RUBY <span class="accent">JACKPOT</span>');
-            setTxt('heroSub', T.heroSub);
-            setTxt('heroPlay', T.playNow);
+            renderBanners();
             setTxt('wheelTitle', T.wheel);
             setTxt('wheelSub', T.wheelSub);
             setTxt('secCat', T.categories);
@@ -5615,7 +5645,7 @@
             setTxt('bbLabel', T.buyBonus);
             setTxt('jackpotLabel', T.grandJackpot);
             setTxt('betUnit', T.coins);
-            setTxt('betAmountLabel', LANG === 'pl' ? 'KWOTA ZAKŁADU' : LANG === 'ru' ? 'СУММА СТАВКИ' : LANG === 'ua' ? 'СУМА СТАВКИ' : 'BET AMOUNT');
+            setTxt('betAmountLabel', T.betAmountLabel);
             /* Bonuses */
             setTxt('bonusTitle', T.bonusTitle);
             setTxt('bfTag', T.exclusive);
@@ -5637,9 +5667,9 @@
             setTxt('wDeposit', T.deposit);
             setTxt('wWithdraw', T.withdraw);
             setTxt('wHistory', T.transHistory);
-            setTxt('wMethodLabel', LANG === 'ru' ? 'МЕТОД ОПЛАТЫ' : LANG === 'ua' ? 'МЕТОД ОПЛАТИ' : LANG === 'pl' ? 'METODA PŁATNOŚCI' : 'PAYMENT METHOD');
+            setTxt('wMethodLabel', T.wMethodLabel);
             setTxt('wPkgLabel', T.selectPkg);
-            setTxt('pmCardTitle', LANG === 'ru' ? 'Банковская карта' : LANG === 'ua' ? 'Банківська картка' : LANG === 'pl' ? 'Karta bankowa' : 'Bank Card');
+            setTxt('pmCardTitle', T.pmCardTitle);
             /* Referral */
             setHtm('refHeroTitle', T.inviteEarn.replace('&', '&amp;').replace(/(Earn|Zarabiaj|Зарабатывай|Заробляй)/, '<span>$1</span>'));
             setHtm('refHeroDesc', T.inviteDesc);
@@ -5672,7 +5702,7 @@
                 { icon: 'stream', label: T.live, screen: null },
                 { icon: 'trending_up', label: T.crash, screen: 'crash' },
                 { icon: 'playing_cards', label: T.table, screen: null },
-                { icon: 'favorite', label: '❤️ ' + (LANG === 'ru' ? 'Избранные' : LANG === 'ua' ? 'Обрані' : LANG === 'pl' ? 'Ulubione' : 'Favorites'), screen: null, filterFav: true }
+                { icon: 'favorite', label: '❤️ ' + T.favs, screen: null, filterFav: true }
             ];
             document.getElementById('catRow').innerHTML = cats.map(function (c, index) {
                 var isActive = index === 0 ? ' active' : '';
@@ -5702,7 +5732,7 @@
                 else { t.style.display = 'none'; }
             });
             if (!anyVisible) {
-                showToast('❤️', LANG === 'ru' ? 'Нет избранных игр' : LANG === 'ua' ? 'Немає обраних ігор' : LANG === 'pl' ? 'Brak ulubionych' : 'No favorites yet', 'OK', '', function () { closeToast(); /* restore all */ tiles.forEach(function (t) { t.style.display = '' }) });
+                showToast('❤️', T.noFavs, 'OK', '', function () { closeToast(); /* restore all */ tiles.forEach(function (t) { t.style.display = '' }) });
             }
         }
 
@@ -5756,9 +5786,9 @@
             var demoGames = ['Ruby Slots', 'Crash', 'Lucky Bonanza', 'Crash', 'Mines', 'Ruby Slots', 'Plinko', 'Crash'];
             var demoColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
             var demoData = [];
-            for (var i = 0; i < 5; i++) {
-                var mult = (Math.random() * 50 + 1.5).toFixed(1);
-                var amt = (Math.random() * 500 + 10).toFixed(2);
+            for (var i = 0; i < 15; i++) {
+                var mult = (Math.random() * 150 + 1.5).toFixed(1);
+                var amt = (Math.random() * 2500 + 10).toFixed(2);
                 demoData.push({
                     username: demoNames[i % demoNames.length],
                     game: demoGames[i % demoGames.length],
@@ -5790,20 +5820,8 @@
         }
 
         /* === SEARCH === */
-        var ALL_GAMES = [
-            { id: 'ruby_slots', name: T.slotName || 'Ruby Slots', emoji: '🎰', tag: T.slotTag || 'POPULAR', screen: 'game', bg: '#ff416c', provider: 'rubybet' },
-            { id: 'crash', name: T.crashName || 'Crash', emoji: '📈', tag: T.hot || 'HOT', screen: 'crash', bg: '#38ef7d', provider: 'rubybet' },
-            { id: 'dice', name: T.diceName || 'Ruby Dice', emoji: '🎲', tag: T.comingTag || 'SOON', screen: null, bg: '#4A00E0', provider: 'rubybet' },
-            { id: 'mines', name: T.mineName || 'Mines', emoji: '💣', tag: T.comingTag || 'SOON', screen: null, bg: '#1565C0', provider: 'rubybet' },
-            { id: 'plinko', name: 'Galactic Plinko', emoji: '🚀', tag: 'NEW', screen: 'plinko', bg: '#e42127', provider: 'rubybet', category: 'plinko' },
-            { id: 'roulette', name: 'Roulette', emoji: '🎡', tag: 'SOON', screen: null, bg: '#ef4444', provider: 'evolution' },
-            { id: 'blackjack', name: 'Blackjack', emoji: '🃏', tag: 'SOON', screen: null, bg: '#10b981', provider: 'evolution' },
-            { id: 'sweet_bonanza', name: 'Sweet Bonanza', emoji: '🍬', tag: 'SOON', screen: null, bg: '#ec4899', provider: 'pragmatic' },
-            { id: 'gates_olympus', name: 'Gates of Olympus', emoji: '⚡', tag: 'SOON', screen: null, bg: '#6366f1', provider: 'pragmatic' },
-            { id: 'big_bass', name: 'Big Bass Bonanza', emoji: '🐟', tag: 'SOON', screen: null, bg: '#14b8a6', provider: 'pragmatic' },
-            { id: 'starlight', name: 'Starlight Princess', emoji: '👸', tag: 'SOON', screen: null, bg: '#8b5cf6', provider: 'pgsoft' },
-            { id: 'wanted', name: 'Wanted Dead or Wild', emoji: '🤠', tag: 'SOON', screen: null, bg: '#b92b27', provider: 'hacksaw' }
-        ];
+        var ALL_GAMES = [];
+
         function openSearch() {
             document.getElementById('searchOverlay').classList.add('open');
             setTimeout(function () { document.getElementById('searchInput').focus(); }, 100);
@@ -5815,23 +5833,25 @@
         function onSearchInput(val) {
             var el = document.getElementById('searchResults');
             if (!val || val.length < 1) {
-                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search</span>' + (LANG === 'ru' ? 'Введите название игры' : LANG === 'ua' ? 'Введіть назву гри' : LANG === 'pl' ? 'Wpisz nazwę gry' : 'Type to search games') + '</div>';
+                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search</span>' + T.searchPrompt + '</div>';
                 return;
             }
             var q = val.toLowerCase();
             var results = ALL_GAMES.filter(function (g) { return g.name.toLowerCase().indexOf(q) > -1 });
             if (results.length === 0) {
-                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search_off</span>' + (LANG === 'ru' ? 'Ничего не найдено' : LANG === 'ua' ? 'Нічого не знайдено' : LANG === 'pl' ? 'Nie znaleziono' : 'No results found') + '</div>';
+                el.innerHTML = '<div class="search-empty"><span class="material-symbols-outlined" style="font-size:48px;display:block;margin-bottom:8px">search_off</span>' + T.noResults + '</div>';
                 return;
             }
             el.innerHTML = results.map(function (g) {
                 var isFav = favorites.indexOf(g.id) > -1;
-                return '<div class="search-result-item" onclick="' + (g.screen ? 'closeSearch();nav(\'' + g.screen + '\')' : '') + '">'
-                    + '<div class="search-result-icon" style="background:' + g.bg + '">' + g.emoji + '</div>'
-                    + '<div style="flex:1"><div class="search-result-name">' + g.name + '</div><div class="search-result-tag">' + g.tag + (g.provider ? ' · ' + g.provider : '') + '</div></div>'
-                    + '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)" style="position:static"><span class="material-symbols-outlined">favorite</span></button>'
+                var iconStyle = g.bg ? 'background:' + g.bg : '';
+                if (g.icon) iconStyle += ';background-image:url(\\'' + g.icon + '\\');background-size:cover';
+                return '<div class="search-result-item" onclick="' + (g.screen ? 'closeSearch();nav(\\'' + g.screen + '\\')' : '') + '">'
+                + '<div class="search-result-icon" style="' + iconStyle + '">' + (g.icon ? '' : g.emoji) + '</div>'
+                + '<div style="flex:1"><div class="search-result-name">' + g.name + '</div><div class="search-result-tag">' + g.tag + (g.provider ? ' · ' + g.provider : '') + '</div></div>'
+                + '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\\'' + g.id + '\\',this)" style="position:static"><span class="material-symbols-outlined">favorite</span></button>'
                     + '</div>';
-            }).join('');
+        }).join('');
         }
 
         /* === NOTIFICATION BADGE === */
@@ -5851,38 +5871,117 @@
                 var isSoon = g.tag === 'SOON' || g.tag === 'СКОРО' || g.tag === 'НЕЗАБАРОМ' || g.tag === 'WKRÓTCE';
                 var isFav = favorites.indexOf(g.id) > -1;
                 var badgeHtml = g.tag ? '<div class="absolute top-2 left-2 text-[9px] font-[800] uppercase px-[8px] py-[2px] rounded-[4px] tracking-[0.5px] z-10 ' + (isSoon ? 'bg-surface2 text-dim' : 'bg-red text-white') + '">' + g.tag + '</div>' : '';
-                var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\'' + g.id + '\',this)"><span class="material-symbols-outlined">favorite</span></button>';
-                html += '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" data-cat="' + (g.category || 'slots') + '" onclick="' + (g.screen ? 'nav(\'' + g.screen + '\')' : '') + '">'
-                    + badgeHtml + favHtml
-                    + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
-                    + '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div>'
-                    + '<div class="relative z-10">' + g.emoji + '</div>'
-                    + '</div>'
-                    + '<div class="p-[10px]">'
-                    + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
-                    + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
-                    + '</div></div>';
-            });
-            target.innerHTML = html;
+                var favHtml = '<button class="fav-btn' + (isFav ? ' liked' : '') + '" onclick="event.stopPropagation();toggleFavorite(\\'' + g.id + '\\',this)"><span class="material-symbols-outlined">favorite</span></button>';
+                var visualHtml = g.icon
+                    ? '<div class="absolute inset-0 border-b border-border" style="background:url(\\'' + g.icon + '\\') center/cover"></div>'
+                    : '<div class="absolute inset-0 opacity-40" style="background:' + (g.bg || '#333') + '"></div><div class="relative z-10">' + g.emoji + '</div>';
+
+                html += '<div class="relative rounded-lg overflow-hidden bg-surface border border-border cursor-pointer transition-transform active:scale-95" data-game-id="' + g.id + '" data-provider="' + (g.provider || '') + '" data-cat="' + (g.category || 'slots') + '" onclick="' + (g.screen ? 'nav(\\'' + g.screen + '\\')' : '') + '">'
+                + badgeHtml + favHtml
+                + '<div class="w-full aspect-[4/3] flex items-center justify-center text-[42px] relative">'
+                + visualHtml
+                + '</div>'
+                + '<div class="p-[10px]">'
+                + '<div class="font-[Montserrat] text-[12px] font-[800] uppercase tracking-[0.3px] whitespace-nowrap overflow-hidden text-ellipsis">' + g.name + '</div>'
+                + '<div class="text-[10px] text-dim font-[500] mt-[2px]">' + (g.provider ? g.provider.charAt(0).toUpperCase() + g.provider.slice(1) : '') + ' · ' + g.tag + '</div>'
+                + '</div></div>';
+        });
+        target.innerHTML = html;
+        }
+
+        var allPromos = [];
+        var activePromoCat = 'all';
+
+        async function fetchPromos() {
+            try {
+                var res = await fetch(API_BASE + '/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
+                var data = await res.json();
+                if (data.ok && data.promos) {
+                    allPromos = data.promos;
+                    renderPromos(activePromoCat);
+                }
+            } catch (e) { console.error('Error fetching promos:', e) }
         }
 
         function initBonuses() {
-            loadBonuses();
-            buildBonusPills();
+            fetchPromos();
         }
 
         function buildBonusPills() {
-            var pillLabels = ['All', 'Deposit', 'Free Spins', 'VIP', 'Cashback'];
-            if (LANG === 'ru') pillLabels = ['Все', 'Депозит', 'Фриспины', 'VIP', 'Кэшбек'];
-            if (LANG === 'ua') pillLabels = ['Все', 'Депозит', 'Фріспіни', 'VIP', 'Кешбек'];
-            if (LANG === 'pl') pillLabels = ['Wszystkie', 'Depozyt', 'Darmowe Spiny', 'VIP', 'Cashback'];
+            var pillLabels = [T.filterAll, T.filterDep, T.filterFS, T.filterVIP, T.filterCB];
+            var cats = ['all', 'Deposit', 'Free Spins', 'VIP', 'Cashback'];
             var bp = document.getElementById('bonusPills');
             if (bp) {
                 bp.className = 'flex gap-[8px] px-[16px] mb-[16px] overflow-x-auto no-scrollbar';
                 bp.innerHTML = pillLabels.map(function (p, i) {
-                    return '<div class="pill' + (i === 0 ? ' active' : '') + '" onclick="this.parentNode.querySelectorAll(\'.pill\').forEach(function(e){e.classList.remove(\'active\')});this.classList.add(\'active\')">' + p + '</div>';
+                    return '<div class="pill' + (cats[i] === activePromoCat ? ' active' : '') + '" onclick="renderPromos(\'' + cats[i] + '\')">' + p + '</div>';
                 }).join('');
             }
+        }
+
+        function renderPromos(cat) {
+            activePromoCat = cat;
+            buildBonusPills();
+
+            var container = document.getElementById('promoList');
+            if (!container) return;
+
+            var filtered = cat === 'all' ? allPromos : allPromos.filter(p => p.category === cat);
+            var contentHtml = '';
+
+            if (filtered.length === 0) {
+                contentHtml = '<div style="text-align:center;padding:40px 20px;color:var(--dim)">' + (T.noResults || 'No promos found') + '</div>';
+            }
+
+            filtered.forEach(function (p) {
+                if (p.ui_type === 'featured') {
+                    contentHtml += `
+                    <div class="bonus-featured">
+                        <div style="position:absolute;inset:0;background:url('${p.image}') center/cover;opacity:.4"></div>
+                        <div style="position:absolute;inset:0;background:linear-gradient(to top,#000 0%,rgba(0,0,0,.8) 40%,transparent 100%)"></div>
+                        <div class="bonus-featured-content">
+                            <div class="bf-tags">
+                                <div class="bf-tag">${p.tag || 'PROMO'}</div>
+                                ${p.timer ? '<div class="bf-timer"><span class="material-symbols-outlined">schedule</span><span>' + p.timer + '</span></div>' : ''}
+                            </div>
+                            <div class="bf-title">${p.title}</div>
+                            <div class="bf-desc">${p.description}</div>
+                            <div class="bf-bottom">
+                                <div>
+                                    <div class="bf-wager-label">${T.wager || 'WAGER'}</div>
+                                    <div class="bf-wager-val">${p.wager || 'x1'}</div>
+                                </div>
+                                <button class="bf-activate" onclick="${p.action}"><span>${p.btnText}</span><span class="material-symbols-outlined">arrow_forward</span></button>
+                            </div>
+                        </div>
+                    </div>`;
+                } else if (p.ui_type === 'card') {
+                    contentHtml += `
+                    <div class="bonus-card">
+                        <div class="bonus-card-img" style="background:url('${p.image}') center/cover"></div>
+                        <div class="bonus-card-body">
+                            <div class="bonus-card-title">${p.title}</div>
+                            <div class="bonus-card-desc">${p.description}</div>
+                            <button class="bonus-card-btn" onclick="${p.action}">${p.btnText}</button>
+                        </div>
+                    </div>`;
+                } else if (p.ui_type === 'locked') {
+                    contentHtml += `
+                    <div class="bonus-locked" style="position:relative">
+                        <div style="width:33%;min-height:100px;background:url('${p.image}') center/cover;filter:grayscale(1);flex-shrink:0"></div>
+                        <div class="lock-icon"><span class="material-symbols-outlined">lock</span></div>
+                        <div class="bonus-locked-body">
+                            <div class="bl-title">${p.title}</div>
+                            <div class="bl-desc">${p.description}</div>
+                            <div class="bl-progress">
+                                <div class="bl-progress-fill" style="width:${p.progress_pct}%"></div>
+                            </div>
+                            <div class="bl-progress-label">${p.progress}</div>
+                        </div>
+                    </div>`;
+                }
+            });
+            container.innerHTML = contentHtml;
         }
 
         /* === PERSONAL BONUS SYSTEM === */
@@ -5919,6 +6018,13 @@
                 }
             } catch (e) { }
             renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
+        }
+
+        function switchBonusTab(tab) {
+            document.getElementById('tabBonusAvailable').classList.toggle('active', tab === 'available');
+            document.getElementById('tabBonusMy').classList.toggle('active', tab === 'my');
+            document.getElementById('bonusAvailableSection').style.display = tab === 'available' ? 'block' : 'none';
+            document.getElementById('bonusMySection').style.display = tab === 'my' ? 'block' : 'none';
         }
 
         function renderActiveBonuses() {
@@ -6356,7 +6462,7 @@
         async function buyStars(amount) {
             /* Request invoice link from backend, then open via Telegram WebApp */
             try {
-                showToast('⭐', LANG === 'ru' ? 'Создаём счёт...' : LANG === 'ua' ? 'Створюємо рахунок...' : LANG === 'pl' ? 'Tworzenie faktury...' : 'Creating invoice...', '⏳', '', null);
+                showToast('⭐', T.creatingInv, '⏳', '', null);
                 var r = await fetch(API + '/api/create-stars-invoice', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), { stars: amount }))
@@ -6366,12 +6472,12 @@
                 if (d.ok && d.invoice_link) {
                     tg.openInvoice(d.invoice_link, function (status) {
                         if (status === 'paid') {
-                            showToast('✅', LANG === 'ru' ? 'Оплата прошла! +' + amount + ' ⭐' : LANG === 'ua' ? 'Оплата пройшла! +' + amount + ' ⭐' : LANG === 'pl' ? 'Płatność przeszła! +' + amount + ' ⭐' : 'Payment successful! +' + amount + ' ⭐', 'OK', '', function () { closeToast() });
+                            showToast('✅', T.paySuccess + amount + ' ⭐', 'OK', '', function () { closeToast() });
                             loadBalance();
                         } else if (status === 'cancelled') {
                             /* User cancelled, do nothing */
                         } else if (status === 'failed') {
-                            showToast('❌', LANG === 'ru' ? 'Ошибка оплаты' : LANG === 'ua' ? 'Помилка оплати' : LANG === 'pl' ? 'Błąd płatności' : 'Payment failed', 'OK', '', function () { closeToast() });
+                            showToast('❌', T.payFail, 'OK', '', function () { closeToast() });
                         }
                     });
                 } else {
@@ -6385,7 +6491,7 @@
 
         async function buyCrypto(coins, price) {
             try {
-                showToast('💎', LANG === 'ru' ? 'Создаём счёт CryptoBot...' : LANG === 'ua' ? 'Створюємо рахунок CryptoBot...' : LANG === 'pl' ? 'Tworzenie faktury CryptoBot...' : 'Creating CryptoBot invoice...', '⏳', '', null);
+                showToast('💎', T.creatingCrypto, '⏳', '', null);
                 var r = await fetch(API + '/api/create-invoice', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), { coins: parseInt(coins), amount: parseFloat(price) }))
@@ -6413,7 +6519,7 @@
 
         async function buyCard(coins, price) {
             try {
-                showToast('💳', LANG === 'ru' ? 'Создаём платёж...' : LANG === 'ua' ? 'Створюємо платіж...' : LANG === 'pl' ? 'Tworzenie płatności...' : 'Creating payment...', '⏳', '', null);
+                showToast('💳', T.creatingPay, '⏳', '', null);
                 var r = await fetch(API + '/api/create-card-payment', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), { coins: parseInt(coins), amount: parseFloat(price) }))
@@ -6425,7 +6531,7 @@
                     tg.openLink(d.pay_url, { try_instant_view: true });
                     pollPayment(d.invoice_id || null);
                 } else {
-                    var msg = d.error || (LANG === 'ru' ? 'Оплата картой скоро будет доступна' : LANG === 'ua' ? 'Оплата карткою скоро буде доступна' : LANG === 'pl' ? 'Płatność kartą wkrótce dostępna' : 'Card payment coming soon');
+                    var msg = d.error || T.cardSoon;
                     showToast('💳', msg, 'OK', '', function () { closeToast() });
                 }
             } catch (e) {
@@ -6450,6 +6556,79 @@
             setTimeout(function () { if (pollTimer) clearInterval(pollTimer) }, 300000);
         }
 
+        /* === NOTIFICATIONS POPUP === */
+        var userNotifs = [];
+        async function loadNotifications() {
+            try {
+                var r = await fetch(API + '/api/notifications?' + qs());
+                var d = await r.json();
+                if (d.ok && d.notifications) {
+                    userNotifs = d.notifications;
+                    updateNotifBadge();
+                }
+            } catch (e) { }
+        }
+        function updateNotifBadge() {
+            var dot = document.getElementById('notifDot');
+            if (!dot) return;
+            var unread = userNotifs.filter(function (n) { return !n.is_read }).length;
+            if (unread > 0) dot.style.display = 'block';
+            else dot.style.display = 'none';
+        }
+        function renderNotifs() {
+            var list = document.getElementById('notifList');
+            if (!list) return;
+            if (userNotifs.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--dim);font-size:12px">No notifications</div>';
+                return;
+            }
+            var html = '';
+            userNotifs.forEach(function (n) {
+                var isUnread = !n.is_read;
+                var dotHtml = isUnread ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:4px"></div>' : '';
+                var clickAction = n.action_url ? n.action_url + ';' : '';
+                html += '<div onclick="' + clickAction + 'readSingleNotif(' + n.id + ')" style="display:flex;gap:12px;padding:8px;background:' + (isUnread ? 'rgba(255,255,255,.03)' : 'transparent') + ';border-radius:var(--radius);cursor:pointer;transition:background .2s">';
+                html += dotHtml;
+                html += '<div style="flex:1">';
+                html += '<div style="font-size:13px;font-weight:700;color:' + (isUnread ? '#fff' : 'var(--dim)') + ';margin-bottom:2px">' + n.title + '</div>';
+                html += '<div style="font-size:11px;color:' + (isUnread ? 'rgba(255,255,255,.7)' : 'var(--dim)') + '">' + n.message + '</div>';
+                html += '<div style="font-size:9px;color:rgba(255,255,255,.3);margin-top:4px">' + n.created_at.substring(0, 16).replace('T', ' ') + '</div>';
+                html += '</div></div>';
+            });
+            list.innerHTML = html;
+        }
+        function openNotifPopup() {
+            document.getElementById('notifPopup').style.display = 'block';
+            renderNotifs();
+            requestAnimationFrame(function () {
+                var card = document.getElementById('notifPopupCard');
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0) scale(1)';
+            });
+        }
+        function closeNotifPopup() {
+            var card = document.getElementById('notifPopupCard');
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(-8px) scale(.95)';
+            setTimeout(function () { document.getElementById('notifPopup').style.display = 'none' }, 200);
+        }
+        async function readAllNotifs() {
+            userNotifs.forEach(function (n) { n.is_read = 1 });
+            updateNotifBadge();
+            renderNotifs();
+            try { await fetch(API + '/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(auth()) }); } catch (e) { }
+        }
+        async function readSingleNotif(id) {
+            var notif = userNotifs.find(function (n) { return n.id === id });
+            if (notif && !notif.is_read) {
+                notif.is_read = 1;
+                updateNotifBadge();
+                renderNotifs();
+                try { await fetch(API + '/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { id: id })) }); } catch (e) { }
+            }
+            closeNotifPopup();
+        }
+
         /* === BALANCE POPUP (header tap) === */
         function openBalancePopup() {
             var p = document.getElementById('balPopup');
@@ -6457,7 +6636,7 @@
             /* Update active state */
             document.getElementById('bpUsdt').classList.toggle('active', activeWallet === 'usdt');
             document.getElementById('bpStars').classList.toggle('active', activeWallet === 'stars');
-            updateBalPopupContent();
+            updateBalanceUI();
             /* Update currency pills */
             document.querySelectorAll('#bpCurrencies .pill').forEach(function (b) {
                 b.classList.toggle('active', b.getAttribute('data-cur') === displayCurrency);
@@ -6547,7 +6726,7 @@
             var el = document.getElementById('profLangCurrent');
             if (el && cur) el.textContent = cur.flag + ' ' + cur.name;
             var el2 = document.getElementById('profLang');
-            if (el2) el2.textContent = LANG === 'ru' ? 'Язык' : LANG === 'ua' ? 'Мова' : LANG === 'pl' ? 'Język' : 'Language';
+            if (el2) el2.textContent = T.langLabel;
         }
 
         /* === CRASH GAME LOGIC === */
@@ -6803,6 +6982,7 @@
         initBonuses();
         buildWalletPackages();
         loadBalance();
+        loadNotifications();
         checkWheel();
         loadTopWinnings('day');
         updateBonusBadge();
@@ -6812,10 +6992,11 @@
 
         /* === HERO CAROUSEL === */
         var heroSlide = 0;
-        var heroTotal = 3;
         var heroTimer = null;
         function goSlide(n) {
             heroSlide = n;
+            var heroTotal = getBanners().length;
+            if (heroTotal === 0) return;
             var track = document.getElementById('heroTrack');
             if (track) track.style.transform = 'translateX(-' + (heroSlide * 100 / heroTotal) + '%)';
             document.querySelectorAll('.hero-dot').forEach(function (d, i) {
@@ -6826,7 +7007,8 @@
         function initCarousel() {
             if (heroTimer) clearInterval(heroTimer);
             heroTimer = setInterval(function () {
-                goSlide((heroSlide + 1) % heroTotal);
+                var heroTotal = getBanners().length;
+                if (heroTotal > 0) goSlide((heroSlide + 1) % heroTotal);
             }, 4000);
         }
 
@@ -6855,23 +7037,35 @@
                 el.parentNode.querySelectorAll('.pill').forEach(function (p) { p.classList.remove('active') });
                 el.classList.add('active');
             }
-            var filter = cat === 'all' ? null : function (g) {
-                if (cat === 'slots') return g.id === 'ruby_slots' || g.id === 'sweet_bonanza' || g.id === 'gates_olympus' || g.id === 'big_bass' || g.id === 'starlight' || g.id === 'wanted';
-                if (cat === 'crash') return g.id === 'crash';
-                if (cat === 'plinko') return g.id === 'plinko';
-                if (cat === 'table') return g.id === 'roulette' || g.id === 'blackjack' || g.id === 'dice';
-                if (cat === 'live') return false;
-                return true;
-            };
-            buildGameGrid('gamesGrid', filter);
+            applyGamesFilter();
         }
         function filterGamesScreen(val) {
-            if (!val || val.length < 1) {
-                buildGameGrid('gamesGrid');
-                return;
-            }
-            var q = val.toLowerCase();
-            buildGameGrid('gamesGrid', function (g) { return g.name.toLowerCase().indexOf(q) > -1 });
+            applyGamesFilter();
+        }
+        function applyGamesFilter() {
+            var searchInput = document.getElementById('gamesSearchInput');
+            var q = searchInput ? searchInput.value.toLowerCase() : '';
+
+            buildGameGrid('gamesGrid', function (g) {
+                // 1. Check Category
+                var catMatch = true;
+                if (gamesCat && gamesCat !== 'all') {
+                    if (gamesCat === 'slots') catMatch = (g.category === 'slots' || ['ruby_slots', 'sweet_bonanza', 'gates_olympus', 'big_bass', 'starlight', 'wanted'].indexOf(g.id) > -1);
+                    else if (gamesCat === 'crash') catMatch = (g.id === 'crash' || g.category === 'crash');
+                    else if (gamesCat === 'plinko') catMatch = (g.id === 'plinko' || g.category === 'plinko');
+                    else if (gamesCat === 'table') catMatch = (['roulette', 'blackjack', 'dice', 'coin'].indexOf(g.id) > -1 || g.category === 'table');
+                    else if (gamesCat === 'live') catMatch = (g.category === 'live');
+                    else catMatch = false;
+                }
+
+                // 2. Check Search Query
+                var textMatch = true;
+                if (q.length > 0) {
+                    textMatch = g.name.toLowerCase().indexOf(q) > -1 || (g.provider && g.provider.toLowerCase().indexOf(q) > -1);
+                }
+
+                return catMatch && textMatch;
+            });
         }
 
         /* === PLINKO GAME === */
