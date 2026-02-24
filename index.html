@@ -5528,7 +5528,21 @@
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
-            tg.expand();
+
+            // Loop to ensure expansion stays active
+            const ensureExpand = () => {
+                tg.expand();
+                if (tg.isExpanded === false) {
+                    setTimeout(ensureExpand, 200);
+                }
+            };
+            ensureExpand();
+
+            // Try new Fullscreen API if available (Bot API 7.0+)
+            if (tg.requestFullscreen) {
+                tg.requestFullscreen();
+            }
+
             tg.enableClosingConfirmation();
             tg.setHeaderColor('#000000');
             tg.setBackgroundColor('#121212');
