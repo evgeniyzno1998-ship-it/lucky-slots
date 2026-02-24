@@ -3975,7 +3975,7 @@
 
         <!-- HERO CAROUSEL -->
         <div class="hero-carousel"
-            style="position:relative;overflow:hidden;border-radius:var(--radius-xl);margin:0 16px 12px">
+            style="position:relative;overflow:hidden;border-radius:var(--radius-xl);margin:0 16px 12px;border:1px solid rgba(255,255,255,0.05)">
             <div class="hero-track" id="heroTrack"
                 style="display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);width:300%">
             </div>
@@ -5259,7 +5259,7 @@
                 var bg = b.bgStyle || (i === 1 ? 'linear-gradient(135deg,#121212 0%,#1a1a1a 100%)' : 'linear-gradient(135deg,#1a1a1a 0%,#121212 100%)');
                 var btnBg = b.btnStyle || 'background:var(--red)';
                 return `
-                <div class="hero-slide" style="flex:0 0 100%;padding:24px;background:${bg};display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden">
+                <div class="hero-slide" style="flex:1;padding:24px;background:${bg};display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden">
                     <div style="position:absolute;top:10px;left:10px;padding:4px 8px;background:${b.tagBg || 'rgba(0,0,0,0.3)'};border-radius:4px;display:flex;align-items:center;gap:4px;z-index:3">
                         <span class="material-symbols-outlined" style="font-size:12px;color:${b.tagColor || 'white'}">${b.tagIcon}</span>
                         <span style="font-size:10px;font-weight:800;color:${b.tagColor || 'white'}">${b.tagText}</span>
@@ -5804,7 +5804,7 @@
             var initials = (d.username || 'U').substring(0, 2).toUpperCase();
 
             var card = document.createElement('div');
-            card.className = `flex-shrink-0 w-[240px] bg-gradient-to-r from-[#1A1A1A] to-[#0F0F0F] p-3.5 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden group cursor-pointer transition-transform active:scale-95 ${isBig ? 'border-[#E91E3F]/40 shadow-[0_0_20px_rgba(233,30,63,0.1)]' : ''}`;
+            card.className = `flex-shrink-0 min-w-[240px] w-[240px] bg-gradient-to-r from-[#1A1A1A] to-[#0F0F0F] p-3.5 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden group cursor-pointer transition-transform active:scale-95 ${isBig ? 'border-[#E91E3F]/40 shadow-[0_0_20px_rgba(233,30,63,0.1)]' : ''}`;
             card.onclick = function () { nav(d.screen); };
 
             card.innerHTML = `
@@ -5833,10 +5833,10 @@
             }
         }
 
-        /* Auto-refresh Live Drops every 0.7 seconds */
+        /* Auto-refresh Live Drops every 2 seconds */
         setInterval(function () {
             if (currentScreen === 'lobby') addRandomLiveDrop();
-        }, 700);
+        }, 2000);
 
         /* === PROFILE === */
         async function loadProfile() {
@@ -6230,84 +6230,6 @@
             el.innerHTML = html;
         }
 
-        /* === FORTUNE WHEEL REDESIGN LOGIC === */
-        function closeWheel() {
-            var el = document.getElementById('wheelOL');
-            if (el) {
-                el.style.display = 'none';
-                el.style.opacity = '0';
-            }
-        }
-        function openWheel() {
-            var el = document.getElementById('wheelOL');
-            if (el) {
-                el.style.display = 'block';
-                el.style.opacity = '1';
-                loadWheelStatus();
-            }
-        }
-
-        async function loadWheelStatus() {
-            try {
-                var r = await fetch(API + '/api/wheel-status?' + qs());
-                var d = await r.json();
-                if (d.ok) {
-                    document.getElementById('wheelBalDisplay').textContent = d.balance_stars || 0;
-                    if (!d.available) {
-                        showWheelState('locked', d.next_spin);
-                    } else {
-                        showWheelState('spin');
-                    }
-                }
-            } catch (e) { }
-        }
-
-        function showWheelState(state, extra) {
-            document.getElementById('wheelSpinState').style.display = state === 'spin' ? 'flex' : 'none';
-            document.getElementById('wheelWinState').style.display = state === 'win' ? 'flex' : 'none';
-            document.getElementById('wheelLockedState').style.display = state === 'locked' ? 'flex' : 'none';
-
-            if (state === 'locked' && extra) {
-                document.getElementById('wheelLockedTimer').textContent = extra;
-            }
-        }
-
-        var isWheelSpinning = false;
-        async function doWheelSpin() {
-            if (isWheelSpinning) return;
-            isWheelSpinning = true;
-
-            try {
-                var r = await fetch(API + '/api/wheel-spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getAuth()) });
-                var d = await r.json();
-                if (d.ok) {
-                    var wheelDisc = document.getElementById('wheelDisc');
-                    // Calculate rotation to land on the correct segment
-                    // Segments are at 30, 90, 150, 210, 270, 330 degrees
-                    // To bring segment at angle A to top (0deg), we rotate by (360 - A)
-                    var targetRotation = (360 * 5) + (330 - (d.index * 60));
-                    wheelDisc.style.transform = 'rotate(' + targetRotation + 'deg)';
-
-                    setTimeout(function () {
-                        document.getElementById('wheelWinAmount').textContent = d.win_val;
-                        document.getElementById('wheelWinUnit').textContent = d.win_type.toUpperCase();
-                        showWheelState('win');
-                        isWheelSpinning = false;
-                    }, 4000);
-                } else {
-                    isWheelSpinning = false;
-                    showToast('!', d.error || 'Failed', 'OK');
-                }
-            } catch (e) {
-                isWheelSpinning = false;
-            }
-        }
-
-        function collectWheelPrize() {
-            closeWheel();
-            loadUserData();
-        }
-
         /* === SEARCH === */
         var ALL_GAMES = [];
 
@@ -6399,15 +6321,8 @@
         }
 
         function buildBonusPills() {
-            var pillLabels = [T.filterAll, T.filterDep, T.filterFS, T.filterVIP, T.filterCB];
-            var cats = ['all', 'Deposit', 'Free Spins', 'VIP', 'Cashback'];
             var bp = document.getElementById('bonusPills');
-            if (bp) {
-                bp.className = 'flex gap-[8px] px-[16px] mb-[16px] overflow-x-auto no-scrollbar';
-                bp.innerHTML = pillLabels.map(function (p, i) {
-                    return '<div class="pill' + (cats[i] === activePromoCat ? ' active' : '') + '" onclick="renderPromos(\'' + cats[i] + '\')">' + p + '</div>';
-                }).join('');
-            }
+            if (bp) bp.style.display = 'none';
         }
 
         function renderPromos(cat) {
@@ -6782,10 +6697,12 @@
         }
 
         /* Override loadBalance to set usdtBalance */
+        var loadBalanceRetries = 0;
         async function loadBalance() {
             try {
                 var r = await fetch(API + '/api/balance?' + qs()); var d = await r.json();
                 if (d.ok) {
+                    loadBalanceRetries = 0;
                     balance = d.balance; freeSpins = d.free_spins || 0;
                     /* Convert coins to USDT — 100 coins = $1 USDT */
                     usdtBalance = d.balance / 100;
@@ -6794,7 +6711,16 @@
                     if (d.vip) updateVIP(d.vip);
                     return;
                 }
-            } catch (e) { }
+            } catch (e) {
+                loadBalanceRetries++;
+                if (loadBalanceRetries > 2 && usdtBalance === null) {
+                    // Fallback to demo mode if backend is disconnected
+                    balance = 15000; freeSpins = 10;
+                    usdtBalance = 150.00; starsBalance = 2500;
+                    updateBalanceUI(); updateWallet();
+                    return;
+                }
+            }
             setTimeout(loadBalance, 2000);
         }
 
@@ -6908,7 +6834,12 @@
                 }
             } catch (e) { }
             /* Demo fallback */
-            el.innerHTML = '<div style="text-align:center;padding:40px 0;opacity:.4"><span class="material-symbols-outlined" style="font-size:40px;display:block;margin-bottom:6px">receipt_long</span><span style="font-size:12px">No transactions yet</span></div>';
+            var demoTxs = [
+                { type: 'deposit', amount: 50.00, label: 'USDT Deposit', status: 'completed', created_at: new Date().toISOString() },
+                { type: 'win', amount: 25.50, label: 'Slots Win', status: 'completed', created_at: new Date(Date.now() - 3600000).toISOString() },
+                { type: 'withdraw', amount: 10.00, label: 'USDT Withdraw', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString() }
+            ];
+            renderTransactions(demoTxs);
         }
         function renderTransactions(txs) {
             var el = document.getElementById('txHistoryList');
@@ -7531,22 +7462,16 @@
             tg.setHeaderColor('#000000');
             tg.setBackgroundColor('#121212');
 
-            /* === LIVE DROPS AUTO-UPDATE === */
-            window.updateLiveDrops = async function () {
-                try {
-                    var r = await fetch(API + '/api/live-drops?' + qs());
-                    var d = await r.json();
-                    if (d.ok) {
-                        renderLiveDrops(d.drops);
-                    }
-                } catch (e) { }
+            /* === LIVE DROPS INITIALIZATION === */
+            window.updateLiveDrops = function () {
+                if (typeof buildLiveDrops === 'function') buildLiveDrops();
             };
-            setInterval(updateLiveDrops, 5000);
 
             /* === INITIAL LOAD === */
             async function initApp() {
                 await loadUserData(); // ensure user data is loaded before rendering
                 initLocale();
+                ALL_GAMES = typeof getGamesConfig === 'function' ? getGamesConfig(T) : [];
                 buildCategories();
                 buildProviders();
                 loadTopWinnings('day');
