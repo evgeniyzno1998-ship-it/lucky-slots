@@ -207,6 +207,82 @@
             animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .glass-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.3s ease;
+        }
+
+        .glass-item:active {
+            background: rgba(255, 255, 255, 0.06);
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(92deg, #E31C23 0%, #B91C23 100%);
+            box-shadow: 0 4px 15px rgba(227, 28, 35, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .glass-card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.3s ease;
+        }
+
+        .glass-item:active {
+            background: rgba(255, 255, 255, 0.06);
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(92deg, #E31C23 0%, #B91C23 100%);
+            box-shadow: 0 4px 15px rgba(227, 28, 35, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+            opacity: 0.9;
+        }
+
         /* Phase 3 Bonus Activation */
         .modal-gradient {
             background: radial-gradient(circle at top, rgba(230, 46, 61, 0.15) 0%, rgba(13, 15, 18, 1) 70%);
@@ -283,15 +359,20 @@
         }
 
         .live-drop-card {
-            flex-shrink: 0;
-            width: 160px;
-            padding: 10px 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
+            flex: 0 0 240px !important;
+            width: 240px !important;
+            min-width: 240px !important;
+            padding: 14px;
+            background: linear-gradient(to right, #1A1A1A, #0F0F0F);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
             position: relative;
             overflow: hidden;
-            transition: border-color .2s
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .live-drop-card::after {
@@ -385,7 +466,68 @@
             align-items: center;
             justify-content: space-between;
             height: var(--header-h);
-            backdrop-filter: blur(12px)
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .popup-card {
+            width: 100%;
+            max-width: 360px;
+            background: #0D0F12;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .popup-overlay.show {
+            display: flex;
+        }
+
+        .popup-overlay.show .popup-card {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .quick-amt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .quick-amt-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .quick-amt-btn:active {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .logo {
@@ -3694,7 +3836,7 @@
                     style="display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all .15s"
                     class="bal-active">
                     <span style="font-size:12px">💵</span>
-                    <span id="headerBal" style="font-weight:800;font-size:13px">0.00</span>
+                    <span id="headerBal" style="font-weight:800;font-size:13px">...</span>
                 </div>
                 <div style="width:1px;height:16px;background:var(--border)"></div>
                 <div id="headerBalStars"
@@ -3854,9 +3996,12 @@
                     <p id="wheelSub" style="font-size:11px;color:var(--dim);margin:2px 0 0">Spin for free every 24h</p>
                 </div>
             </div>
-            <div
+            <div id="wheelSpinBtn"
                 style="background:var(--red);color:#fff;padding:8px 16px;border-radius:20px;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;box-shadow:0 2px 8px rgba(227,30,36,.4);cursor:pointer">
                 SPIN</div>
+            <div id="wheelLockTimer"
+                style="display:none;font-family:monospace;font-size:16px;font-weight:700;color:var(--dim2);background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.05)">
+                00:00:00</div>
         </div>
 
         <!-- Live Drops Ticker (Phase 3 Redesign) -->
@@ -5125,7 +5270,7 @@
         const T = LC[LANG] || LC.en;
         const BSYM = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎'];
         const BONSYM = ['👑', '💎', '⭐', '❤️', '🍀', '🧲', '💰', '🌈'];
-        let balance = 0, freeSpins = 0, bet = 5, spinning = false, currentScreen = 'lobby';
+        let balance = null, freeSpins = 0, bet = 5, spinning = false, currentScreen = 'lobby';
         let currentLang = LANG;
         let activeWallet = 'usdt'; /* 'usdt' or 'stars' */
 
@@ -5592,31 +5737,27 @@
             var initials = (d.username || 'U').substring(0, 2).toUpperCase();
 
             var card = document.createElement('div');
-            card.style.cssText = 'flex-shrink:0;width:240px;background:linear-gradient(to right,#1A1A1A,#0F0F0F);padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:between;position:relative;overflow:hidden;cursor:pointer;transition:transform .2s;';
-            if (isBig) {
-                card.style.borderColor = 'rgba(233,30,63,0.4)';
-                card.style.boxShadow = '0 0 20px rgba(233,30,63,0.1)';
-            }
+            card.className = `flex-shrink-0 w-[240px] bg-gradient-to-r from-[#1A1A1A] to-[#0F0F0F] p-3.5 rounded-2xl border border-white/5 flex items-center justify-between relative overflow-hidden group cursor-pointer transition-transform active:scale-95 ${isBig ? 'border-[#E91E3F]/40 shadow-[0_0_20px_rgba(233,30,63,0.1)]' : ''}`;
             card.onclick = function () { nav(d.screen); };
 
             card.innerHTML = `
-                ${isBig ? `<div style="position:absolute;bottom:0;left:0;width:100%;height:1px;background:linear-gradient(to right,transparent,#E91E3F,transparent);opacity:0.4"></div>` : ''}
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div style="width:44px;height:44px;border-radius:50%;background:#252525;padding:2px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.05);overflow:hidden">
-                         <div style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-bold:700;background:${color};color:white">${initials}</div>
+                ${isBig ? `<div class="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#E91E3F] to-transparent opacity-40"></div>` : ''}
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-[#252525] p-0.5 flex items-center justify-center border border-white/5 overflow-hidden">
+                         <div class="w-full h-full rounded-full flex items-center justify-center text-xs font-bold" style="background:${color}; color:white">${initials}</div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:2px">
-                        <div style="font-weight:700;font-size:14px;color:#f3f4f6">${d.username}</div>
-                        <div style="font-size:10px;color:#9ca3af;font-weight:500;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:0.025em">
-                            <span class="material-symbols-outlined" style="font-size:12px;color:${color}">stars</span> ${d.game}
+                    <div class="flex flex-col gap-0.5">
+                        <div class="font-bold text-sm text-gray-100">${d.username}</div>
+                        <div class="text-[10px] text-gray-500 font-medium flex items-center gap-1 uppercase tracking-wider">
+                            <span class="material-symbols-outlined text-[12px]" style="color:${color}">stars</span> ${d.game}
                         </div>
                     </div>
                 </div>
-                <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-left:auto">
-                    <div style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:4px;${isBig ? 'color:#E91E3F;text-shadow:0 0 5px rgba(233,30,63,0.3)' : 'color:#FFD700'}">
+                <div class="text-right flex flex-col items-end gap-1">
+                    <div class="font-bold text-[14px] flex items-center gap-1 ${isBig ? 'text-[#E91E3F] drop-shadow-[0_0_5px_rgba(233,30,63,0.3)]' : 'text-[#FFD700]'}">
                         + ${d.amount} ${unit}
                     </div>
-                    <div style="font-size:10px;font-family:monospace;${isBig ? 'background:rgba(233,30,63,0.1);color:#E91E3F' : 'background:rgba(255,255,255,0.05);color:#9ca3af'} padding:2px 6px;border-radius:4px;border:${isBig ? '1px solid rgba(233,30,63,0.2)' : '1px solid rgba(255,255,255,0.05)'}">x${d.multiplier}</div>
+                    <div class="text-[10px] font-mono ${isBig ? 'bg-[#E91E3F]/10 text-[#E91E3F]' : 'bg-white/5 text-gray-400'} px-1.5 py-0.5 rounded border ${isBig ? 'border-[#E91E3F]/20' : 'border-white/5'}">x${d.multiplier}</div>
                 </div>`;
 
             el.insertBefore(card, el.firstChild);
@@ -5625,15 +5766,10 @@
             }
         }
 
-        /* Auto-refresh Live Drops with random delay between 1.5s - 2.0s */
-        function scheduleNextDrop() {
-            var delay = Math.floor(Math.random() * 500) + 1500;
-            setTimeout(function () {
-                if (currentScreen === 'lobby') addRandomLiveDrop();
-                scheduleNextDrop();
-            }, delay);
-        }
-        scheduleNextDrop();
+        /* Auto-refresh Live Drops every 0.7 seconds */
+        setInterval(function () {
+            if (currentScreen === 'lobby') addRandomLiveDrop();
+        }, 700);
 
         /* === PROFILE === */
         async function loadProfile() {
@@ -5737,7 +5873,48 @@
             window.location.href = u.toString();
         }
 
-        async function checkWheel() { try { var r = await fetch(API + '/api/wheel-status?' + qs()); var d = await r.json(); if (d.ok && !d.available) document.getElementById('wheelBanner').classList.add('done') } catch (e) { } }
+        var wheelLockTimer = null;
+        async function checkWheel() {
+            try {
+                var r = await fetch(API + '/api/wheel-status?' + qs());
+                var d = await r.json();
+                var btn = document.querySelector('.wheel-spin-btn') || document.getElementById('wheelSpinBtn');
+                var timerEl = document.getElementById('wheelLockTimer');
+
+                if (d.ok && !d.available) {
+                    document.getElementById('wheelBanner').classList.add('done');
+                    if (btn) btn.style.display = 'none';
+                    if (timerEl) {
+                        timerEl.style.display = 'block';
+                        startWheelCountdown(d.next_spin);
+                    }
+                } else {
+                    document.getElementById('wheelBanner').classList.remove('done');
+                    if (btn) btn.style.display = 'block';
+                    if (timerEl) timerEl.style.display = 'none';
+                }
+            } catch (e) { }
+        }
+
+        function startWheelCountdown(nextSpinTime) {
+            if (wheelLockTimer) clearInterval(wheelLockTimer);
+            var target = new Date(nextSpinTime).getTime();
+
+            wheelLockTimer = setInterval(function () {
+                var now = new Date().getTime();
+                var diff = target - now;
+                if (diff <= 0) {
+                    clearInterval(wheelLockTimer);
+                    checkWheel();
+                    return;
+                }
+                var h = Math.floor(diff / 3600000);
+                var m = Math.floor((diff % 3600000) / 60000);
+                var s = Math.floor((diff % 60000) / 1000);
+                var timerEl = document.getElementById('wheelLockTimer');
+                if (timerEl) timerEl.textContent = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+            }, 1000);
+        }
 
         /* === INIT LOCALE === */
         function initLocale() {
@@ -6029,6 +6206,35 @@
         }
 
         var isWheelSpinning = false;
+        async function doWheelSpin() {
+            if (isWheelSpinning) return;
+            isWheelSpinning = true;
+
+            try {
+                var r = await fetch(API + '/api/wheel-spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getAuth()) });
+                var d = await r.json();
+                if (d.ok) {
+                    var wheelDisc = document.getElementById('wheelDisc');
+                    // Calculate rotation to land on the correct segment
+                    // Segments are at 30, 90, 150, 210, 270, 330 degrees
+                    // To bring segment at angle A to top (0deg), we rotate by (360 - A)
+                    var targetRotation = (360 * 5) + (330 - (d.index * 60));
+                    wheelDisc.style.transform = 'rotate(' + targetRotation + 'deg)';
+
+                    setTimeout(function () {
+                        document.getElementById('wheelWinAmount').textContent = d.win_val;
+                        document.getElementById('wheelWinUnit').textContent = d.win_type.toUpperCase();
+                        showWheelState('win');
+                        isWheelSpinning = false;
+                    }, 4000);
+                } else {
+                    isWheelSpinning = false;
+                    showToast('!', d.error || 'Failed', 'OK');
+                }
+            } catch (e) {
+                isWheelSpinning = false;
+            }
+        }
 
         function collectWheelPrize() {
             closeWheel();
@@ -6120,6 +6326,8 @@
         }
 
         function initBonuses() {
+            var bp = document.getElementById('bonusPills');
+            if (bp) bp.style.display = 'none'; // Remove categories row
             fetchPromos();
         }
 
@@ -6146,7 +6354,9 @@
             var contentHtml = '';
 
             if (filtered.length === 0) {
-                contentHtml = '<div style="text-align:center;padding:40px 20px;color:var(--dim)">' + (T.noResults || 'No promos found') + '</div>';
+                // If no promos, hide section or show minimal text
+                container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--dim)">' + (T.noResults || 'No promos found') + '</div>';
+                return;
             }
 
             filtered.forEach(function (p) {
@@ -6635,45 +6845,108 @@
         }
         function renderTransactions(txs) {
             var el = document.getElementById('txHistoryList');
-            var html = '';
+            if (!el) return;
+            if (!txs || txs.length === 0) {
+                el.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;">
+                    <div style="font-size:48px;margin-bottom:16px;opacity:0.3">🧾</div>
+                    <div style="color:var(--dim2);font-size:14px;margin-bottom:24px">${T.noHistory || 'No transactions yet'}</div>
+                    <button class="btn-primary" style="padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700" onclick="switchCashierTab('deposit')">${T.deposit || 'DEPOSIT'}</button>
+                </div>`;
+                return;
+            }
+
+            // Group by date
+            var groups = {};
             txs.forEach(function (tx) {
-                var isDeposit = tx.type === 'deposit';
-                var icon = isDeposit ? 'arrow_downward' : 'arrow_upward';
-                var color = isDeposit ? 'var(--green)' : 'var(--red)';
-                var sign = isDeposit ? '+' : '-';
-                var statusColor = tx.status === 'completed' ? 'var(--green)' : tx.status === 'pending' ? '#FFD700' : 'var(--dim)';
-                html += '<div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">';
-                html += '<div style="width:36px;height:36px;border-radius:50%;background:' + (isDeposit ? 'rgba(34,197,94,.08)' : 'rgba(227,30,36,.08)') + ';display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:18px;color:' + color + '">' + icon + '</span></div>';
-                html += '<div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff;text-transform:capitalize">' + tx.type + '</div><div style="font-size:10px;color:var(--dim)">' + (tx.method || '') + ' · ' + (tx.date || '') + '</div></div>';
-                html += '<div style="text-align:right"><div style="font-size:13px;font-weight:800;color:' + color + ';font-family:\'Montserrat\',sans-serif">' + sign + (tx.amount || 0) + '</div><div style="font-size:9px;font-weight:700;color:' + statusColor + ';text-transform:uppercase">' + (tx.status || '') + '</div></div>';
-                html += '</div>';
+                var d = new Date(tx.created_at || tx.date);
+                var dateStr = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
+                if (!groups[dateStr]) groups[dateStr] = [];
+                groups[dateStr].push(tx);
+            });
+
+            var html = '';
+            Object.keys(groups).forEach(function (date) {
+                html += `<h3 style="text-align:center;font-size:12px;font-weight:600;color:var(--dim2);margin:24px 0 12px;text-transform:uppercase;letter-spacing:1px">${date}</h3>`;
+                groups[date].forEach(function (tx) {
+                    var isPlus = tx.type === 'deposit' || tx.type === 'win';
+                    var icon = isPlus ? 'add' : 'remove';
+                    var color = isPlus ? '#C0142A' : '#9ca3af';
+                    var timeStr = new Date(tx.created_at || tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    html += `
+                    <div class="glass-item" style="display:flex;align-items:center;justify-content:space-between;padding:14px;border-radius:16px;margin-bottom:8px">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px solid ${isPlus ? 'rgba(192,20,42,0.2)' : 'rgba(255,255,255,0.05)'};display:flex;align-items:center;justify-content:center">
+                                <span class="material-symbols-outlined" style="font-size:18px;color:${color}">${icon}</span>
+                            </div>
+                            <div>
+                                <div style="font-size:14px;font-weight:700;color:#fff">${tx.label || (tx.type.charAt(0).toUpperCase() + tx.type.slice(1))}</div>
+                                <div style="font-size:11px;color:var(--dim2);font-weight:500">${timeStr}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div style="font-size:14px;font-weight:700;color:#fff">${tx.amount} ${tx.unit || 'USDT'}</div>
+                            <div style="font-size:10px;font-weight:600;color:${tx.status === 'success' || tx.status === 'completed' ? '#10b981' : '#f59e0b'}">${tx.status.toUpperCase()}</div>
+                        </div>
+                    </div>`;
+                });
             });
             el.innerHTML = html;
         }
 
         /* === DEPOSIT FLOW (inside miniapp) === */
         function openDepositModal(type) {
-            if (type === 'stars') {
-                /* Telegram Stars payment via WebApp invoice */
-                var starsPkg = document.querySelector('#starsRow .asset-btn.active');
-                var amount = starsPkg ? starsPkg.getAttribute('data-stars') : '50';
-                buyStars(parseInt(amount));
-                return;
-            }
-            if (payMethod === 'crypto') {
-                /* CryptoBot payment — call backend to create invoice, open URL in browser */
-                var pkg = document.querySelector('#assetRow .asset-btn.active');
-                var coins = pkg ? pkg.getAttribute('data-coins') : '50';
-                var price = pkg ? pkg.getAttribute('data-price') : '0.50';
-                buyCrypto(coins, price);
-            } else if (payMethod === 'card') {
-                /* Card payment — call backend to get payment link */
-                var pkg2 = document.querySelector('#assetRow .asset-btn.active');
-                var coins2 = pkg2 ? pkg2.getAttribute('data-coins') : '50';
-                var price2 = pkg2 ? pkg2.getAttribute('data-price') : '0.50';
-                buyCard(coins2, price2);
-            }
+            var el = document.getElementById('scrWallet');
+            if (!el) return;
+            var title = type === 'stars' ? 'BUY STARS' : (T.deposit || 'DEPOSIT');
+            var min = type === 'stars' ? 50 : 0.5;
+            var unit = type === 'stars' ? '⭐' : 'USDT';
+
+            var quickAmts = type === 'stars' ? [50, 250, 1000] : [0.5, 5, 10, 20, 50];
+            var quickHtml = quickAmts.map(a => `<div class="quick-amt-btn" onclick="document.getElementById('depAmtInput').value='${a}';updateDepBtn()">${a}${type === 'stars' ? '' : '$'}</div>`).join('');
+
+            var html = `
+            <div class="popup-overlay active" id="depPopup" onclick="if(event.target===this)this.remove()">
+                <div class="popup-card">
+                    <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;margin:0 0 8px;text-align:center">${title}</h2>
+                    <p style="font-size:13px;color:var(--dim2);text-align:center;margin-bottom:20px">Minimum: ${min} ${unit}</p>
+                    
+                    <div style="position:relative;margin-bottom:12px">
+                        <input type="number" id="depAmtInput" placeholder="0.00" oninput="updateDepBtn()"
+                            style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:20px;font-weight:700;text-align:center;font-family:monospace">
+                        <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2)">${unit}</div>
+                    </div>
+
+                    <div class="quick-amt-grid">${quickHtml}</div>
+
+                    <button class="btn-primary" id="depConfirmBtn" style="width:100%;padding:16px;border-radius:16px;margin-top:12px;font-weight:800;font-size:15px;opacity:0.5" disabled onclick="confirmDeposit('${type}')">
+                        ${type === 'stars' ? 'BUY NOW' : 'NEXT'}
+                    </button>
+                    <button style="width:100%;margin-top:12px;color:var(--dim2);font-weight:600;font-size:13px;background:none;border:none" onclick="document.getElementById('depPopup').remove()">CANCEL</button>
+                </div>
+            </div>`;
+            document.body.insertAdjacentHTML('beforeend', html);
         }
+
+        window.updateDepBtn = function () {
+            var val = parseFloat(document.getElementById('depAmtInput').value) || 0;
+            var btn = document.getElementById('depConfirmBtn');
+            if (btn) {
+                btn.disabled = val <= 0;
+                btn.style.opacity = val <= 0 ? 0.5 : 1;
+            }
+        };
+
+        window.confirmDeposit = async function (type) {
+            var amt = parseFloat(document.getElementById('depAmtInput').value);
+            var min = type === 'stars' ? 50 : 0.5;
+            if (!amt || amt < min) { showToast('⚠️', 'Min amount: ' + min + (type === 'stars' ? ' ⭐' : ' USDT'), 'OK'); return; }
+
+            document.getElementById('depPopup').remove();
+            if (type === 'stars') buyStars(amt);
+            else buyCrypto(null, amt);
+        };
 
         async function buyStars(amount) {
             /* Request invoice link from backend, then open via Telegram WebApp */
@@ -6710,7 +6983,10 @@
                 showToast('💎', T.creatingCrypto, '⏳', '', null);
                 var r = await fetch(API + '/api/create-invoice', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.assign({}, auth(), { coins: parseInt(coins), amount: parseFloat(price) }))
+                    body: JSON.stringify(Object.assign({}, auth(), {
+                        coins: coins ? parseInt(coins) : Math.floor(parseFloat(price) * 100),
+                        amount: parseFloat(price)
+                    }))
                 });
                 var d = await r.json();
                 closeToast();
@@ -6848,12 +7124,10 @@
         /* === BALANCE POPUP (header tap) === */
         function openBalancePopup() {
             var p = document.getElementById('balPopup');
-            if (p) p.style.display = 'block';
+            p.style.display = 'block';
             /* Update active state */
-            var uCard = document.getElementById('bpUsdtCard');
-            var sCard = document.getElementById('bpStarsCard');
-            if (uCard) uCard.classList.toggle('active', activeWallet === 'usdt');
-            if (sCard) sCard.classList.toggle('active', activeWallet === 'stars');
+            document.getElementById('bpUsdt').classList.toggle('active', activeWallet === 'usdt');
+            document.getElementById('bpStars').classList.toggle('active', activeWallet === 'stars');
             updateBalanceUI();
             /* Update currency pills */
             document.querySelectorAll('#bpCurrencies .pill').forEach(function (b) {
@@ -6873,10 +7147,8 @@
         }
         function switchBalPopup(type) {
             activeWallet = type;
-            var uCard = document.getElementById('bpUsdtCard');
-            var sCard = document.getElementById('bpStarsCard');
-            if (uCard) uCard.classList.toggle('active', type === 'usdt');
-            if (sCard) sCard.classList.toggle('active', type === 'stars');
+            document.getElementById('bpUsdt').classList.toggle('active', type === 'usdt');
+            document.getElementById('bpStars').classList.toggle('active', type === 'stars');
             document.getElementById('bpCurrencies').style.display = type === 'usdt' ? 'grid' : 'none';
             document.getElementById('bpDeposit').textContent = type === 'stars' ? 'BUY STARS' : 'DEPOSIT';
             updateBalPopupContent();
@@ -7214,7 +7486,6 @@
                 loadTopWinnings('day');
                 initBonuses();
                 updateLiveDrops();
-                initCarousel();
                 buildGameGrid();
             }
             initApp();
@@ -7229,70 +7500,59 @@
             loadReferral();
         }
 
+        buildLiveDrops();
+        initCarousel();
 
         /* === HERO CAROUSEL === */
         var heroSlide = 0;
         var heroTimer = null;
-        function goSlide(i) {
-            heroSlide = i;
+        function goSlide(n) {
+            heroSlide = n;
+            var heroTotal = getBanners().length;
+            if (heroTotal === 0) return;
             var track = document.getElementById('heroTrack');
-            if (track) track.style.transform = 'translateX(-' + (i * 100) + '%)';
-            updateDots();
-        }
-
-        function updateDots() {
+            if (track) track.style.transform = 'translateX(-' + (heroSlide * 100 / heroTotal) + '%)';
             document.querySelectorAll('.hero-dot').forEach(function (d, i) {
-                if (d) {
-                    d.style.background = i === heroSlide ? 'var(--red)' : 'rgba(255,255,255,.3)';
-                    d.style.opacity = i === heroSlide ? '1' : '0.6';
-                }
+                d.style.background = i === heroSlide ? 'var(--red)' : 'rgba(255,255,255,.3)';
+                d.style.opacity = i === heroSlide ? '1' : '0.6';
             });
         }
+        function initCarouselSwipe() {
+            var track = document.getElementById('heroTrack');
+            if (!track) return;
+            var startX = 0, startY = 0, dist = 0, isSwipe = false;
+            track.addEventListener('touchstart', function (e) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                isSwipe = false;
+            }, { passive: true });
+            track.addEventListener('touchmove', function (e) {
+                var dx = Math.abs(e.touches[0].clientX - startX);
+                var dy = Math.abs(e.touches[0].clientY - startY);
+                if (dx > dy && dx > 10) { isSwipe = true; if (e.cancelable) e.preventDefault(); }
+            }, { passive: false });
+            track.addEventListener('touchend', function (e) {
+                if (!isSwipe) return;
+                var endX = e.changedTouches[0].clientX;
+                var diff = startX - endX;
+                var banners = getBanners();
+                var total = banners.length;
+                if (Math.abs(diff) > 50 && total > 0) {
+                    if (diff > 0) goSlide((heroSlide + 1) % total);
+                    else goSlide((heroSlide - 1 + total) % total);
+                    initCarousel(); // reset timer
+                }
+            }, { passive: true });
+        }
 
-        function startHeroTimer() {
+        function initCarousel() {
             if (heroTimer) clearInterval(heroTimer);
             heroTimer = setInterval(function () {
                 var heroTotal = getBanners().length;
                 if (heroTotal > 0) goSlide((heroSlide + 1) % heroTotal);
             }, 4000);
         }
-
-        // Swipe support for Hero Carousel
-        function initCarouselSwipe() {
-            var track = document.getElementById('heroTrack');
-            if (!track) return;
-            var startX = 0;
-            var dragging = false;
-
-            track.addEventListener('touchstart', function (e) {
-                startX = e.touches[0].clientX;
-                dragging = true;
-            }, { passive: true });
-
-            track.addEventListener('touchend', function (e) {
-                if (!dragging) return;
-                var endX = e.changedTouches[0].clientX;
-                var diff = startX - endX;
-                var banners = getBanners();
-                var heroTotal = banners.length;
-
-                if (Math.abs(diff) > 50 && heroTotal > 0) {
-                    if (diff > 0) {
-                        goSlide((heroSlide + 1) % heroTotal);
-                    } else {
-                        goSlide((heroSlide - 1 + heroTotal) % heroTotal);
-                    }
-                    startHeroTimer(); // Reset timer
-                }
-                dragging = false;
-            }, { passive: true });
-        }
-
-        function initCarousel() {
-            goSlide(0);
-            startHeroTimer();
-            initCarouselSwipe();
-        }
+        initCarouselSwipe();
 
         /* === GAMES CATALOG SCREEN === */
         var gamesCat = 'all';
