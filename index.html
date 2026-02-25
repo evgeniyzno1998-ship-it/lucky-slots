@@ -8217,8 +8217,7 @@
         /* === CURRENCY SYSTEM === */
         var RATES = { USDT: 1, USD: 1, PLN: 4.05, UAH: 41.2, EUR: 0.92, RUB: 96.5 };
         var displayCurrency = 'USDT';
-        var usdtBalance = 0; /* internal USDT balance (cents precision) */
-        var starsBalance = 0;
+        var usdtBalance = 0; /* internal USDT balance (cents precision parsed to float $ ) */
         var payMethod = 'crypto'; /* crypto | card | stars */
 
         function setCurrency(cur) {
@@ -8253,48 +8252,16 @@
                 if (displayCurrency !== 'USDT') loc.textContent = '≈ ' + usdtBalance.toFixed(2) + ' USDT';
                 else loc.textContent = '';
             }
+            // Clear legacy stars UI if it still exists
             var se = document.getElementById('wStarsAmount');
-            if (se) se.textContent = starsBalance;
+            if (se) se.textContent = '';
         }
 
         function updateBalanceUI() {
+            // Unified header balance display
             var hb = document.getElementById('headerBal');
             var hu = document.getElementById('headerUnit');
-            if (activeWallet === 'stars') {
-                /* Stars mode — show stars balance */
-                if (hb) hb.textContent = starsBalance;
-                if (hu) hu.textContent = '⭐';
-            } else {
-                /* USDT mode — show in selected display currency */
-                if (hb) {
-                    if (usdtBalance !== null && usdtBalance !== undefined) {
-                        hb.textContent = displayCurrency === 'USDT' ? usdtBalance.toFixed(2) : formatCurrency(usdtBalance);
-                    } else {
-                        hb.textContent = '...';
-                    }
-                }
-                if (hu) hu.textContent = displayCurrency;
-            }
-            /* Game balance — always show active wallet */
-            var gb = document.getElementById('gameBal');
-            var cb = document.getElementById('crashBal');
-            if (gb) {
-                if (activeWallet === 'stars') {
-                    gb.textContent = starsBalance + ' ⭐';
-                } else {
-                    gb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
-                }
-            }
-            if (cb) {
-                if (activeWallet === 'stars') {
-                    cb.textContent = starsBalance + ' ⭐';
-                } else {
-                    cb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
-                }
-            }
-            /* Header dual balance */
-            var hb = document.getElementById('headerBal');
-            var hsv = document.getElementById('headerBalStarsVal');
+
             if (hb) {
                 if (usdtBalance !== null && usdtBalance !== undefined) {
                     hb.textContent = displayCurrency === 'USDT' ? usdtBalance.toFixed(2) : formatCurrency(usdtBalance);
@@ -8302,42 +8269,55 @@
                     hb.textContent = '...';
                 }
             }
-            if (hsv) hsv.textContent = starsBalance;
+            if (hu) hu.textContent = displayCurrency;
+
+            /* Game balance — always show unified wallet */
+            var gb = document.getElementById('gameBal');
+            var cb = document.getElementById('crashBal');
+            if (gb) gb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
+            if (cb) cb.textContent = usdtBalance !== null ? usdtBalance.toFixed(2) : '0';
+
+            /* Header dual balance elements (if applicable) */
+            var hsv = document.getElementById('headerBalStarsVal');
+            if (hsv) hsv.parentElement.style.display = 'none'; // Hide stars block
+
             /* Popup values */
             var pu = document.getElementById('bpUsdtVal');
-            var ps = document.getElementById('bpStarsVal');
             if (pu) pu.textContent = '$' + (usdtBalance || 0).toFixed(2);
-            if (ps) ps.textContent = starsBalance || 0;
+            var ps = document.getElementById('bpStarsVal');
+            if (ps) ps.parentElement.style.display = 'none'; // Hide stars block
+
             var fb = document.getElementById('freeBadge'); if (fb) fb.textContent = freeSpins > 0 ? '⚡ ' + freeSpins + ' ' + T.freeSpins : '';
             updateSpinBtn();
         }
 
-        /* Override loadBalance to set usdtBalance */
+        /* Override loadBalance to set usdtBalance directly from balance_cents */
         var loadBalanceRetries = 0;
         async function loadBalance() {
             try {
                 var r = await fetch(API + '/api/balance?' + qs()); var d = await r.json();
                 if (d.ok) {
-                    loadBalanceRetries = 0;
-                    balance = d.balance; freeSpins = d.free_spins || 0;
-                    /* Convert coins to USDT — 100 coins = $1 USDT */
-                    usdtBalance = d.balance / 100;
-                    starsBalance = d.stars_balance || 0;
+                    loadBalanceRetries = 0; // reset retries on success
+                    balance = d.balance; // this is balance_cents coming directly from bot.py
+                    freeSpins = d.free_spins || 0;
+                    usdtBalance = parseFloat((balance / 100).toFixed(2));
                     updateBalanceUI(); updateWallet();
                     if (d.vip) updateVIP(d.vip);
                     return;
                 }
             } catch (e) {
                 loadBalanceRetries++;
-                if (loadBalanceRetries > 2) {
-                    // Fallback to demo mode if backend is disconnected
-                    balance = 15000; freeSpins = 10;
-                    usdtBalance = 150.00; starsBalance = 2500;
-                    updateBalanceUI(); updateWallet();
-                    return;
+                console.warn('API /balance fetch failed. Retrying... Attempt:', loadBalanceRetries);
+                /* 
+                 * DELIBERATE CHANGE: We no longer fallback to mock demo balances after 3 retries.
+                 * This was the bug causing users to "lose" their balance display when network flipped briefly.
+                 * The app will patiently keep attempting to load the true state.
+                 */
+                if (loadBalanceRetries > 20) {
+                    console.error('API disconnected for a long period.');
                 }
             }
-            setTimeout(loadBalance, 2000);
+            setTimeout(loadBalance, 3000);
         }
 
         /* === WALLET TAB SWITCH (legacy — now using cashier tabs) === */
@@ -8361,8 +8341,9 @@
                     /* If the new design doesn't use cashHistory, toggle visibility manually */
                     histContainer.style.display = tab === 'history' ? 'block' : 'none';
                     if (tab === 'deposit') {
-                        document.getElementById('depositCryptoSection').style.display = activeWallet === 'usdt' ? 'block' : 'none';
-                        document.getElementById('depositStarsSection').style.display = activeWallet === 'stars' ? 'block' : 'none';
+                        // Display the standard deposit menu
+                        var dc = document.getElementById('depositCryptoSection');
+                        if (dc) dc.style.display = 'block';
                     } else {
                         var cDepo = document.getElementById('depositCryptoSection');
                         if (cDepo) cDepo.style.display = 'none';
@@ -8376,19 +8357,9 @@
         }
 
         function switchActiveWallet(w) {
-            activeWallet = w;
-            updateBalanceUI(); updateWallet();
-            /* Highlight active card in cashier */
-            var uc = document.getElementById('cashierUsdtCard');
-            var sc = document.getElementById('cashierStarsCard');
-            if (uc) uc.style.borderColor = w === 'usdt' ? 'var(--red)' : 'var(--border)';
-            if (sc) sc.style.borderColor = w === 'stars' ? '#FFD700' : 'var(--border)';
-            /* Header highlight */
-            var hc = document.getElementById('headerBalCrypto');
-            var hs = document.getElementById('headerBalStars');
-            if (hc) hc.style.background = w === 'usdt' ? 'rgba(227,30,36,.1)' : 'transparent';
-            if (hs) hs.style.background = w === 'stars' ? 'rgba(255,215,0,.1)' : 'transparent';
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            // Deprecated: UI no longer toggles between distinct Star/USDT internal wallets, 
+            // but we keep this function structure to not break any existing external onclicks
+            console.log('Wallet toggled, but system uses unified USD balance now.');
         }
 
         /* === PAYMENT METHOD === */
@@ -8422,26 +8393,28 @@
         function selectWithdrawMethod(m) {
             withdrawMethod = m;
             document.getElementById('wdCrypto').classList.toggle('active', m === 'crypto');
-            document.getElementById('wdStars').classList.toggle('active', m === 'stars');
-            document.getElementById('wdUnit').textContent = m === 'crypto' ? displayCurrency : 'Stars';
+
+            // Telegram Stars withdrawals to users are not natively supported by the API yet
+            var wdStarsEl = document.getElementById('wdStars');
+            if (wdStarsEl) wdStarsEl.classList.toggle('active', m === 'stars');
+
+            document.getElementById('wdUnit').textContent = m === 'crypto' ? displayCurrency : 'USDT';
             updateWithdrawInfo();
         }
         function setWithdrawPct(pct) {
-            var bal = withdrawMethod === 'crypto' ? usdtBalance : starsBalance;
-            var amt = (bal * pct / 100);
-            document.getElementById('withdrawAmount').value = withdrawMethod === 'crypto' ? amt.toFixed(2) : Math.floor(amt);
+            var amt = (usdtBalance * pct / 100);
+            document.getElementById('withdrawAmount').value = amt.toFixed(2);
         }
         function updateWithdrawInfo() {
-            var bal = withdrawMethod === 'crypto' ? usdtBalance : starsBalance;
-            var unit = withdrawMethod === 'crypto' ? displayCurrency : 'Stars';
-            document.getElementById('wdAvailable').textContent = (withdrawMethod === 'crypto' ? bal.toFixed(2) : bal) + ' ' + unit;
+            var unit = withdrawMethod === 'crypto' ? displayCurrency : 'USDT';
+            document.getElementById('wdAvailable').textContent = usdtBalance.toFixed(2) + ' ' + unit;
         }
         async function submitWithdraw() {
             var amt = parseFloat(document.getElementById('withdrawAmount').value);
             if (!amt || amt <= 0) { showToast('❌', 'Enter valid amount', 'OK', '', function () { closeToast() }); return; }
-            if (withdrawMethod === 'crypto' && amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
-            if (withdrawMethod === 'crypto' && amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
-            if (withdrawMethod === 'stars' && amt > starsBalance) { showToast('❌', 'Insufficient Stars', 'OK', '', function () { closeToast() }); return; }
+            if (amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
+            if (amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
+
             try {
                 showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
                 var r = await fetch(API + '/api/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
