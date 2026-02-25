@@ -5371,56 +5371,81 @@
 
                     <!-- Deposit Amount Input Sections -->
                     <div id="depositCryptoSection">
-                        <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Enter Amount
-                            (USDT)</h3>
-                        <div style="position:relative;margin-bottom:12px">
-                            <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
-                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:20px;font-weight:700;text-align:center;font-family:monospace">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Enter Amount</h3>
                             <div
-                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2)">
+                                class="bg-green-500/10 border border-green-500/20 text-green-500 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Network: TRC20
+                            </div>
+                        </div>
+                        <div style="position:relative;margin-bottom:8px">
+                            <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
+                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
+                                onfocus="this.style.borderColor='rgba(227,30,36,0.5)';this.style.boxShadow='0 0 15px rgba(227,30,36,0.2)'"
+                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                            <div
+                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:12px">
                                 USDT</div>
                         </div>
-                        <p class="text-[10px] text-gray-500 text-center mb-4">Min: 1.00 USDT | Max: 10,000 USDT</p>
+                        <div class="flex justify-between text-[10px] text-gray-400 mb-4 px-1">
+                            <span>Min limit: <span class="text-white font-bold">1.00 USDT</span></span>
+                            <span>Est. Fee: <span class="text-green-400 font-bold">Free</span></span>
+                        </div>
                         <div class="grid grid-cols-4 gap-2 mb-6">
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
-                                onclick="document.getElementById('depAmtCrypto').value='5';updateMainDepBtn()">$5</button>
-                            <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                                 onclick="document.getElementById('depAmtCrypto').value='10';updateMainDepBtn()">$10</button>
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                                 onclick="document.getElementById('depAmtCrypto').value='50';updateMainDepBtn()">$50</button>
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                                 onclick="document.getElementById('depAmtCrypto').value='100';updateMainDepBtn()">$100</button>
+                            <button
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all text-[#e62e3d] flex flex-col items-center justify-center leading-none"
+                                onclick="document.getElementById('depAmtCrypto').value='500';updateMainDepBtn()">
+                                <span>Max</span>
+                                <span class="text-[8px] font-normal text-gray-500 mt-0.5">$500</span>
+                            </button>
                         </div>
                     </div>
 
                     <div id="depositStarsSection" class="hidden">
-                        <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Enter Amount
-                            (Stars)</h3>
-                        <div style="position:relative;margin-bottom:12px">
-                            <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
-                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:20px;font-weight:700;text-align:center;font-family:monospace">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Enter Amount</h3>
                             <div
-                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2)">
-                                ⭐</div>
+                                class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                                <span class="material-symbols-outlined text-[10px]">bolt</span> Instant</div>
                         </div>
-                        <p class="text-[10px] text-gray-500 text-center mb-4">Min: 50 Stars | Max: 50,000 Stars</p>
+                        <div style="position:relative;margin-bottom:8px">
+                            <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
+                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
+                                onfocus="this.style.borderColor='rgba(59,130,246,0.5)';this.style.boxShadow='0 0 15px rgba(59,130,246,0.2)'"
+                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                            <div
+                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:12px flex items-center gap-1">
+                                ⭐ STARS</div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-gray-400 mb-4 px-1">
+                            <span>Min limit: <span class="text-white font-bold">50 Stars</span></span>
+                            <span>Est. Fee: <span class="text-green-400 font-bold">Free</span></span>
+                        </div>
                         <div class="grid grid-cols-4 gap-2 mb-6">
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
-                                onclick="document.getElementById('depAmtStars').value='50';updateMainDepBtn()">50</button>
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                                onclick="document.getElementById('depAmtStars').value='150';updateMainDepBtn()">150</button>
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
-                                onclick="document.getElementById('depAmtStars').value='250';updateMainDepBtn()">250</button>
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
+                                onclick="document.getElementById('depAmtStars').value='500';updateMainDepBtn()">500</button>
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
                                 onclick="document.getElementById('depAmtStars').value='1000';updateMainDepBtn()">1000</button>
                             <button
-                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
-                                onclick="document.getElementById('depAmtStars').value='5000';updateMainDepBtn()">5000</button>
+                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all text-blue-400 flex flex-col items-center justify-center leading-none"
+                                onclick="document.getElementById('depAmtStars').value='5000';updateMainDepBtn()">
+                                <span>Max</span>
+                                <span class="text-[8px] font-normal text-gray-500 mt-0.5">5000</span>
+                            </button>
                         </div>
                     </div>
 
@@ -8488,27 +8513,40 @@
 
             var html = '';
             Object.keys(groups).forEach(function (date) {
-                html += `<h3 style="text-align:center;font-size:12px;font-weight:600;color:var(--dim2);margin:24px 0 12px;text-transform:uppercase;letter-spacing:1px">${date}</h3>`;
+                html += `<h3 style="text-align:left;font-size:10px;font-weight:800;color:var(--dim2);margin:24px 0 12px 16px;text-transform:uppercase;letter-spacing:1px">${date}</h3>`;
                 groups[date].forEach(function (tx) {
                     var isPlus = tx.type === 'deposit' || tx.type === 'win';
-                    var icon = isPlus ? 'add' : 'remove';
-                    var color = isPlus ? '#C0142A' : '#9ca3af';
+                    var isDeposit = tx.type === 'deposit';
+                    var icon = isPlus ? 'arrow_downward' : 'arrow_upward';
+                    var color = isPlus ? '#10b981' : '#f43f5e';
                     var timeStr = new Date(tx.created_at || tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+                    var statusBadge = '';
+                    if (tx.status === 'success' || tx.status === 'completed') {
+                        statusBadge = '<span style="color:#10b981;font-size:10px;font-weight:800;background:rgba(16,185,129,0.1);padding:2px 6px;border-radius:4px">COMPLETED</span>';
+                    } else if (tx.status === 'pending') {
+                        statusBadge = '<span style="color:#f59e0b;font-size:10px;font-weight:800;background:rgba(245,158,11,0.1);padding:2px 6px;border-radius:4px">PENDING ↻</span>';
+                    } else {
+                        statusBadge = `<span style="color:#f43f5e;font-size:10px;font-weight:800;background:rgba(244,63,94,0.1);padding:2px 6px;border-radius:4px">${tx.status.toUpperCase()}</span>`;
+                    }
+
+                    var repeatBtn = isDeposit ? `<button onclick="switchCashierTab('deposit');document.getElementById('depAmtCrypto').value='${tx.amount}';updateMainDepBtn()" style="background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--dim);border-radius:6px;font-size:10px;padding:4px 8px;margin-top:6px;cursor:pointer;display:flex;align-items:center;gap:4px;float:right"><span class="material-symbols-outlined" style="font-size:12px">replay</span> Repeat</button>` : '';
+
                     html += `
-                    <div class="glass-item" style="display:flex;align-items:center;justify-content:space-between;padding:14px;border-radius:16px;margin-bottom:8px">
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px solid ${isPlus ? 'rgba(192,20,42,0.2)' : 'rgba(255,255,255,0.05)'};display:flex;align-items:center;justify-content:center">
-                                <span class="material-symbols-outlined" style="font-size:18px;color:${color}">${icon}</span>
+                    <div class="glass-item" style="display:flex;align-items:flex-start;justify-content:space-between;padding:16px;border-radius:16px;margin-bottom:10px;background:#15171b;border:1px solid rgba(255,255,255,0.03);transition:background 0.2s">
+                        <div style="display:flex;align-items:flex-start;gap:14px">
+                            <div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;margin-top:2px">
+                                <span class="material-symbols-outlined" style="font-size:20px;color:${color}">${icon}</span>
                             </div>
                             <div>
-                                <div style="font-size:14px;font-weight:700;color:#fff">${tx.label || (tx.type.charAt(0).toUpperCase() + tx.type.slice(1))}</div>
-                                <div style="font-size:11px;color:var(--dim2);font-weight:500">${timeStr}</div>
+                                <div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:2px">${tx.label || (tx.type.charAt(0).toUpperCase() + tx.type.slice(1))}</div>
+                                <div style="font-size:11px;color:var(--dim);font-weight:500">${timeStr} · ${tx.method || 'Internal'}</div>
+                                <div style="margin-top:6px">${statusBadge}</div>
                             </div>
                         </div>
                         <div style="text-align:right">
-                            <div style="font-size:14px;font-weight:700;color:#fff">${tx.amount} ${tx.unit || 'USDT'}</div>
-                            <div style="font-size:10px;font-weight:600;color:${tx.status === 'success' || tx.status === 'completed' ? '#10b981' : '#f59e0b'}">${tx.status.toUpperCase()}</div>
+                            <div style="font-size:15px;font-weight:800;color:${color}">${isPlus ? '+' : '-'}${tx.amount} <span style="font-size:11px;color:var(--dim2)">${tx.unit || 'USDT'}</span></div>
+                            ${repeatBtn}
                         </div>
                     </div>`;
                 });
