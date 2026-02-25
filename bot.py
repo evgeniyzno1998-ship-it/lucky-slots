@@ -370,11 +370,39 @@ async def add_usdt(uid, delta_cents):
     r = await db("SELECT balance_usdt_cents FROM users WHERE user_id=?", (int(uid),), one=True)
     return r['balance_usdt_cents'] if r else 0
 
-async def add_stars(uid, delta):
-    """Add/subtract Stars balance."""
-    await db("UPDATE users SET balance_stars=GREATEST(0,balance_stars+?) WHERE user_id=?", (int(delta), int(uid)))
-    r = await db("SELECT balance_stars FROM users WHERE user_id=?", (int(uid),), one=True)
-    return r['balance_stars'] if r else 0
+async def add_stars_atomic(uid, stars_amount, charge_id):
+    """
+    High-load fintech-grade atomic balance update specifically for Stars.
+    Guarantees idempotency based on charge_id, prevents double-crediting
+    and ensures safe DB commits via Postgres transactions.
+    """
+    if not db_pool: return False, 0
+    async with db_pool.acquire() as conn:
+        async with conn.transaction():
+            # 1. Idempotency Check (Check if charge_id already exists)
+            existing = await conn.fetchrow(
+                "SELECT id FROM payments WHERE user_id=$1 AND invoice_id=$2 AND status='completed'", 
+                int(uid), str(charge_id)
+            )
+            if existing:
+                logging.warning(f"⭐ Idempotency hit: Duplicate stars payment {charge_id} for user {uid}")
+                return False, 0
+            
+            # 2. Acquire Row-Level Lock for User Balance
+            u = await conn.fetchrow("SELECT balance_stars FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
+            bal_before = u['balance_stars'] if u else 0
+            bal_after = bal_before + stars_amount
+            
+            # 3. Atomic Balance Crediting
+            await conn.execute("UPDATE users SET balance_stars = $1 WHERE user_id=$2", bal_after, int(uid))
+            
+            # 4. Atomic Audit Trail Record
+            await conn.execute(
+                "INSERT INTO payments(user_id, direction, amount_usd, amount_coins, method, status, invoice_id, balance_before, balance_after, details, created_at) "
+                "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+                int(uid), "deposit", 0.0, stars_amount, "telegram_stars", "completed", str(charge_id), bal_before, bal_after, f"stars={stars_amount},charge_id={charge_id}", _now()
+            )
+            return True, bal_after
 
 def usdt_cents_to_display(cents, currency='USD'):
     """Convert USDT cents to display currency amount."""
@@ -605,18 +633,23 @@ async def process_pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
 
 @dp.message(F.successful_payment)
 async def process_successful_payment(msg: Message):
-    """Handle successful Telegram Stars payment."""
+    """Handle successful Telegram Stars payment using atomic fintech-grade logic."""
     payment = msg.successful_payment
     uid = msg.from_user.id
     try:
         pl = json.loads(payment.invoice_payload)
         stars = pl.get("stars", 0)
+        charge_id = payment.telegram_payment_charge_id
+        
         if stars > 0:
-            bal = await add_stars(uid, stars)
-            await record_payment(uid, "deposit", 0, stars, method="telegram_stars", status="completed", details=f"stars={stars},charge_id={payment.telegram_payment_charge_id}")
-            logging.info(f"⭐ Stars payment OK: uid={uid}, +{stars} stars, bal={bal}")
-            u = await get_user(uid); lang = u['language'] if u else 'en'
-            await msg.answer(f"✅ +{stars} ⭐ Stars!\n⭐ Balance: {bal}")
+            success, bal_after = await add_stars_atomic(uid, stars, charge_id)
+            
+            if success:
+                logging.info(f"⭐ Stars payment OK: uid={uid}, +{stars} stars, bal={bal_after}")
+                u = await get_user(uid)
+                await msg.answer(f"✅ +{stars} ⭐ Stars!\n⭐ Balance: {bal_after}")
+            else:
+                logging.info(f"⭐ Stars payment skipped (duplicate): uid={uid}, charge_id={charge_id}")
     except Exception as e:
         logging.error(f"Stars payment handler error: {e}")
 
