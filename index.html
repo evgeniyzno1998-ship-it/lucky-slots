@@ -4895,6 +4895,33 @@
                 </div>
             </div>
         </div>
+        <div
+            class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] md:w-[360px] glass-panel rounded-2xl py-3 px-6 flex justify-between items-center z-50 shadow-2xl">
+            <button onclick="nav('lobby')"
+                class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <span class="material-symbols-outlined" style="font-size: 24px;">home</span>
+            </button>
+            <button onclick="togglePaytable(true)"
+                class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <span class="material-symbols-outlined" style="font-size: 24px;">emoji_events</span>
+            </button>
+            <div class="w-px h-8 bg-white/10"></div>
+            <button onclick="openWheel()" class="flex flex-col items-center gap-1 text-[#E91E3F] relative">
+                <div class="absolute inset-0 bg-[#E91E3F] blur-lg opacity-20"></div>
+                <span class="material-symbols-outlined"
+                    style="font-size: 32px; filter: drop-shadow(0 0 5px rgba(233,30,63,0.8));">sports_esports</span>
+            </button>
+            <div class="w-px h-8 bg-white/10"></div>
+            <button onclick="nav('wallet')"
+                class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <span class="material-symbols-outlined" style="font-size: 24px;">account_balance_wallet</span>
+            </button>
+            <button onclick="nav('profile')"
+                class="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
+                <span class="material-symbols-outlined" style="font-size: 24px;">person</span>
+            </button>
+        </div>
+
         <!-- === PAYTABLE MODAL === -->
         <div id="paytable-modal" class="absolute inset-0 z-50 flex flex-col justify-end"
             style="opacity:0; pointer-events:none; transition:opacity 0.3s ease;">
@@ -6804,127 +6831,137 @@
             spin();
         }
 
-        async function spin() {
-            if (spinning) return;
-            spinning = true;
-            var btn = document.getElementById('spinBtn');
-            if (btn) btn.disabled = true;
-            if (btn) btn.style.transform = 'scale(0.9)';
-            setTimeout(() => { if (btn) btn.style.transform = 'scale(1)' }, 150);
+        async function spin(forcedData = null) {
+            return new Promise(async (resolve) => {
+                if (spinning) return resolve();
+                spinning = true;
+                var btn = document.getElementById('spinBtn');
+                if (btn) btn.disabled = true;
+                if (btn) btn.style.transform = 'scale(0.9)';
+                setTimeout(() => { if (btn) btn.style.transform = 'scale(1)' }, 150);
 
-            var wd = document.getElementById('win-display');
-            var badge = document.getElementById('tumble-badge');
-            var g = document.getElementById('slot-grid');
-            if (wd) { wd.innerText = '0.00'; wd.classList.remove('text-[#FFD700]', 'scale-110'); wd.classList.add('text-white'); }
-            if (badge) { badge.classList.remove('scale-100', 'opacity-100'); badge.classList.add('scale-0', 'opacity-0'); }
+                var wd = document.getElementById('win-display');
+                var badge = document.getElementById('tumble-badge');
+                var g = document.getElementById('slot-grid');
+                if (wd) { wd.innerText = '0.00'; wd.classList.remove('text-[#FFD700]', 'scale-110'); wd.classList.add('text-white'); }
+                if (badge) { badge.classList.remove('scale-100', 'opacity-100'); badge.classList.add('scale-0', 'opacity-0'); }
 
-            var tiles = Array.from(g.children);
-            tiles.forEach((tile, i) => {
-                const col = i % 6;
-                setTimeout(() => {
-                    tile.classList.add('spinning-column');
-                }, col * 60);
-            });
+                var tiles = Array.from(g.children);
+                tiles.forEach((tile, i) => {
+                    const col = i % 6;
+                    setTimeout(() => {
+                        tile.classList.add('spinning-column');
+                    }, col * 60);
+                });
 
-            const SPIN_BASE = speedMode === 2 ? 300 : 700;
-            const COL_STAGGER = speedMode === 2 ? 40 : 90;
+                const SPIN_BASE = speedMode === 2 ? 300 : 700;
+                const COL_STAGGER = speedMode === 2 ? 40 : 90;
 
-            try {
-                var useFree = freeSpins > 0 && ((activeWallet === 'usdt' && balance < bet) || (activeWallet === 'stars' && starsBalance < bet));
-                var r = await fetch(API + '/api/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet })) });
-                var d = await r.json();
+                try {
+                    var d;
+                    if (forcedData) {
+                        d = forcedData;
+                    } else {
+                        var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
+                        var useFree = freeSpins > 0 && ((activeWallet === 'usdt' && balance < bet) || (activeWallet === 'stars' && starsBalance < bet));
+                        var r = await fetch(API + '/api/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet, double_chance: isDoubleChance })) });
+                        d = await r.json();
 
-                if (!d.ok) {
-                    spinning = false;
-                    if (btn) btn.disabled = false;
+                        if (!d.ok) {
+                            spinning = false;
+                            if (btn) btn.disabled = false;
+                            if (d.balance !== undefined) balance = d.balance;
+                            if (d.stars !== undefined) starsBalance = d.stars;
+                            updateBalanceUI();
+                            tiles.forEach(t => t.classList.remove('spinning-column'));
+                            return resolve();
+                        }
+                    }
+
                     if (d.balance !== undefined) balance = d.balance;
                     if (d.stars !== undefined) starsBalance = d.stars;
+                    freeSpins = d.free_spins || freeSpins;
                     updateBalanceUI();
-                    tiles.forEach(t => t.classList.remove('spinning-column'));
-                    return;
-                }
 
-                if (d.balance !== undefined) balance = d.balance;
-                if (d.stars !== undefined) starsBalance = d.stars;
-                freeSpins = d.free_spins || freeSpins;
-                updateBalanceUI();
+                    var newTypes = d.grid.map(emoji => emojiToSvgMap[emoji] || 'ruby');
 
-                var newTypes = d.grid.map(emoji => emojiToSvgMap[emoji] || 'ruby');
-
-                setTimeout(() => {
-                    g.innerHTML = '';
-                    const newTiles = [];
-                    for (let i = 0; i < 30; i++) {
-                        const div = document.createElement('div');
-                        div.className = 'symbol-tile';
-                        div.style.opacity = '0';
-                        div.style.transform = 'translateY(-110%) scaleY(1.15)';
-                        div.dataset.type = newTypes[i];
-                        div.dataset.index = i;
-                        div.innerHTML = getSymbolSVG(newTypes[i]);
-                        g.appendChild(div);
-                        newTiles.push(div);
-                    }
-
-                    for (let col = 0; col < 6; col++) {
-                        const colDelay = col * COL_STAGGER;
-                        setTimeout(() => {
-                            for (let row = 0; row < 5; row++) {
-                                const tile = newTiles[row * 6 + col];
-                                const rowDelay = row * 35;
-                                setTimeout(() => {
-                                    tile.style.opacity = '1';
-                                    tile.style.transform = '';
-                                    void tile.offsetWidth;
-                                    tile.classList.add('reel-land');
-                                }, rowDelay);
-                            }
-                        }, colDelay);
-                    }
-
-                    const totalAnim = (5) * COL_STAGGER + (4) * 35 + 520;
                     setTimeout(() => {
-                        if (d.winnings > 0) {
-                            var co = {}; d.grid.forEach(function (s) { if (s !== '🎰') co[s] = (co[s] || 0) + 1 });
-                            var ws = new Set(Object.entries(co).filter(function (e) { return e[1] >= 8 }).map(function (e) { return emojiToSvgMap[e[0]] || 'ruby' }));
+                        g.innerHTML = '';
+                        const newTiles = [];
+                        for (let i = 0; i < 30; i++) {
+                            const div = document.createElement('div');
+                            div.className = 'symbol-tile';
+                            div.style.opacity = '0';
+                            div.style.transform = 'translateY(-110%) scaleY(1.15)';
+                            div.dataset.type = newTypes[i];
+                            div.dataset.index = i;
+                            div.innerHTML = getSymbolSVG(newTypes[i]);
+                            g.appendChild(div);
+                            newTiles.push(div);
+                        }
 
-                            newTiles.forEach(t => {
-                                if (ws.has(t.dataset.type)) {
-                                    t.classList.add('winning-tile');
-                                    const rect = t.getBoundingClientRect();
-                                    triggerSparkles(rect.left + rect.width / 2, rect.top + rect.height / 2);
-                                } else {
-                                    t.style.opacity = '0.3';
+                        for (let col = 0; col < 6; col++) {
+                            const colDelay = col * COL_STAGGER;
+                            setTimeout(() => {
+                                for (let row = 0; row < 5; row++) {
+                                    const tile = newTiles[row * 6 + col];
+                                    const rowDelay = row * 35;
+                                    setTimeout(() => {
+                                        tile.style.opacity = '1';
+                                        tile.style.transform = '';
+                                        void tile.offsetWidth;
+                                        tile.classList.add('reel-land');
+                                    }, rowDelay);
                                 }
-                            });
-
-                            animateValue(wd, 0, parseFloat(d.winnings), 1000);
-                            wd.classList.remove('text-white');
-                            wd.classList.add('text-[#FFD700]');
-                            if (badge) {
-                                badge.classList.remove('scale-0', 'opacity-0');
-                                badge.classList.add('scale-100', 'opacity-100');
-                            }
-                            if (d.winnings > bet * 5) {
-                                setTimeout(() => showBigWin(d.winnings.toFixed(2)), 500);
-                            }
+                            }, colDelay);
                         }
 
-                        if (d.triggered_bonus) {
-                            setTimeout(function () { startBonus('triggered') }, 1200);
-                        }
+                        const totalAnim = (5) * COL_STAGGER + (4) * 35 + 520;
+                        setTimeout(() => {
+                            if (d.winnings > 0) {
+                                var co = {}; d.grid.forEach(function (s) { if (s !== '🎰') co[s] = (co[s] || 0) + 1 });
+                                var ws = new Set(Object.entries(co).filter(function (e) { return e[1] >= 8 }).map(function (e) { return emojiToSvgMap[e[0]] || 'ruby' }));
 
-                        spinning = false;
-                        if (btn) btn.disabled = false;
-                    }, totalAnim);
+                                newTiles.forEach(t => {
+                                    if (ws.has(t.dataset.type)) {
+                                        t.classList.add('winning-tile');
+                                        const rect = t.getBoundingClientRect();
+                                        triggerSparkles(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                                    } else {
+                                        t.style.opacity = '0.3';
+                                    }
+                                });
 
-                }, Math.max(0, SPIN_BASE - 500));
+                                animateValue(wd, 0, parseFloat(d.winnings), 1000);
+                                wd.classList.remove('text-white');
+                                wd.classList.add('text-[#FFD700]');
+                                if (badge) {
+                                    badge.classList.remove('scale-0', 'opacity-0');
+                                    badge.classList.add('scale-100', 'opacity-100');
+                                }
+                                if (d.winnings > bet * 5) {
+                                    setTimeout(() => showBigWin(d.winnings.toFixed(2)), 500);
+                                }
+                            }
 
-            } catch (e) {
-                spinning = false;
-                if (btn) btn.disabled = false;
-                tiles.forEach(t => t.classList.remove('spinning-column'));
-            }
+                            if (d.triggered_bonus && !forcedData) {
+                                setTimeout(function () { startBonus('triggered') }, 1200);
+                            }
+
+                            spinning = false;
+                            if (btn) btn.disabled = false;
+                            resolve();
+                        }, totalAnim);
+
+                    }, Math.max(0, SPIN_BASE - 500));
+
+                } catch (e) {
+                    spinning = false;
+                    if (btn) btn.disabled = false;
+                    tiles.forEach(t => t.classList.remove('spinning-column'));
+                    resolve();
+                }
+            });
         }
 
         function animateValue(obj, start, end, duration) {
@@ -6938,142 +6975,145 @@
                 }
             };
             window.requestAnimationFrame(step);
+        }
 
-            /* === NEW SLOTS MODALS & AUTOSPIN === */
-            function togglePaytable(show) {
-                const modal = document.getElementById('paytable-modal');
-                if (!modal) return;
-                if (show) {
-                    modal.style.opacity = '1';
-                    modal.style.pointerEvents = 'auto';
-                } else {
-                    modal.style.opacity = '0';
-                    modal.style.pointerEvents = 'none';
-                }
+        /* === NEW SLOTS MODALS & AUTOSPIN === */
+        function togglePaytable(show) {
+            const modal = document.getElementById('paytable-modal');
+            if (!modal) return;
+            if (show) {
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
+            } else {
+                modal.style.opacity = '0';
+                modal.style.pointerEvents = 'none';
             }
+        }
 
-            let isAutoSpinning = false;
-            let autoSpinsLeft = 0;
-            let selectedAutoAmount = 25;
+        let isAutoSpinning = false;
+        let autoSpinsLeft = 0;
+        let selectedAutoAmount = 25;
 
-            function openAutoModal() {
-                if (spinning || isAutoSpinning) return;
-                selectedAutoAmount = 25;
-                updateAutoChips();
-                const modal = document.getElementById('autospin-modal');
-                if (modal) {
-                    modal.style.opacity = '1';
-                    modal.style.pointerEvents = 'auto';
-                }
+        function openAutoModal() {
+            if (spinning || isAutoSpinning) return;
+            selectedAutoAmount = 25;
+            updateAutoChips();
+            const modal = document.getElementById('autospin-modal');
+            if (modal) {
+                modal.style.opacity = '1';
+                modal.style.pointerEvents = 'auto';
             }
+        }
 
-            function toggleAutoModal(show) {
-                const modal = document.getElementById('autospin-modal');
-                if (!modal) return;
-                modal.style.opacity = show ? '1' : '0';
-                modal.style.pointerEvents = show ? 'auto' : 'none';
+        function toggleAutoModal(show) {
+            const modal = document.getElementById('autospin-modal');
+            if (!modal) return;
+            modal.style.opacity = show ? '1' : '0';
+            modal.style.pointerEvents = show ? 'auto' : 'none';
+        }
+
+        function selectAutoChip(btn, amount) {
+            selectedAutoAmount = amount;
+            updateAutoChips();
+        }
+
+        function updateAutoChips() {
+            const btns = document.querySelectorAll('#autoSpinsGrid .option-chip');
+            if (!btns.length) return;
+            btns.forEach(b => b.classList.remove('selected'));
+            const map = { 10: 0, 25: 1, 50: 2, 100: 3, 9999: 4 };
+            if (map[selectedAutoAmount] !== undefined && btns[map[selectedAutoAmount]]) {
+                btns[map[selectedAutoAmount]].classList.add('selected');
             }
+        }
 
-            function selectAutoChip(btn, amount) {
-                selectedAutoAmount = amount;
-                updateAutoChips();
+        function startAutoSpinFlow() {
+            autoSpinsLeft = selectedAutoAmount;
+            isAutoSpinning = true;
+            toggleAutoModal(false);
+
+            var al = document.getElementById('autoLabel');
+            if (al) al.textContent = 'STOP';
+            var icon = document.getElementById('turboIcon');
+            if (icon) icon.textContent = 'stop';
+
+            doAutoSpin();
+        }
+
+        function stopAutoSpinFlow() {
+            isAutoSpinning = false;
+            autoSpinsLeft = 0;
+
+            var labels = ['🐢', '▶️', '⚡'];
+            var al = document.getElementById('autoLabel');
+            if (al) al.textContent = labels[speedMode];
+            var icon = document.getElementById('turboIcon');
+            if (icon) {
+                if (speedMode === 0) icon.textContent = 'speed';
+                if (speedMode === 1) icon.textContent = 'play_arrow';
+                if (speedMode === 2) icon.textContent = 'bolt';
             }
+        }
 
-            function updateAutoChips() {
-                const btns = document.querySelectorAll('#autoSpinsGrid .option-chip');
-                if (!btns.length) return;
-                btns.forEach(b => b.classList.remove('selected'));
-                const map = { 10: 0, 25: 1, 50: 2, 100: 3, 9999: 4 };
-                if (map[selectedAutoAmount] !== undefined && btns[map[selectedAutoAmount]]) {
-                    btns[map[selectedAutoAmount]].classList.add('selected');
-                }
+        // Intercept Auto button depending on state
+        function handleAutoBtnClick() {
+            if (isAutoSpinning) {
+                stopAutoSpinFlow();
+            } else {
+                openAutoModal();
             }
+        }
 
-            function startAutoSpinFlow() {
-                autoSpinsLeft = selectedAutoAmount;
-                isAutoSpinning = true;
-                toggleAutoModal(false);
-
-                var al = document.getElementById('autoLabel');
-                if (al) al.textContent = 'STOP';
-                var icon = document.getElementById('turboIcon');
-                if (icon) icon.textContent = 'stop';
-
-                doAutoSpin();
+        function doAutoSpin() {
+            if (!isAutoSpinning || autoSpinsLeft <= 0) {
+                stopAutoSpinFlow();
+                return;
             }
-
-            function stopAutoSpinFlow() {
-                isAutoSpinning = false;
-                autoSpinsLeft = 0;
-
-                var labels = ['🐢', '▶️', '⚡'];
-                var al = document.getElementById('autoLabel');
-                if (al) al.textContent = labels[speedMode];
-                var icon = document.getElementById('turboIcon');
-                if (icon) {
-                    if (speedMode === 0) icon.textContent = 'speed';
-                    if (speedMode === 1) icon.textContent = 'play_arrow';
-                    if (speedMode === 2) icon.textContent = 'bolt';
-                }
-            }
-
-            // Intercept Auto button depending on state
-            function handleAutoBtnClick() {
-                if (isAutoSpinning) {
-                    stopAutoSpinFlow();
-                } else {
-                    openAutoModal();
-                }
-            }
-
-            function doAutoSpin() {
-                if (!isAutoSpinning || autoSpinsLeft <= 0) {
-                    stopAutoSpinFlow();
-                    return;
-                }
-                if (!spinning) {
-                    autoSpinsLeft--;
-                    doSpin();
-                    const checkInterval = setInterval(() => {
-                        if (!spinning) {
-                            clearInterval(checkInterval);
-                            setTimeout(doAutoSpin, speedMode === 2 ? 200 : 700);
-                        }
-                    }, 100);
-                }
+            if (!spinning) {
+                autoSpinsLeft--;
+                doSpin();
+                const checkInterval = setInterval(() => {
+                    if (!spinning) {
+                        clearInterval(checkInterval);
+                        setTimeout(doAutoSpin, speedMode === 2 ? 200 : 700);
+                    }
+                }, 100);
             }
         }
 
         /* === BONUS === */
         async function startBonus(mode) {
-            spinning = true; document.getElementById('bonusOL').classList.add('show');
-            document.getElementById('boTitle').textContent = T.bonusRound;
-            document.getElementById('boSpinL').textContent = T.spinL; document.getElementById('boTotalL').textContent = T.winL;
-            document.getElementById('boClose').style.display = 'none'; document.getElementById('boFinal').textContent = ''; document.getElementById('boRes').textContent = '';
-            document.getElementById('boSpinC').textContent = '0/10'; document.getElementById('boRunT').textContent = '0';
-            var bg = document.getElementById('boGrid'); bg.innerHTML = '';
-            for (var i = 0; i < 30; i++) { var c = document.createElement('div'); c.className = 'cell'; c.textContent = BONSYM[Math.floor(Math.random() * BONSYM.length)]; bg.appendChild(c) }
+            var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
             try {
-                var r = await fetch(API + '/api/bonus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode })) });
-                var d = await r.json(); if (!d.ok) { if (d.error === 'funds') showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') }); closeBonus(); return }
-                var bc = bg.querySelectorAll('.cell'); var sp = S();
+                var r = await fetch(API + '/api/bonus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode, double_chance: isDoubleChance })) });
+                var d = await r.json();
+                if (!d.ok) {
+                    if (d.error === 'funds') showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') });
+                    return;
+                }
+
+                var al = document.getElementById('autoLabel');
+                var originalLabel = al ? al.textContent : 'Auto';
+
                 for (var j = 0; j < d.spins.length; j++) {
                     var sn = d.spins[j];
-                    document.getElementById('boSpinC').textContent = sn.spin_number + '/' + sn.total_spins;
-                    for (var t = 0; t < sp.bf; t++) { bc.forEach(function (c) { c.textContent = BONSYM[Math.floor(Math.random() * BONSYM.length)] }); await sleep(sp.ai) }
-                    sn.grid.forEach(function (s, i) { bc[i].textContent = s; bc[i].className = 'cell'; if (s === '🎰') bc[i].classList.add('scatter'); else if (s === '💣') bc[i].classList.add('bomb') });
-                    if (sn.winning_symbols) { var ws = new Set(Object.keys(sn.winning_symbols)); bc.forEach(function (c) { if (ws.has(c.textContent)) c.classList.add('win') }) }
-                    await sleep(sp.bp / 2);
-                    if (sn.bombs && sn.bombs.length > 0 && sn.base_win > 0) { for (var k = 0; k < sn.bombs.length; k++) { showBombPop(sn.bombs[k].mult); await sleep(sp.bmp) } }
-                    document.getElementById('boRes').innerHTML = sn.winnings > 0 ? '<span style="color:var(--green)">+' + sn.winnings + (sn.total_bomb_mult > 1 ? ' 💣x' + sn.total_bomb_mult : '') + '</span>' : '—';
-                    if (sn.retrigger) { document.getElementById('boRes').innerHTML += '<br><span style="color:var(--red)">+5!</span>'; await sleep(sp.bp) }
-                    document.getElementById('boRunT').textContent = sn.running_total; await sleep(sp.bp);
+                    if (al) al.textContent = (j + 1) + '/' + d.spins.length;
+
+                    await spin(sn);
+                    await sleep(1500);
                 }
-                balance = d.balance; document.getElementById('boRes').textContent = '';
-                document.getElementById('boFinal').innerHTML = '🏆 ' + d.total_win + ' 🪙';
-                var cb = document.getElementById('boClose'); cb.textContent = T.collect + ' ' + d.total_win + ' 🪙'; cb.style.display = 'block';
-            } catch (e) { closeBonus() }
+
+                balance = d.balance;
+                updateBalanceUI();
+
+                if (d.total_win > 0) {
+                    showBigWin(d.total_win.toFixed(2));
+                }
+
+                if (al) al.textContent = originalLabel;
+            } catch (e) { console.error('Bonus error', e); }
         }
+        function buyBonus() { if (!balance || balance < bet * 100) { showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') }); return; } startBonus('bought'); }
         function closeBonus() { document.getElementById('bonusOL').classList.remove('show'); spinning = false; updateBalanceUI() }
         function showBombPop(m) { var e = document.createElement('div'); e.className = 'bomb-pop'; e.textContent = '💣 x' + m; document.body.appendChild(e); setTimeout(function () { e.remove() }, 800) }
         function buyBonus() { if (!balance || balance < bet * 100) { showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') }); return } startBonus('bought') }
