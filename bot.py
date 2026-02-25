@@ -59,15 +59,9 @@ BONUS_SYMS = ['👑', '💎', '⭐', '❤️', '🍀', '🧲', '💰', '🌈']
 SCATTER = '🎰'; BOMB = '💣'
 BOMB_WEIGHTS = [(50,2),(25,3),(12,5),(6,8),(3,10),(2,15),(1,25),(0.5,50),(0.2,100)]
 
-# Updated Wheel Prizes (Phase 3 Redesign)
-# Segments: 0:CASH, 1:SPINS, 2:DEPOSIT, 3:STARS, 4:VIP, 5:MYSTERY
-WHEEL_PRIZES_V2 = [
-    {"type": "cash", "val": 10, "weight": 20},
-    {"type": "spins", "val": 25, "weight": 25},
-    {"type": "deposit", "val": 50, "weight": 15},
-    {"type": "stars", "val": 500, "weight": 30},
-    {"type": "vip", "val": 100, "weight": 5},
-    {"type": "mystery", "val": 1, "weight": 5}
+WHEEL_PRIZES = [
+    (30,'coins',5),(25,'coins',10),(15,'coins',25),(10,'coins',50),
+    (8,'coins',100),(5,'free_spins',3),(4,'free_spins',5),(2,'coins',250),(1,'coins',500),
 ]
 
 VIP_LEVELS = [
@@ -449,10 +443,11 @@ def _bmult():
         if r<=c: return m
     return 2
 
-def base_spin(bet):
+def base_spin(bet, double_chance=False):
     g=[]; sc=0
+    scatter_odds = 0.10 if double_chance else 0.05
     for _ in range(30):
-        if random.random()<0.05: g.append(SCATTER); sc+=1
+        if random.random()<scatter_odds: g.append(SCATTER); sc+=1
         else: g.append(random.choice(BASE_SYMS))
     co={}
     for s in g:
@@ -653,6 +648,8 @@ async def api_spin(req):
     data=await req.json(); uid=get_uid(data)
     if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
     bet=int(data.get("bet",0))
+    dc=data.get("double_chance",False)
+    actual_bet=int(bet*1.25) if dc else bet
     if bet not in(5,10,25,50): return web.json_response({"ok":False,"error":"bad_bet"},headers=H)
     free=data.get("use_free_spin",False); u=await get_user(uid)
     is_free = False
@@ -660,9 +657,9 @@ async def api_spin(req):
         await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=?",(uid,))
         is_free = True
     else:
-        if u['coins']<bet: return web.json_response({"ok":False,"error":"funds","balance":u['coins']},headers=H)
-        await add_coins(uid,-bet)
-    r=base_spin(bet)
+        if u['coins']<actual_bet: return web.json_response({"ok":False,"error":"funds","balance":u['coins']},headers=H)
+        await add_coins(uid,-actual_bet)
+    r=base_spin(bet, double_chance=dc)
     if r["winnings"]>0: await add_coins(uid,r["winnings"])
     u2=await get_user(uid)
     # Record bet in history
@@ -717,73 +714,7 @@ async def api_wheel_status(req):
     if not uid: return web.json_response({"ok":False},headers=H)
     u=await get_user(uid)
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
-    available = (time.time() - last_spin >= 86400)
-    next_spin = "00:00:00"
-    if not available:
-        rem = 86400 - (time.time() - last_spin)
-        h = int(rem // 3600); m = int((rem % 3600) // 60); s = int(rem % 60)
-        next_spin = f"{h:02d}:{m:02d}:{s:02d}"
-    
-    return web.json_response({"ok":True,"available":available,"next_spin":next_spin,"balance_stars":u['balance_stars']},headers=H)
-
-async def api_wheel_spin(req):
-    """POST /api/wheel-spin — Perform a spin on the Phase 3 Fortune Wheel."""
-    if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
-    u=await get_user(uid)
-    last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
-    if time.time() - last_spin < 86400: return web.json_response({"ok":False,"error":"already_spun"},headers=H)
-    
-    # Select prize based on weights
-    total_w = sum(p['weight'] for p in WHEEL_PRIZES_V2)
-    r = random.uniform(0, total_w); cur = 0; p_idx = 0
-    for i, p in enumerate(WHEEL_PRIZES_V2):
-        cur += p['weight']
-        if r <= cur: p_idx = i; break
-    
-    prize = WHEEL_PRIZES_V2[p_idx]
-    await db("UPDATE users SET last_wheel=? WHERE user_id=?",(str(int(time.time())),uid))
-    
-    # Process prize logic
-    if prize['type'] == 'stars':
-        await add_stars(uid, prize['val'])
-    elif prize['type'] == 'spins':
-        await db("UPDATE users SET free_spins=free_spins+? WHERE user_id=?",(prize['val'],uid))
-    elif prize['type'] == 'cash':
-        await add_usdt(uid, prize['val'] * 100) # Assuming val is whole dollars
-    
-    u2=await get_user(uid)
-    await record_bet(uid, "fortune_wheel", "spin", 0, 0, u2['balance_stars'], 0, details=f"prize={prize['type']}:{prize['val']}")
-    
-    return web.json_response({
-        "ok":True, "index": p_idx, "win_type": prize['type'], "win_val": prize['val'],
-        "balance_stars": u2['balance_stars'], "free_spins": u2['free_spins']
-    }, headers=H)
-
-async def api_live_drops(req):
-    """GET /api/live-drops — returns mock data for the new drops ticker."""
-    uid = get_uid(query=dict(req.rel_url.query))
-    # In a real app, this would fetch from a 'recent_wins' or 'broadcast' table
-    # For now, generate dynamic mock data that looks premium
-    names = ["Lucky", "Ruby", "Pro", "Vip", "Winner", "Alpha", "Star", "Gold"]
-    games = ["Ruby Slots", "Crash", "Plinko", "Mines", "Roulette"]
-    currencies = ["stars", "ton"]
-    colors = ["#E91E3F", "#FFD700", "#3B82F6", "#10B981"]
-    
-    drops = []
-    for i in range(10):
-        m = round(random.uniform(1.2, 50.0), 1)
-        drops.append({
-            "username": f"{random.choice(names)}{random.randint(10,99)}",
-            "game": random.choice(games),
-            "amount": round(random.uniform(5, 500), 2),
-            "multiplier": m,
-            "currency": random.choice(currencies),
-            "color": random.choice(colors)
-        })
-    drops.sort(key=lambda x: x['multiplier'], reverse=True)
-    return web.json_response({"ok":True, "drops": drops}, headers=H)
+    return web.json_response({"ok":True,"available":(time.time() - last_spin >= 86400)},headers=H)
 
 async def api_profile(req):
     uid=get_uid(query=dict(req.rel_url.query))
@@ -1258,9 +1189,9 @@ async def api_notifications_read(req):
 
 async def start_api():
     app=web.Application(client_max_size=200*1024*1024)
-    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications),("/api/live-drops",api_live_drops)]:
+    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/wheel-spin",api_wheel_spin),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read)]:
         app.router.add_post(path,handler)
     # Admin API routes (JWT protected)
     # Admin API (GET)
