@@ -4551,16 +4551,7 @@
                     <span class="material-symbols-outlined" style="font-size:14px">arrow_upward</span> WITHDRAW
                 </button>
             </div>
-            <!-- Floating Fortune Wheel Button (Phase 3) -->
-            <button onclick="openWheel()"
-                class="fixed bottom-24 right-5 w-14 h-14 bg-gradient-to-tr from-[#C0142A] to-[#FF0033] rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(233,30,63,0.5)] hover:scale-110 active:scale-95 transition-all z-40 group animate-pulse-ring">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                    class="w-8 h-8 text-white transition-transform group-hover:rotate-90">
-                    <path fill-rule="evenodd"
-                        d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
-                        clip-rule="evenodd" />
-                </svg>
-            </button>
+
         </div>
     </div>
 
@@ -4572,7 +4563,7 @@
                     class="material-symbols-outlined">arrow_back</span></button>
             <input type="text" class="search-input" id="searchInput" placeholder="Search games..."
                 oninput="onSearchInput(this.value)">
-            <button onclick="document.getElementById('searchInput').value='';onSearchInput('')"
+            <button onclick="closeSearch(); document.getElementById('searchInput').value=''; onSearchInput('');"
                 style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px"><span
                     class="material-symbols-outlined">close</span></button>
         </div>
@@ -4591,7 +4582,7 @@
         <div class="hero-carousel"
             style="position:relative;overflow:hidden;border-radius:var(--radius-xl);margin:0 16px 12px;border:1px solid rgba(255,255,255,0.05)">
             <div class="hero-track" id="heroTrack"
-                style="display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);width:300%">
+                style="display:flex;transition:transform .5s cubic-bezier(.4,0,.2,1);">
             </div>
             <!-- Dots -->
             <div id="heroDots"
@@ -5225,6 +5216,16 @@
         </div>
 
         <div id="bonusAvailableSection">
+            <!-- Floating Fortune Wheel Button (Phase 3) -->
+            <button onclick="openWheel()"
+                class="fixed bottom-24 right-5 w-14 h-14 bg-gradient-to-tr from-[#C0142A] to-[#FF0033] rounded-full flex items-center justify-center shadow-[0_0_25px_rgba(233,30,63,0.5)] hover:scale-110 active:scale-95 transition-all z-40 group animate-pulse-ring">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                    class="w-8 h-8 text-white transition-transform group-hover:rotate-90">
+                    <path fill-rule="evenodd"
+                        d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z"
+                        clip-rule="evenodd" />
+                </svg>
+            </button>
             <!-- Featured Promotion Banner (Relocated from Wallet) -->
             <div class="relative w-full rounded-2xl bg-gradient-to-br from-[#1a1c22] to-black overflow-hidden border border-gray-800/50 mb-6 mx-auto max-w-[calc(100%-32px)]"
                 id="bonusPromoTop">
@@ -5330,75 +5331,128 @@
                     </div>
                 </div>
 
-                <!-- Payment Methods Section -->
-                <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Payment Methods</h3>
-                <div class="space-y-3 mb-6">
-                    <!-- CryptoBot -->
-                    <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#e62e3d] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
-                        onclick="selectPayMethod('crypto')" id="pmCrypto">
-                        <div class="flex items-center gap-4 z-10">
-                            <div
-                                class="w-10 h-10 rounded-lg bg-red-900/10 flex items-center justify-center border border-red-500/10">
-                                <span class="text-xl">💎</span>
+                <div id="cashDeposit">
+                    <!-- Payment Methods Section -->
+                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Payment Methods</h3>
+                    <div class="space-y-3 mb-6">
+                        <!-- CryptoBot -->
+                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#e62e3d] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
+                            onclick="selectPayMethod('crypto')" id="pmCrypto">
+                            <div class="flex items-center gap-4 z-10">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-red-900/10 flex items-center justify-center border border-red-500/10">
+                                    <span class="text-xl">💎</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-sm tracking-wide">CRYPTOBOT</h3>
+                                    <p class="text-gray-500 text-[10px]">USDT, BTC, TON · Min $1.00</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="font-bold text-white text-sm tracking-wide">CRYPTOBOT</h3>
-                                <p class="text-gray-500 text-[10px]">USDT, BTC, TON · Min $1.00</p>
+                            <div
+                                class="bg-[#e62e3d]/10 text-[#e62e3d] text-[9px] font-bold px-2 py-1 rounded border border-[#e62e3d]/20 uppercase tracking-widest">
+                                +7%</div>
+                        </div>
+
+                        <!-- Telegram Stars -->
+                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-yellow-600 relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
+                            onclick="selectPayMethod('stars')" id="pmStars">
+                            <div class="flex items-center gap-4 z-10">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-yellow-900/10 flex items-center justify-center border border-yellow-500/10">
+                                    <span class="text-xl">⭐</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-sm tracking-wide uppercase">Telegram Stars</h3>
+                                    <p class="text-gray-500 text-[10px]">Instant · In-app payment</p>
+                                </div>
                             </div>
                         </div>
-                        <div
-                            class="bg-[#e62e3d]/10 text-[#e62e3d] text-[9px] font-bold px-2 py-1 rounded border border-[#e62e3d]/20 uppercase tracking-widest">
-                            +7%</div>
                     </div>
 
-                    <!-- Telegram Stars -->
-                    <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-yellow-600 relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
-                        onclick="selectPayMethod('stars')" id="pmStars">
-                        <div class="flex items-center gap-4 z-10">
+                    <!-- Deposit Amount Input Sections -->
+                    <div id="depositCryptoSection">
+                        <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Enter Amount
+                            (USDT)</h3>
+                        <div style="position:relative;margin-bottom:12px">
+                            <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
+                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:20px;font-weight:700;text-align:center;font-family:monospace">
                             <div
-                                class="w-10 h-10 rounded-lg bg-yellow-900/10 flex items-center justify-center border border-yellow-500/10">
-                                <span class="text-xl">⭐</span>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white text-sm tracking-wide uppercase">Telegram Stars</h3>
-                                <p class="text-gray-500 text-[10px]">Instant · In-app payment</p>
-                            </div>
+                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2)">
+                                USDT</div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 text-center mb-4">Min: 1.00 USDT | Max: 10,000 USDT</p>
+                        <div class="grid grid-cols-4 gap-2 mb-6">
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtCrypto').value='5';updateMainDepBtn()">$5</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtCrypto').value='10';updateMainDepBtn()">$10</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtCrypto').value='50';updateMainDepBtn()">$50</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtCrypto').value='100';updateMainDepBtn()">$100</button>
                         </div>
                     </div>
+
+                    <div id="depositStarsSection" class="hidden">
+                        <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Enter Amount
+                            (Stars)</h3>
+                        <div style="position:relative;margin-bottom:12px">
+                            <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
+                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:20px;font-weight:700;text-align:center;font-family:monospace">
+                            <div
+                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2)">
+                                ⭐</div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 text-center mb-4">Min: 50 Stars | Max: 50,000 Stars</p>
+                        <div class="grid grid-cols-4 gap-2 mb-6">
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtStars').value='50';updateMainDepBtn()">50</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtStars').value='250';updateMainDepBtn()">250</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtStars').value='1000';updateMainDepBtn()">1000</button>
+                            <button
+                                class="bg-gray-800/50 hover:bg-gray-700 text-white font-bold py-2 rounded-lg text-sm transition"
+                                onclick="document.getElementById('depAmtStars').value='5000';updateMainDepBtn()">5000</button>
+                        </div>
+                    </div>
+
+                    <!-- Deposit Action Button -->
+                    <button id="mainDepositBtn"
+                        class="w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed"
+                        onclick="confirmDepositDirect()">
+                        Enter Amount
+                    </button>
+
+                    <!-- Transaction History Link -->
+                    <button
+                        class="w-full flex items-center justify-between p-4 bg-[#15171b] border border-gray-800/50 rounded-xl hover:bg-[#1a1c22] transition mb-4"
+                        onclick="switchCashierTab('history')">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">history</span>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">Transaction
+                                History</span>
+                        </div>
+                        <span class="material-symbols-outlined text-gray-600">chevron_right</span>
+                    </button>
                 </div>
 
-                <!-- Package Selection Row -->
-                <div id="depositCryptoSection">
-                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Select Amount</h3>
-                    <div class="grid grid-cols-3 gap-2 mb-6" id="assetRow">
-                        <!-- Rendered by JS -->
+                <!-- Transaction History Container -->
+                <div id="cashHistory" style="display:none;">
+                    <div class="flex items-center gap-3 mb-6 cursor-pointer text-gray-400 hover:text-white transition"
+                        onclick="switchCashierTab('deposit')">
+                        <span class="material-symbols-outlined text-lg">arrow_back</span>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.2em]">Back to Deposit</span>
                     </div>
+                    <div id="txHistoryList" class="flex flex-col gap-3 pb-8"></div>
                 </div>
-
-                <div id="depositStarsSection" class="hidden">
-                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Stars Packages</h3>
-                    <div class="grid grid-cols-2 gap-2 mb-6" id="starsRow">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <!-- Deposit Action Button -->
-                <button
-                    class="w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest shadow-lg shadow-red-900/30 mb-8"
-                    onclick="openDepositModal(payMethod === 'stars' ? 'stars' : 'usdt')">
-                    Confirm Deposit
-                </button>
-
-                <!-- Transaction History Link -->
-                <button
-                    class="w-full flex items-center justify-between p-4 bg-[#15171b] border border-gray-800/50 rounded-xl hover:bg-[#1a1c22] transition mb-4"
-                    onclick="switchCashierTab('history')">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-gray-400">history</span>
-                        <span class="text-xs font-bold text-white uppercase tracking-wider">Transaction History</span>
-                    </div>
-                    <span class="material-symbols-outlined text-gray-600">chevron_right</span>
-                </button>
 
             </div>
         </div>
@@ -6309,6 +6363,7 @@
             var el = document.getElementById('heroTrack');
             if (!el) return;
             var banners = getBanners();
+            el.style.width = (banners.length * 100) + '%';
             el.innerHTML = banners.map(function (b, i) {
                 var bg = b.bgStyle || (i === 1 ? 'linear-gradient(135deg,#121212 0%,#1a1a1a 100%)' : 'linear-gradient(135deg,#1a1a1a 0%,#121212 100%)');
                 var btnBg = b.btnStyle || 'background:var(--red)';
@@ -8157,13 +8212,14 @@
 
         function updateWallet() {
             var el = document.getElementById('wBalAmount');
+            var unitEl = document.getElementById('wBalUnit');
             if (el) {
                 if (displayCurrency === 'USDT') {
                     el.textContent = usdtBalance.toFixed(2);
-                    document.getElementById('wBalUnit').textContent = 'USDT';
+                    if (unitEl) unitEl.textContent = 'USDT';
                 } else {
                     el.textContent = formatCurrency(usdtBalance);
-                    document.getElementById('wBalUnit').textContent = displayCurrency;
+                    if (unitEl) unitEl.textContent = displayCurrency;
                 }
             }
             var loc = document.getElementById('wBalLocal');
@@ -8313,25 +8369,40 @@
         function selectPayMethod(method) {
             payMethod = method;
             /* Crypto */
-            document.getElementById('pmCrypto').style.borderColor = method === 'crypto' ? 'var(--red)' : 'var(--border)';
-            document.querySelector('#pmCrypto .material-symbols-outlined:last-child').textContent = method === 'crypto' ? 'check_circle' : 'radio_button_unchecked';
-            document.querySelector('#pmCrypto .material-symbols-outlined:last-child').style.color = method === 'crypto' ? 'var(--red)' : 'var(--dim)';
+            var pmc = document.getElementById('pmCrypto');
+            if (pmc) pmc.style.borderColor = method === 'crypto' ? 'var(--red)' : 'var(--border)';
+            var pmcCheck = document.querySelector('#pmCrypto .material-symbols-outlined:last-child');
+            if (pmcCheck) {
+                pmcCheck.textContent = method === 'crypto' ? 'check_circle' : 'radio_button_unchecked';
+                pmcCheck.style.color = method === 'crypto' ? 'var(--red)' : 'var(--dim)';
+            }
             /* Stars */
             var pmStars = document.getElementById('pmStars');
             if (pmStars) {
                 pmStars.style.borderColor = method === 'stars' ? '#FFD700' : 'var(--border)';
-                document.getElementById('pmStarsCheck').textContent = method === 'stars' ? 'check_circle' : 'radio_button_unchecked';
-                document.getElementById('pmStarsCheck').style.color = method === 'stars' ? '#FFD700' : 'var(--dim)';
+                var pmStarsCheck = document.getElementById('pmStarsCheck');
+                if (pmStarsCheck) {
+                    pmStarsCheck.textContent = method === 'stars' ? 'check_circle' : 'radio_button_unchecked';
+                    pmStarsCheck.style.color = method === 'stars' ? '#FFD700' : 'var(--dim)';
+                }
             }
             /* Card */
-            document.getElementById('pmCard').style.borderColor = method === 'card' ? 'var(--red)' : 'var(--border)';
-            document.getElementById('pmCardCheck').textContent = method === 'card' ? 'check_circle' : 'radio_button_unchecked';
-            document.getElementById('pmCardCheck').style.color = method === 'card' ? 'var(--red)' : 'var(--dim)';
+            var pmCard = document.getElementById('pmCard');
+            if (pmCard) {
+                pmCard.style.borderColor = method === 'card' ? 'var(--red)' : 'var(--border)';
+                var pmCardCheck = document.getElementById('pmCardCheck');
+                if (pmCardCheck) {
+                    pmCardCheck.textContent = method === 'card' ? 'check_circle' : 'radio_button_unchecked';
+                    pmCardCheck.style.color = method === 'card' ? 'var(--red)' : 'var(--dim)';
+                }
+            }
             /* Show/hide sections */
             var cs = document.getElementById('depositCryptoSection');
             var ss = document.getElementById('depositStarsSection');
             if (cs) cs.style.display = (method === 'crypto' || method === 'card') ? 'block' : 'none';
             if (ss) ss.style.display = method === 'stars' ? 'block' : 'none';
+
+            if (typeof updateMainDepBtn === 'function') updateMainDepBtn();
         }
 
         /* === WITHDRAW === */
@@ -8496,6 +8567,51 @@
             document.getElementById('depPopup').remove();
             if (type === 'stars') buyStars(amt);
             else buyCrypto(null, amt);
+        };
+
+        window.updateMainDepBtn = function () {
+            var isStars = payMethod === 'stars';
+            var inputId = isStars ? 'depAmtStars' : 'depAmtCrypto';
+            var min = isStars ? 50 : 1.00;
+            var max = isStars ? 50000 : 10000;
+            var val = parseFloat(document.getElementById(inputId).value) || 0;
+            var btn = document.getElementById('mainDepositBtn');
+            if (btn) {
+                var isValid = val >= min && val <= max;
+                if (isValid) {
+                    btn.classList.remove('bg-[#1a1c22]', 'text-gray-500', 'cursor-not-allowed');
+                    btn.classList.add('bg-[#e62e3d]', 'hover:bg-red-700', 'text-white', 'shadow-lg', 'shadow-red-900/30');
+                    btn.textContent = 'Confirm Deposit';
+                    btn.disabled = false;
+                } else {
+                    btn.classList.add('bg-[#1a1c22]', 'text-gray-500', 'cursor-not-allowed');
+                    btn.classList.remove('bg-[#e62e3d]', 'hover:bg-red-700', 'text-white', 'shadow-lg', 'shadow-red-900/30');
+                    btn.textContent = 'Enter Valid Amount';
+                    if (val === 0) btn.textContent = 'Enter Amount';
+                    else if (val < min) btn.textContent = 'Amount too low';
+                    else if (val > max) btn.textContent = 'Amount too high';
+                    btn.disabled = true;
+                }
+            }
+        };
+
+        window.confirmDepositDirect = async function () {
+            var isStars = payMethod === 'stars';
+            var inputId = isStars ? 'depAmtStars' : 'depAmtCrypto';
+            var min = isStars ? 50 : 1.00;
+            var max = isStars ? 50000 : 10000;
+            var amt = parseFloat(document.getElementById(inputId).value) || 0;
+
+            if (amt < min || amt > max) {
+                showToast('⚠️', 'Invalid amount: Min ' + min + ', Max ' + max + (isStars ? ' ⭐' : ' USDT'), 'OK');
+                return;
+            }
+
+            if (isStars) {
+                buyStars(amt);
+            } else {
+                buyCrypto(null, amt);
+            }
         };
 
         async function buyStars(amount) {
