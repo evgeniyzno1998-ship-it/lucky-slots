@@ -88,14 +88,14 @@ async def init_db():
             last_name TEXT,
             tg_language_code TEXT,
             is_premium INTEGER DEFAULT 0,
-            coins BIGINT DEFAULT 0,
+            balance_cents BIGINT DEFAULT 0,
             free_spins INTEGER DEFAULT 0,
             total_wagered BIGINT DEFAULT 0,
             total_won BIGINT DEFAULT 0,
             total_spins INTEGER DEFAULT 0,
             biggest_win BIGINT DEFAULT 0,
-            total_deposited_usd REAL DEFAULT 0,
-            total_withdrawn_usd REAL DEFAULT 0,
+            total_deposited_usd DECIMAL(20,8) DEFAULT 0,
+            total_withdrawn_usd DECIMAL(20,8) DEFAULT 0,
             referrals_count INTEGER DEFAULT 0,
             referred_by BIGINT DEFAULT NULL,
             language TEXT DEFAULT 'pl',
@@ -117,21 +117,29 @@ async def init_db():
             ("tg_language_code","TEXT"),("is_premium","INTEGER DEFAULT 0"),
             ("last_game","TEXT DEFAULT ''"),("last_login","TEXT DEFAULT ''"),
             ("last_bot_interaction","TEXT DEFAULT ''"),
-            ("total_deposited_usd","REAL DEFAULT 0"),("total_withdrawn_usd","REAL DEFAULT 0"),
-            # NEW: dual balance system
-            ("balance_usdt_cents","BIGINT DEFAULT 0"),  # USDT balance in cents (500 = $5.00)
-            ("balance_stars","BIGINT DEFAULT 0"),        # Telegram Stars balance
-            ("display_currency","TEXT DEFAULT 'USD'"),    # preferred display currency
-            ("total_wagered_usdt_cents","BIGINT DEFAULT 0"),
-            ("total_won_usdt_cents","BIGINT DEFAULT 0"),
-            ("total_wagered_stars","BIGINT DEFAULT 0"),
-            ("total_won_stars","BIGINT DEFAULT 0"),
+            ("total_deposited_usd","DECIMAL(20,8) DEFAULT 0"),("total_withdrawn_usd","DECIMAL(20,8) DEFAULT 0"),
+            ("balance_cents","BIGINT DEFAULT 0"),  # Unified active balance
             ("admin_note","TEXT DEFAULT ''"),
             ("is_blocked","INTEGER DEFAULT 0"),
         ]
         for col, d in new_cols:
             try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
             except: pass
+
+        # === BALANCE_LEDGER — Strict record of all balance mutations ===
+        await c.execute('''CREATE TABLE IF NOT EXISTS balance_ledger(
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT NOT NULL,
+            source_type TEXT NOT NULL,
+            amount_cents BIGINT NOT NULL,
+            balance_before BIGINT NOT NULL,
+            balance_after BIGINT NOT NULL,
+            reference_id TEXT DEFAULT '',
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )''')
+        try: await c.execute("CREATE INDEX IF NOT EXISTS idx_ledger_user ON balance_ledger(user_id)")
+        except: pass
 
         # === BET_HISTORY — история каждой ставки ===
         await c.execute('''CREATE TABLE IF NOT EXISTS bet_history(
@@ -143,7 +151,7 @@ async def init_db():
             win_amount BIGINT NOT NULL,
             profit BIGINT NOT NULL,
             balance_after BIGINT NOT NULL,
-            multiplier REAL DEFAULT 0,
+            multiplier DECIMAL(20,8) DEFAULT 0,
             is_bonus INTEGER DEFAULT 0,
             is_free_spin INTEGER DEFAULT 0,
             details TEXT DEFAULT '',
@@ -151,38 +159,36 @@ async def init_db():
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )''')
 
-        # === SYSTEM STATE — Multi-worker shared state ===
-        await c.execute('''CREATE TABLE IF NOT EXISTS sys_state(
-            key TEXT PRIMARY KEY,
-            value JSONB
-        )''')
-        
         # === PAYMENTS — история платежей in/out ===
         await c.execute('''CREATE TABLE IF NOT EXISTS payments(
             id SERIAL PRIMARY KEY,
             user_id BIGINT NOT NULL,
             direction TEXT NOT NULL,
-            amount_usd REAL NOT NULL,
-            amount_coins BIGINT NOT NULL,
+            amount_usd DECIMAL(20,8) NOT NULL,
+            amount_cents BIGINT NOT NULL,
             method TEXT DEFAULT 'crypto_bot',
             status TEXT DEFAULT 'completed',
             invoice_id TEXT DEFAULT '',
             balance_before BIGINT DEFAULT 0,
             balance_after BIGINT DEFAULT 0,
             details TEXT DEFAULT '',
-            sol_amount NUMERIC(24, 9) DEFAULT NULL,
-            oracle_price_usd NUMERIC(15, 6) DEFAULT NULL,
+            sol_amount DECIMAL(20,8) DEFAULT NULL,
+            oracle_price_usd DECIMAL(20,8) DEFAULT NULL,
             oracle_timestamp INTEGER DEFAULT NULL,
             oracle_source TEXT DEFAULT NULL,
+            stars_amount BIGINT DEFAULT NULL,
+            applied_exchange_rate DECIMAL(20,8) DEFAULT NULL,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )''')
-        # Migrate existing column explicitly to exact-precision NUMERIC
+        # Migrate existing column
         try:
-            await c.execute("ALTER TABLE payments ADD COLUMN sol_amount NUMERIC(24, 9) DEFAULT NULL")
-            await c.execute("ALTER TABLE payments ADD COLUMN oracle_price_usd NUMERIC(15, 6) DEFAULT NULL")
+            await c.execute("ALTER TABLE payments ADD COLUMN sol_amount DECIMAL(20,8) DEFAULT NULL")
+            await c.execute("ALTER TABLE payments ADD COLUMN oracle_price_usd DECIMAL(20,8) DEFAULT NULL")
             await c.execute("ALTER TABLE payments ADD COLUMN oracle_timestamp INTEGER DEFAULT NULL")
             await c.execute("ALTER TABLE payments ADD COLUMN oracle_source TEXT DEFAULT NULL")
+            await c.execute("ALTER TABLE payments ADD COLUMN stars_amount BIGINT DEFAULT NULL")
+            await c.execute("ALTER TABLE payments ADD COLUMN applied_exchange_rate DECIMAL(20,8) DEFAULT NULL")
         except: pass
 
         # === INDEXES for fast queries ===
@@ -202,9 +208,9 @@ async def init_db():
             title TEXT NOT NULL,
             description TEXT DEFAULT '',
             icon TEXT DEFAULT 'redeem',
-            amount REAL DEFAULT 0,
-            progress REAL DEFAULT 0,
-            max_progress REAL DEFAULT 0,
+            amount DECIMAL(20,8) DEFAULT 0,
+            progress DECIMAL(20,8) DEFAULT 0,
+            max_progress DECIMAL(20,8) DEFAULT 0,
             vip_tag TEXT DEFAULT '',
             expires_at TEXT DEFAULT '',
             status TEXT DEFAULT 'active',
@@ -377,52 +383,47 @@ async def update_last_game(uid, game_name):
     await db("UPDATE users SET last_game=? WHERE user_id=?", (game_name, int(uid)))
 
 async def get_user(uid):
-    return await db("SELECT * FROM users WHERE user_id=?", (int(uid),), one=True)
+    return await db("SELECT * FROM users WHERE user_id=$1", (int(uid),), one=True)
 
-async def add_coins(uid, delta):
-    await db("UPDATE users SET coins=GREATEST(0,coins+?) WHERE user_id=?", (delta, int(uid)))
-    r = await db("SELECT coins FROM users WHERE user_id=?", (int(uid),), one=True)
-    return r['coins'] if r else 0
-
-async def add_usdt(uid, delta_cents):
-    """Add/subtract USDT balance in cents. delta_cents can be negative."""
-    await db("UPDATE users SET balance_usdt_cents=GREATEST(0,balance_usdt_cents+?) WHERE user_id=?", (int(delta_cents), int(uid)))
-    r = await db("SELECT balance_usdt_cents FROM users WHERE user_id=?", (int(uid),), one=True)
-    return r['balance_usdt_cents'] if r else 0
-
-async def add_stars_atomic(uid, stars_amount, charge_id):
+# Centralized Atomic Balance Controller
+async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id: str = "") -> dict:
     """
-    High-load fintech-grade atomic balance update specifically for Stars.
-    Guarantees idempotency based on charge_id, prevents double-crediting
-    and ensures safe DB commits via Postgres transactions.
+    High-load fintech-grade atomic balance update.
+    Returns: {"ok": True/False, "balance_after": int, "error": str}
     """
-    if not db_pool: return False, 0
+    if not db_pool: return {"ok": False, "error": "no_db"}
+    
+    # Fast exit for zero delta unless explicitly intended
+    if delta_cents == 0:
+        u = await db("SELECT balance_cents FROM users WHERE user_id=$1", (int(uid),), one=True)
+        return {"ok": True, "balance_after": u['balance_cents'] if u else 0}
+
     async with db_pool.acquire() as conn:
         async with conn.transaction():
-            # 1. Idempotency Check (Check if charge_id already exists)
-            existing = await conn.fetchrow(
-                "SELECT id FROM payments WHERE user_id=$1 AND invoice_id=$2 AND status='completed'", 
-                int(uid), str(charge_id)
-            )
-            if existing:
-                logging.warning(f"⭐ Idempotency hit: Duplicate stars payment {charge_id} for user {uid}")
-                return False, 0
+            # 1. Acquire Row-Level Lock for User Balance
+            u = await conn.fetchrow("SELECT balance_cents FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
+            if not u:
+                return {"ok": False, "error": "user_not_found"}
+                
+            bal_before = u['balance_cents']
+            bal_after = bal_before + delta_cents
             
-            # 2. Acquire Row-Level Lock for User Balance
-            u = await conn.fetchrow("SELECT balance_stars FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
-            bal_before = u['balance_stars'] if u else 0
-            bal_after = bal_before + stars_amount
+            # Prevent negative balance
+            if bal_after < 0:
+                logging.warning(f"Failed atomic balance update: {uid} insufficient funds. Has {bal_before}, tried delta {delta_cents}")
+                return {"ok": False, "error": "insufficient_funds"}
             
-            # 3. Atomic Balance Crediting
-            await conn.execute("UPDATE users SET balance_stars = $1 WHERE user_id=$2", bal_after, int(uid))
+            # 2. Atomic Balance Modification
+            await conn.execute("UPDATE users SET balance_cents = $1 WHERE user_id=$2", bal_after, int(uid))
             
-            # 4. Atomic Audit Trail Record
+            # 3. Centralized Ledger Write
             await conn.execute(
-                "INSERT INTO payments(user_id, direction, amount_usd, amount_coins, method, status, invoice_id, balance_before, balance_after, details, created_at) "
-                "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-                int(uid), "deposit", 0.0, stars_amount, "telegram_stars", "completed", str(charge_id), bal_before, bal_after, f"stars={stars_amount},charge_id={charge_id}", _now()
+                "INSERT INTO balance_ledger(user_id, source_type, amount_cents, balance_before, balance_after, reference_id, created_at) "
+                "VALUES($1, $2, $3, $4, $5, $6, $7)",
+                int(uid), source_type, delta_cents, bal_before, bal_after, str(reference_id), _now()
             )
-            return True, bal_after
+            return {"ok": True, "balance_after": bal_after}
+
 
 def usdt_cents_to_display(cents, currency='USD'):
     """Convert USDT cents to display currency amount."""
@@ -601,7 +602,11 @@ async def handle_btn(msg: Message):
     await ensure_user(uid, fu.username, fu.first_name, fu.last_name, fu.language_code, getattr(fu, 'is_premium', False))
     u=await get_user(uid); lang=u['language'] if u else 'pl'; bi=await bot.get_me()
     if any(txt==BOT_TEXTS[l]['buy'] for l in BOT_TEXTS): await msg.answer(BOT_TEXTS[lang]['buy_m'], reply_markup=pkgs_kb(lang))
-    elif any(txt==BOT_TEXTS[l]['bal'] for l in BOT_TEXTS): await msg.answer(BOT_TEXTS[lang]['balance_text'].format(c=u['coins'] if u else 0))
+    elif any(txt==BOT_TEXTS[l]['bal'] for l in BOT_TEXTS): 
+        cur = u['display_currency'] if u else 'USD'
+        display_bal = usdt_cents_to_display(u['balance_cents'], cur) if u else 0
+        sym = CURRENCY_SYMBOLS.get(cur, '$')
+        await msg.answer(f"💰 Balance: {sym}{display_bal:.2f}")
     elif any(txt==BOT_TEXTS[l]['ref'] for l in BOT_TEXTS):
         refs=u['referrals_count'] if u else 0
         await msg.answer(BOT_TEXTS[lang]['ref_t'].format(b=bi.username,u=uid,refs=refs,earned=refs*REFERRAL_BONUS,bonus=REFERRAL_BONUS), parse_mode="HTML")
@@ -639,8 +644,12 @@ async def handle_buy(call: CallbackQuery):
             d=await r.json()
             if not d.get("ok"): await call.answer("Error",show_alert=True); return
             inv_id = str(d["result"].get("invoice_id",""))
-            # Record pending payment
-            await record_payment(uid, "deposit", price, coins, method="crypto_bot", status="pending", invoice_id=inv_id, details=f"package={coins}")
+            # Record pending payment (coins mapped directly to cents)
+            usdt_cents = coins * 100 if price == 0 else int(price * 100)
+            await db(
+                "INSERT INTO payments(user_id, direction, amount_usd, amount_cents, method, status, invoice_id, oracle_source, created_at) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                (int(uid), 'deposit', float(price), usdt_cents, 'crypto_bot', 'pending', inv_id, 'crypto_bot_ui', _now())
+            )
             kb=InlineKeyboardBuilder(); kb.button(text=f"💳 {price} USDT", url=d["result"]["mini_app_invoice_url"])
             await call.message.edit_text(BOT_TEXTS[lang]['pay_pending'], reply_markup=kb.as_markup())
     except Exception as e: logging.error(f"Pay: {e}"); await call.answer("Unavailable",show_alert=True)
@@ -685,16 +694,15 @@ async def api_balance(req):
     u=await get_user(uid); v=vip_level(u['total_wagered'])
     cur = u['display_currency'] or 'USD'
     return web.json_response({"ok":True,
-        "balance":u['coins'],  # legacy coins
-        "balance_usdt_cents":u['balance_usdt_cents'],
-        "balance_stars":u['balance_stars'],
+        "balance":int(u['balance_cents']),  
         "display_currency":cur,
-        "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
+        "display_amount":usdt_cents_to_display(u['balance_cents'], cur),
         "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$'),
-        "free_spins":u['free_spins'],
+        "free_spins":int(u['free_spins']),
         "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],"biggest":u['biggest_win']},
         "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered']},
-        "refs":u['referrals_count']},headers=H)
+        "refs":int(u['referrals_count'])},headers=H)
+
 
 async def api_spin(req):
     if req.method=="OPTIONS": return web.Response(headers=H)
@@ -707,20 +715,20 @@ async def api_spin(req):
     free=data.get("use_free_spin",False); u=await get_user(uid)
     is_free = False
     if free and u['free_spins']>0:
-        await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=?",(uid,))
+        await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=$1",(int(uid),))
         is_free = True
     else:
-        if u['coins']<actual_bet: return web.json_response({"ok":False,"error":"funds","balance":u['coins']},headers=H)
-        await add_coins(uid,-actual_bet)
+        if u['balance_cents']<actual_bet: return web.json_response({"ok":False,"error":"funds","balance":u['balance_cents']},headers=H)
+        await add_balance(uid, -actual_bet, 'bet_slots', 'slots_spin')
     r=base_spin(bet, double_chance=dc)
-    if r["winnings"]>0: await add_coins(uid,r["winnings"])
+    if r["winnings"]>0: await add_balance(uid, r["winnings"], 'win_slots', 'slots_spin_win')
     u2=await get_user(uid)
     # Record bet in history
     mult = r["winnings"]/bet if bet>0 else 0
     details = f"scatters={r['scatter_count']},bonus={'yes' if r['triggered_bonus'] else 'no'}"
-    await record_bet(uid, "lucky_bonanza", "base_spin", bet, r["winnings"], u2['coins'], mult, is_free=is_free, details=details)
+    await record_bet(uid, "lucky_bonanza", "base_spin", bet, r["winnings"], u2['balance_cents'], mult, is_free=is_free, details=details)
     await update_last_game(uid, "lucky_bonanza")
-    return web.json_response({"ok":True,**r,"balance":u2['coins'],"free_spins":u2['free_spins']},headers=H)
+    return web.json_response({"ok":True,**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
 
 async def api_bonus(req):
     if req.method=="OPTIONS": return web.Response(headers=H)
@@ -731,18 +739,18 @@ async def api_bonus(req):
     cost = 0
     if mode=="bought":
         cost=bet*100; u=await get_user(uid)
-        if u['coins']<cost: return web.json_response({"ok":False,"error":"funds","balance":u['coins']},headers=H)
-        await add_coins(uid,-cost)
+        if u['balance_cents']<cost: return web.json_response({"ok":False,"error":"funds","balance":u['balance_cents']},headers=H)
+        await add_balance(uid, -cost, 'buy_bonus', 'slots_bonus')
     b=full_bonus(bet)
-    if b["total_win"]>0: await add_coins(uid,b["total_win"])
+    if b["total_win"]>0: await add_balance(uid, b["total_win"], 'win_bonus', 'slots_bonus_win')
     u2=await get_user(uid)
     # Record bonus round as a single bet entry
     actual_cost = cost if mode=="bought" else 0
     mult = b["total_win"]/actual_cost if actual_cost>0 else b["total_win"]/bet if bet>0 else 0
     details = f"mode={mode},spins={b['total_spins_played']},total_win={b['total_win']}"
-    await record_bet(uid, "lucky_bonanza", "bonus_round", actual_cost or bet, b["total_win"], u2['coins'], mult, is_bonus=True, details=details)
+    await record_bet(uid, "lucky_bonanza", "bonus_round", actual_cost or bet, b["total_win"], u2['balance_cents'], mult, is_bonus=True, details=details)
     await update_last_game(uid, "lucky_bonanza")
-    return web.json_response({"ok":True,**b,"balance":u2['coins']},headers=H)
+    return web.json_response({"ok":True,**b,"balance":u2['balance_cents']},headers=H)
 
 async def api_wheel(req):
     if req.method=="OPTIONS": return web.Response(headers=H)
@@ -752,15 +760,15 @@ async def api_wheel(req):
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
     if time.time() - last_spin < 86400: return web.json_response({"ok":False,"error":"done"},headers=H)
     prize=spin_wheel()
-    await db("UPDATE users SET last_wheel=? WHERE user_id=?",(str(int(time.time())),uid))
+    await db("UPDATE users SET last_wheel=$1 WHERE user_id=$2",(str(int(time.time())),int(uid)))
     if prize['type']=='coins':
-        await add_coins(uid,prize['value'])
+        await add_balance(uid, prize['value'], 'daily_wheel', 'free_prize')
     else:
-        await db("UPDATE users SET free_spins=free_spins+? WHERE user_id=?",(prize['value'],uid))
+        await db("UPDATE users SET free_spins=free_spins+$1 WHERE user_id=$2",(prize['value'],int(uid)))
     u2=await get_user(uid)
     # Record wheel spin in bet_history (free, no wager)
-    await record_bet(uid, "daily_wheel", "wheel_spin", 0, prize['value'] if prize['type']=='coins' else 0, u2['coins'], 0, details=f"prize={prize['type']}:{prize['value']}")
-    return web.json_response({"ok":True,"prize":prize,"balance":u2['coins'],"free_spins":u2['free_spins']},headers=H)
+    await record_bet(uid, "daily_wheel", "wheel_spin", 0, prize['value'] if prize['type']=='coins' else 0, u2['balance_cents'], 0, details=f"prize={prize['type']}:{prize['value']}")
+    return web.json_response({"ok":True,"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
 
 async def api_wheel_status(req):
     uid=get_uid(query=dict(req.rel_url.query))
@@ -777,20 +785,18 @@ async def api_profile(req):
     for l in VIP_LEVELS:
         if l['min']>u['total_wagered']: nxt=l; break
     # Get recent bets (last 20)
-    recent_bets = await db("SELECT game,bet_type,bet_amount,win_amount,profit,multiplier,is_bonus,created_at FROM bet_history WHERE user_id=? ORDER BY id DESC LIMIT 20", (uid,), fetch=True)
+    recent_bets = await db("SELECT game,bet_type,bet_amount,win_amount,profit,multiplier,is_bonus,created_at FROM bet_history WHERE user_id=$1 ORDER BY id DESC LIMIT 20", (int(uid),), fetch=True)
     bets_list = [dict(b) for b in recent_bets] if recent_bets else []
     # Get payment summary
-    payments = await db("SELECT direction,amount_usd,amount_coins,method,created_at FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20", (uid,), fetch=True)
+    payments = await db("SELECT direction,amount_usd,amount_cents,method,status,created_at FROM payments WHERE user_id=$1 ORDER BY id DESC LIMIT 20", (int(uid),), fetch=True)
     pay_list = [dict(p) for p in payments] if payments else []
     cur = u['display_currency'] or 'USD'
     return web.json_response({"ok":True,
         "username":u['username'] or '',"first_name":u['first_name'] or '',"last_name":u['last_name'] or '',
         "tg_language":u['tg_language_code'] or '',"is_premium":bool(u['is_premium']),
-        "coins":u['coins'],"free_spins":u['free_spins'],
-        "balance_usdt_cents":u['balance_usdt_cents'],
-        "balance_stars":u['balance_stars'],
+        "balance":u['balance_cents'],"free_spins":u['free_spins'],
         "display_currency":cur,
-        "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
+        "display_amount":usdt_cents_to_display(u['balance_cents'], cur),
         "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$'),
         "last_login":u['last_login'] or '',"last_game":u['last_game'] or '',
         "registered_at":u['created_at'] or '',
@@ -804,6 +810,7 @@ async def api_profile(req):
         "recent_bets":bets_list,
         "recent_payments":pay_list
     },headers=H)
+
 
 async def apply_crypto_bonus(uid, amount_usd):
     """
@@ -829,62 +836,72 @@ async def api_webhook(req):
         pl=json.loads(body.get("payload",{}).get("payload","{}"))
         uid=pl.get("user_id"); price_usd=pl.get("amount_usd",0)
         usdt_cents = pl.get("usdt_cents", 0)
-        coins=pl.get("coins",0)  # legacy support
-        if not uid: return web.json_response({"ok":False})
+        if not uid or not usdt_cents: return web.json_response({"ok":False})
+        
         invoice_id = str(body.get("payload",{}).get("invoice_id",""))
-        amount_usd = price_usd or PACKAGES.get(str(coins), 0)
-        # Try to update pending payment to completed
-        existing = await db("SELECT id FROM payments WHERE user_id=? AND invoice_id=? AND status='pending' LIMIT 1", (uid, invoice_id), one=True)
-        if existing:
-            await db("UPDATE payments SET status='completed',created_at=? WHERE id=?", (_now(), existing['id']))
-        else:
-            await record_payment(uid, "deposit", amount_usd, usdt_cents or coins, method="crypto_bot", status="completed", invoice_id=invoice_id)
-        # Credit balance
-        if usdt_cents > 0:
-            # New system: credit USDT cents
-            bal = await add_usdt(uid, usdt_cents)
-            await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
-            # Apply +7% crypto deposit bonus
-            await apply_crypto_bonus(uid, amount_usd)
-            logging.info(f"💳 USDT deposit OK: uid={uid}, +{usdt_cents}c (${amount_usd}), bal={bal}c")
-        elif coins > 0:
-            # Legacy: credit coins
-            bal = await add_coins(uid, coins)
-            await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
-            logging.info(f"💳 Coins deposit OK: uid={uid}, +{coins} coins, ${amount_usd}, bal={bal}")
-        u=await get_user(uid); lang=u['language'] if u else 'pl'
+        amount_usd = float(price_usd)
+        
+        # Indempotency & Status Update via Atomic Add Balance
+        # First check if it's already completed to prevent double processing
+        existing = await db("SELECT id, status FROM payments WHERE invoice_id=$1 LIMIT 1", (invoice_id,), one=True)
+        if existing and existing['status'] == 'completed':
+            return web.json_response({"ok":True})
+            
+        # If it doesn't exist, create it as pending first
+        if not existing:
+            await db(
+                "INSERT INTO payments(user_id, direction, amount_usd, amount_cents, method, status, invoice_id, oracle_source, created_at) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                (int(uid), 'deposit', amount_usd, usdt_cents, 'crypto_bot', 'pending', invoice_id, 'crypto_bot_webhook', _now())
+            )
+            
+        # Execute unified atomic balance addition. This will update the ledger.
+        # We pass the invoice_id as the reference_id
+        res = await add_balance(uid, usdt_cents, 'deposit_crypto', invoice_id)
+        if not res['ok']:
+            logging.error(f"Failed to add balance for {uid} via webhook: {res.get('error')}")
+            return web.json_response({"ok":False})
+            
+        # Mark payment as completed
+        await db("UPDATE payments SET status='completed', created_at=$1 WHERE invoice_id=$2", (_now(), invoice_id))
+        
+        # Update user stats
+        await db("UPDATE users SET total_deposited_usd=total_deposited_usd+$1 WHERE user_id=$2", (amount_usd, int(uid)))
+        
+        # Auto-apply bonus (handled inside function safely)
+        await apply_crypto_bonus(uid, amount_usd)
+        bal_after = res['balance_after']
+        logging.info(f"💳 USDT deposit OK: uid={uid}, +{usdt_cents}c (${amount_usd}), bal={bal_after}c")
+
         try:
-            if usdt_cents > 0:
-                await bot.send_message(uid, f"✅ +${usdt_cents/100:.2f} USDT!")
-            else:
-                await bot.send_message(uid, BOT_TEXTS[lang]['pay_success'].format(amount=coins,balance=bal))
+            await bot.send_message(uid, f"✅ +${usdt_cents/100:.2f} USDT added to your balance!")
         except: pass
         return web.json_response({"ok":True})
-    except Exception as e: logging.error(f"WH: {e}", exc_info=True); return web.json_response({"ok":False})
+    except Exception as e: 
+        logging.error(f"WH: {e}", exc_info=True)
+        return web.json_response({"ok":False})
+
+# Oracle Circuit Breaker Global State
+ORACLE_STATE = {
+    "price": 140.0,
+    "timestamp": 0,
+    "source": "fallback_baseline",
+    "failures": 0
+}
 
 async def get_sol_price():
-    """Deterministic oracle fetch for SOL->USD conversion with multi-worker Postgres sync circuit breaker and 60s cache window."""
+    """Deterministic oracle fetch for SOL->USD conversion with circuit breaker and 60s cache window."""
+    global ORACLE_STATE
     import aiohttp
     
+    # Check cache freshness (60s)
     current_time = int(time.time())
-    state_json = {"price": 140.0, "timestamp": 0, "source": "fallback_baseline", "failures": 0}
-    
-    # 1. READ GLOBAL WORKER STATE
-    try:
-        row = await db("SELECT value FROM sys_state WHERE key='oracle_sol'", one=True)
-        if row and row['value']:
-            state_json = json.loads(row['value'])
-    except Exception as e:
-        logging.warning(f"Could not read DB oracle state: {e}")
-            
-    # Check cache freshness (60s) across all workers
-    if current_time - state_json.get("timestamp", 0) < 60 and state_json.get("source") != "fallback_baseline":
-        return float(state_json.get("price", 140.0)), state_json.get("source", "fallback_baseline")
+    if current_time - ORACLE_STATE["timestamp"] < 60 and ORACLE_STATE["source"] != "fallback_baseline":
+        return ORACLE_STATE["price"], ORACLE_STATE["source"]
         
-    # Circuit Breaker: If > 5 consecutive failures, lock oracle network requests globally for 2 minutes
-    if state_json.get("failures", 0) >= 5 and (current_time - state_json.get("timestamp", 0) < 120):
-        logging.warning("ORACLE NETWORK TRIPPED CIRCUIT BREAKER GLOBALLY. Serving baseline fallback.")
-        return float(state_json.get("price", 140.0)), state_json.get("source", "fallback_baseline")
+    # Circuit Breaker: If > 5 consecutive failures, lock oracle network requests for 2 minutes
+    if ORACLE_STATE["failures"] >= 5 and (current_time - ORACLE_STATE["timestamp"] < 120):
+        logging.warning("ORACLE NETWORK TRIPPED CIRCUIT BREAKER. Serving baseline fallback.")
+        return ORACLE_STATE["price"], ORACLE_STATE["source"]
         
     endpoints = [
         ("https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT", "price", "binance"),
@@ -904,16 +921,13 @@ async def get_sol_price():
                             price = float(data.get("data", {}).get("price", 140.0))
                             
                         if price > 0:
-                            # 2. WRITE GLOBAL WORKER STATE (SUCCESS)
-                            new_state = {
+                            # Flush to global state
+                            ORACLE_STATE = {
                                 "price": price,
                                 "timestamp": current_time,
                                 "source": src,
                                 "failures": 0
                             }
-                            try:
-                                await db("INSERT INTO sys_state(key, value) VALUES('oracle_sol', $1) ON CONFLICT(key) DO UPDATE SET value=$1", (json.dumps(new_state),))
-                            except: pass
                             return price, src
             except Exception as e:
                 logging.warning(f"Oracle Fetch failure for {src}: {e}")
@@ -921,18 +935,13 @@ async def get_sol_price():
         await asyncio.sleep(1) # Delay before sweeping endpoints again
     
     # Total failure increment
-    state_json["failures"] = state_json.get("failures", 0) + 1
-    state_json["timestamp"] = current_time # Reset timer to track circuit breaker decay
-    logging.error(f"ALL Oracles failed! Global Failures count: {state_json['failures']}")
-    
-    # 3. WRITE GLOBAL WORKER STATE (FAILURE)
-    try:
-        await db("INSERT INTO sys_state(key, value) VALUES('oracle_sol', $1) ON CONFLICT(key) DO UPDATE SET value=$1", (json.dumps(state_json),))
-    except: pass
+    ORACLE_STATE["failures"] += 1
+    ORACLE_STATE["timestamp"] = current_time # Reset timer to track circuit breaker decay
+    logging.error(f"ALL Oracles failed! Failures count: {ORACLE_STATE['failures']}")
     
     # If we have a stale price (<1 hour old), return it instead of the 140 base
-    if current_time - state_json.get("timestamp", 0) < 3600 and float(state_json.get("price", 0)) > 0:
-         return float(state_json.get("price")), state_json.get("source", "fallback_baseline") + "_stale"
+    if current_time - ORACLE_STATE["timestamp"] < 3600 and ORACLE_STATE["price"] > 0:
+         return ORACLE_STATE["price"], ORACLE_STATE["source"] + "_stale"
          
     return 140.0, "fallback_baseline"
 
@@ -1048,11 +1057,12 @@ async def api_solana_deposit(req):
                 return web.json_response({"ok": True, "status": "already_processed"}, headers=H)
             
             # Row-level pessimistic lock on the user's balances
-            u = await conn.fetchrow("SELECT balance_usdt_cents FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
-            bal_before = u['balance_usdt_cents'] if u else 0
+            u = await conn.fetchrow("SELECT balance_cents FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
+            bal_before = u['balance_cents'] if u else 0
             
             # 1. Base Deposit
             bal_after = bal_before + usdt_cents
+            base_deposit_cents = usdt_cents
             
             # 2. Atomic Bonus Logic inline
             bonus_cents = 0
@@ -1070,14 +1080,28 @@ async def api_solana_deposit(req):
                     int(uid), 'deposit_match', f'+7% Crypto Bonus (${usdt_value:.2f})', f'+${bonus_usd:.2f} bonus. Wager ${wager_req:.2f} to unlock.', 'diamond', bonus_usd, 0.0, wager_req, 'active', 'CRYPTO +7%', str(tx_hash), _now()
                 )
                 
-            await conn.execute("UPDATE users SET balance_usdt_cents = $1 WHERE user_id=$2", bal_after, int(uid))
+            await conn.execute("UPDATE users SET balance_cents = $1 WHERE user_id=$2", bal_after, int(uid))
             
             # Audit Trail using explicit columns
             await conn.execute(
-                "INSERT INTO payments(user_id, direction, amount_usd, amount_coins, method, status, invoice_id, balance_before, balance_after, details, sol_amount, oracle_price_usd, oracle_timestamp, oracle_source, created_at) "
+                "INSERT INTO payments(user_id, direction, amount_usd, amount_cents, method, status, invoice_id, balance_before, balance_after, details, sol_amount, oracle_price_usd, oracle_timestamp, oracle_source, created_at) "
                 "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
                 int(uid), "deposit", usdt_value, usdt_cents, "solana", "completed", str(tx_hash), bal_before, bal_after, f"atomic execution", sol_amount, sol_price, int(time.time()), oracle_src, _now()
             )
+            
+            # Ledger Record for Base Deposit
+            await conn.execute(
+                "INSERT INTO balance_ledger(user_id, source_type, amount_cents, balance_before, balance_after, reference_id, created_at) VALUES($1, $2, $3, $4, $5, $6, $7)",
+                int(uid), 'deposit_solana', base_deposit_cents, bal_before, bal_before + base_deposit_cents, str(tx_hash), _now()
+            )
+            
+            # Ledger Record for Bonus (if applicable)
+            if bonus_cents > 0:
+                await conn.execute(
+                    "INSERT INTO balance_ledger(user_id, source_type, amount_cents, balance_before, balance_after, reference_id, created_at) VALUES($1, $2, $3, $4, $5, $6, $7)",
+                    int(uid), 'bonus_solana', bonus_cents, bal_before + base_deposit_cents, bal_after, str(tx_hash) + '_bonus', _now()
+                )
+                
             # Add to total deposited
             await conn.execute("UPDATE users SET total_deposited_usd=total_deposited_usd+$1 WHERE user_id=$2", usdt_value, int(uid))
             
@@ -1287,17 +1311,54 @@ async def api_create_deposit(req):
 
     return web.json_response({"ok":False,"error":"unknown_method"},headers=H)
 
+# Configuration for Telegram Stars Developer Withdrawal Rate
+STARS_USD_RATE = 0.013
+
 async def api_stars_webhook(req):
     """POST /api/stars-webhook — called after successful Telegram Stars payment"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     data = await req.json(); uid = get_uid(data)
     if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
-    stars = int(data.get("stars",0))
+    
+    stars = int(data.get("stars", 0))
+    # Telegram sends a charge_id (or invoice payload ID) we must use for idempotency
+    charge_id = str(data.get("charge_id", f"stars_{int(time.time())}_{uid}_{stars}")) 
+    
     if stars <= 0: return web.json_response({"ok":False,"error":"invalid"},headers=H)
-    bal = await add_stars(uid, stars)
-    await record_payment(uid, "deposit", 0, stars, method="telegram_stars", status="completed", details=f"stars={stars}")
-    logging.info(f"⭐ Stars deposit: uid={uid}, +{stars} stars, bal={bal}")
-    return web.json_response({"ok":True,"balance_stars":bal},headers=H)
+    
+    # Calculate unified internal values based on the Developer Withdrawal Rate
+    usd_amount = round(stars * STARS_USD_RATE, 2)
+    usdt_cents = int(usd_amount * 100)
+    
+    # Indempotency Check
+    existing = await db("SELECT id, status FROM payments WHERE invoice_id=$1 LIMIT 1", (charge_id,), one=True)
+    if existing and existing['status'] == 'completed':
+        return web.json_response({"ok":True})
+        
+    # Create Pending Record if it doesn't exist
+    if not existing:
+        await db(
+            "INSERT INTO payments(user_id, direction, amount_usd, amount_cents, method, status, invoice_id, stars_amount, applied_exchange_rate, created_at) "
+            "VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+            (int(uid), 'deposit', usd_amount, usdt_cents, 'telegram_stars', 'pending', charge_id, stars, STARS_USD_RATE, _now())
+        )
+        
+    # Execute atomic unified balance addition
+    res = await add_balance(uid, usdt_cents, 'deposit_stars', charge_id)
+    if not res['ok']:
+        logging.error(f"Failed to add stars balance for {uid}: {res.get('error')}")
+        return web.json_response({"ok":False})
+        
+    # Mark as completed
+    await db("UPDATE payments SET status='completed', created_at=$1 WHERE invoice_id=$2", (_now(), charge_id))
+    
+    # Update user lifetime stats
+    await db("UPDATE users SET total_deposited_usd=total_deposited_usd+$1 WHERE user_id=$2", (usd_amount, int(uid)))
+    
+    bal_after = res['balance_after']
+    logging.info(f"⭐ Stars deposit OK: uid={uid}, +{stars} stars (${usd_amount}), new unified bal={bal_after}c")
+    
+    return web.json_response({"ok":True, "balance_after": bal_after}, headers=H)
 
 async def api_currencies(req):
     """GET /api/currencies — return available currencies and rates"""
