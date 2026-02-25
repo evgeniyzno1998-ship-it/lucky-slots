@@ -3819,10 +3819,624 @@
             opacity: 0.8;
             font-family: 'Inter', sans-serif;
         }
+
+        /* === NEW RUBY SLOT DESIGN === */
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-btn {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3), -4px -4px 10px rgba(255, 255, 255, 0.02);
+        }
+
+        .slot-frame {
+            background: linear-gradient(160deg, #2a0a10 0%, #0D0D0D 50%, #2a0a10 100%);
+            border-radius: 16px;
+            padding: 4px;
+            position: relative;
+            box-shadow: 0 0 40px rgba(192, 20, 42, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(192, 20, 42, 0.3);
+        }
+
+        .slot-frame::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 18px;
+            padding: 2px;
+            background: linear-gradient(45deg, #C0142A, transparent, #FFD700, transparent, #C0142A);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .grid-cell-separator {
+            position: absolute;
+            background: rgba(192, 20, 42, 0.2);
+            z-index: 1;
+        }
+
+        .symbol-tile {
+            background: radial-gradient(circle at center, rgba(40, 40, 40, 0.8) 0%, rgba(15, 15, 15, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+            transform-style: preserve-3d;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+        }
+
+        .symbol-tile svg {
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+            transform: translateZ(10px);
+        }
+
+        /* ── REEL SPIN: tiles in a spinning column stream downward ── */
+        @keyframes reel-scroll {
+            0% {
+                transform: translateY(0);
+                filter: blur(0);
+                opacity: 1;
+            }
+
+            15% {
+                transform: translateY(18px);
+                filter: blur(4px);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: translateY(-6px);
+                filter: blur(8px);
+                opacity: 0.3;
+            }
+
+            85% {
+                transform: translateY(14px);
+                filter: blur(4px);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translateY(0);
+                filter: blur(0);
+                opacity: 1;
+            }
+        }
+
+        .spinning-column .symbol-tile {
+            animation: reel-scroll 0.14s linear infinite;
+            will-change: transform, filter;
+        }
+
+        /* ── REEL LAND: symbol drops in from top with elastic overshoot ── */
+        @keyframes reel-land {
+            0% {
+                transform: translateY(-110%) scaleY(1.15);
+                filter: blur(6px);
+                opacity: 0;
+            }
+
+            55% {
+                transform: translateY(8%) scaleY(0.92);
+                filter: blur(1px);
+                opacity: 1;
+            }
+
+            75% {
+                transform: translateY(-4%) scaleY(1.05);
+                filter: blur(0);
+                opacity: 1;
+            }
+
+            88% {
+                transform: translateY(2%) scaleY(0.98);
+            }
+
+            100% {
+                transform: translateY(0) scaleY(1);
+                filter: blur(0);
+                opacity: 1;
+            }
+        }
+
+        .reel-land {
+            animation: reel-land 0.48s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+            will-change: transform, filter;
+        }
+
+        @keyframes bounce-in {
+            0% {
+                transform: translateY(-100%) scale(0.8);
+                opacity: 0;
+            }
+
+            60% {
+                transform: translateY(10%) scale(1.05);
+                opacity: 1;
+            }
+
+            80% {
+                transform: translateY(-5%) scale(0.95);
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .bounce-in {
+            animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes win-pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 215, 0, 0);
+            }
+
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 215, 0, 0.4);
+                border-color: #FFD700;
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 215, 0, 0);
+            }
+        }
+
+        .winning-tile {
+            animation: win-pulse 1.5s infinite;
+            z-index: 10;
+            background: radial-gradient(circle at center, rgba(60, 50, 20, 0.9) 0%, rgba(15, 15, 15, 0.95) 100%);
+        }
+
+        .spin-btn-outer {
+            background: linear-gradient(to bottom, #2a050b, #1a0205);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 4px #2a050b;
+        }
+
+        .spin-btn-inner {
+            background: linear-gradient(135deg, #E91E3F 0%, #990a1f 50%, #700515 100%);
+            box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.3), inset 0 -5px 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spin-btn-inner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transform: rotate(45deg) translateX(-100%);
+            animation: shimmer-btn 3s infinite;
+        }
+
+        @keyframes shimmer-btn {
+            0% {
+                transform: rotate(45deg) translateX(-100%);
+            }
+
+            20% {
+                transform: rotate(45deg) translateX(100%);
+            }
+
+            100% {
+                transform: rotate(45deg) translateX(100%);
+            }
+        }
+
+        .spin-ring {
+            border: 2px solid transparent;
+            border-top: 2px solid #FFD700;
+            border-right: 2px solid rgba(192, 20, 42, 0.5);
+            border-radius: 50%;
+            animation: spin-ring 2s linear infinite;
+        }
+
+        @keyframes spin-ring {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .multiplier-bubble {
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .multiplier-bubble.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 15px currentColor;
+            border-color: currentColor;
+            color: white;
+            font-weight: 800;
+        }
+
+        .svg-defs {
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        #big-win-overlay {
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.9) 100%);
+            backdrop-filter: blur(5px);
+            perspective: 1000px;
+        }
+
+        .big-win-text {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(to bottom, #FFD700, #FDB931, #C0142A);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            transform: rotateX(20deg);
+            animation: big-win-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes big-win-pop {
+            0% {
+                transform: rotateX(20deg) scale(0);
+                opacity: 0;
+            }
+
+            100% {
+                transform: rotateX(0deg) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: sparkle-anim 1s forwards;
+        }
+
+        @keyframes sparkle-anim {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* === MODALS & OVERLAYS === */
+        /* Big Win */
+        .big-win-overlay {
+            background: radial-gradient(circle at center, rgba(40, 5, 10, 0.95) 0%, rgba(13, 13, 13, 0.98) 100%);
+            perspective: 1200px;
+        }
+
+        .gold-glow {
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3);
+        }
+
+        .big-win-title {
+            font-size: 4.5rem;
+            font-weight: 900;
+            background: linear-gradient(to bottom, #FFF7CC 0%, #FFD700 40%, #B38F00 70%, #C0142A 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.8));
+            animation: title-entrance 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            letter-spacing: -0.02em;
+        }
+
+        @keyframes title-entrance {
+            0% {
+                transform: scale(0.5) rotateX(45deg);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1) rotateX(0deg);
+                opacity: 1;
+            }
+        }
+
+        .amount-display {
+            animation: pulse-amount 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse-amount {
+
+            0%,
+            100% {
+                transform: scale(1);
+                filter: brightness(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+                filter: brightness(1.3);
+            }
+        }
+
+        .collect-btn {
+            background: linear-gradient(135deg, #E91E3F 0%, #990a1f 100%);
+            box-shadow: 0 0 30px rgba(233, 30, 63, 0.4), inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            animation: pulse-button 1.5s infinite;
+        }
+
+        @keyframes pulse-button {
+            0% {
+                box-shadow: 0 0 20px rgba(233, 30, 63, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 45px rgba(233, 30, 63, 0.7);
+                transform: scale(1.02);
+            }
+
+            100% {
+                box-shadow: 0 0 20px rgba(233, 30, 63, 0.4);
+            }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 12px;
+            opacity: 0.8;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) rotate(0deg);
+            }
+
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+            }
+        }
+
+        .combination-row {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(4px);
+        }
+
+        .light-ray {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 100px;
+            background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.1), transparent);
+            transform-origin: center;
+            animation: rotate-ray 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate-ray {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        .symbol-mini {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Autospin Modal */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, #1A1A1A 0%, #0D0D0D 100%);
+            border-top: 2px solid #C0142A;
+            box-shadow: 0 -10px 40px rgba(192, 20, 42, 0.2);
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-content.active {
+            transform: translateY(0);
+        }
+
+        .option-chip {
+            background: #151515;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .option-chip.selected {
+            background: linear-gradient(135deg, #C0142A 0%, #800d1c 100%);
+            border-color: #FFD700;
+            color: white;
+            box-shadow: 0 0 15px rgba(192, 20, 42, 0.4);
+        }
+
+        .start-autospin-btn {
+            background: linear-gradient(to right, #FFD700, #FDB931);
+            color: #000;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(253, 185, 49, 0.3);
+        }
+
+        /* Paytable */
+        .symbol-card {
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: 18px;
+            padding: 14px 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .symbol-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            background: radial-gradient(ellipse at 40% 30%, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .symbol-card:hover::before {
+            opacity: 1;
+        }
+
+        .symbol-card:hover {
+            border-color: rgba(255, 215, 0, 0.35);
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 215, 0, 0.15);
+        }
+
+        .symbol-card:active {
+            transform: scale(0.98);
+        }
+
+        .ruby-glow {
+            box-shadow: 0 0 15px rgba(192, 20, 42, 0.2);
+            border-color: rgba(192, 20, 42, 0.3);
+        }
+
+        .star-glow {
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        .diamond-glow {
+            box-shadow: 0 0 15px rgba(77, 208, 225, 0.2);
+            border-color: rgba(77, 208, 225, 0.3);
+        }
+
+        .heart-glow {
+            box-shadow: 0 0 15px rgba(255, 0, 47, 0.2);
+            border-color: rgba(255, 0, 47, 0.3);
+        }
+
+        .grape-glow {
+            box-shadow: 0 0 15px rgba(123, 31, 162, 0.2);
+            border-color: rgba(123, 31, 162, 0.3);
+        }
+
+        .apple-glow {
+            box-shadow: 0 0 15px rgba(192, 20, 42, 0.15);
+            border-color: rgba(192, 20, 42, 0.2);
+        }
+
+        .peach-glow {
+            box-shadow: 0 0 15px rgba(255, 112, 67, 0.2);
+            border-color: rgba(255, 112, 67, 0.3);
+        }
+
+        .lolly-glow {
+            box-shadow: 0 0 15px rgba(236, 64, 122, 0.2);
+            border-color: rgba(236, 64, 122, 0.3);
+        }
+
+        .multiplier-grid div:nth-child(odd) {
+            color: #888;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .multiplier-grid div:nth-child(even) {
+            color: #FFD700;
+            font-weight: 800;
+            text-align: right;
+        }
+
+        .info-header {
+            background: linear-gradient(to bottom, #1a0508, #0D0D0D);
+            border-bottom: 1px solid rgba(192, 20, 42, 0.2);
+        }
     </style>
 </head>
 
 <body>
+    <!-- Global SVG Gradients for Slots -->
+    <svg class="svg-defs">
+        <defs>
+            <linearGradient id="rubyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ff4d6d"></stop>
+                <stop offset="50%" stop-color="#C0142A"></stop>
+                <stop offset="100%" stop-color="#59000d"></stop>
+            </linearGradient>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFF7CC"></stop>
+                <stop offset="40%" stop-color="#FFD700"></stop>
+                <stop offset="100%" stop-color="#B38F00"></stop>
+            </linearGradient>
+            <linearGradient id="diamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#E0F7FA"></stop>
+                <stop offset="50%" stop-color="#4DD0E1"></stop>
+                <stop offset="100%" stop-color="#006064"></stop>
+            </linearGradient>
+            <radialGradient id="grapeGrad" cx="30%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#E1BEE7"></stop>
+                <stop offset="100%" stop-color="#7B1FA2"></stop>
+            </radialGradient>
+            <linearGradient id="peachGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFCCBC"></stop>
+                <stop offset="100%" stop-color="#FF7043"></stop>
+            </linearGradient>
+            <linearGradient id="heartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ff9a9e"></stop>
+                <stop offset="49%" stop-color="#ff002f"></stop>
+                <stop offset="50%" stop-color="#b3001e"></stop>
+                <stop offset="100%" stop-color="#59000d"></stop>
+            </linearGradient>
+            <radialGradient id="lollyGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="40%" stop-color="#F48FB1"></stop>
+                <stop offset="100%" stop-color="#EC407A"></stop>
+            </radialGradient>
+        </defs>
+    </svg>
 
     <!-- ===== HEADER (shared) ===== -->
     <div class="header" id="mainHeader">
@@ -4118,41 +4732,452 @@
 
     <!-- ===== SCREEN: GAME (Ruby Slots) ===== -->
     <div class="screen" id="scrGame">
-        <div class="game-header">
-            <div class="game-back" onclick="nav('lobby')"><span class="material-symbols-outlined">arrow_back</span>
+        <div class="w-full h-full bg-[#0D0D0D] relative flex flex-col overflow-hidden" style="min-height: 100vh;">
+
+            <div
+                class="absolute top-[-20%] left-[-20%] w-[140%] h-[60%] bg-[#C0142A] blur-[120px] opacity-20 pointer-events-none rounded-full">
             </div>
-            <div class="game-title-bar">RUBY SLOTS</div>
-            <div class="game-bal"><span class="material-symbols-outlined">toll</span><span id="gameBal">0</span></div>
-        </div>
-        <div class="jackpot-display">
-            <div class="jackpot-label" id="jackpotLabel">GRAND JACKPOT</div>
-            <div class="jackpot-amount">50,000<span>coins</span></div>
-        </div>
-        <div class="grid-frame" id="gridFrame">
-            <div class="grid" id="grid"></div>
-        </div>
-        <div class="game-result" id="gameResult"></div>
-        <div class="free-spin-badge" id="freeBadge"></div>
-        <div class="game-controls">
-            <button class="ctrl-side-btn" onclick="toggleAutoSpeed()"><span
-                    class="material-symbols-outlined">sync</span><span id="autoLabel">AUTO</span></button>
-            <button class="spin-btn m-load" id="spinBtn" onclick="doSpin()"><span class="material-symbols-outlined"
-                    id="spinIcon">play_arrow</span><span id="spinTxt">...</span></button>
-            <button class="ctrl-side-btn" onclick="setMaxBet()"><span
-                    style="font-family:'Montserrat',sans-serif;font-size:14px;font-weight:900">MAX</span><span>MAX</span></button>
-        </div>
-        <div class="bet-strip">
-            <button class="bet-strip-btn" onclick="changeBet(-1)">−</button>
-            <div class="bet-strip-val"><span id="betDisplay">5.0</span><span class="bet-unit" id="betUnit">coins</span>
+            <div
+                class="absolute bottom-[-10%] right-[-10%] w-[100%] h-[40%] bg-[#FFD700] blur-[100px] opacity-10 pointer-events-none rounded-full">
             </div>
-            <button class="bet-strip-btn" onclick="changeBet(1)">+</button>
+
+
+            <div class="px-5 py-4 flex items-center justify-between z-30 relative pt-8 md:pt-6">
+                <button
+                    class="text-gray-400 hover:text-white transition-colors w-10 h-10 flex items-center justify-center rounded-full glass-btn"
+                    onclick="nav('lobby')">
+                    <span class="material-symbols-outlined text-xl">arrow_back</span>
+                </button>
+
+                <div class="flex flex-col items-center">
+                    <h1 class="font-black text-lg tracking-wider text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                        SWEET RUBIES</h1>
+                    <div class="flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-pulse"></span>
+                        <span class="text-[10px] text-gray-400 font-bold tracking-widest uppercase">RubyBet
+                            Exclusive</span>
+                    </div>
+                </div>
+
+                <div class="glass-btn px-3 py-1.5 rounded-full flex items-center gap-2 border border-[#333]">
+                    <div
+                        class="w-4 h-4 rounded-full bg-gradient-to-br from-[#FFD700] to-[#B38F00] flex items-center justify-center shadow-[0_0_8px_#FFD700]">
+                        <span class="material-symbols-outlined" style="font-size: 10px; color: #5c4a00;">star</span>
+                    </div>
+                    <span id="gameBal" class="font-bold text-sm text-[#FFD700] tabular-nums tracking-wide">0.00</span>
+                </div>
+            </div>
+
+
+            <div class="flex-1 overflow-y-auto no-scrollbar relative flex flex-col z-10">
+
+                <div class="px-4 pt-4 pb-2 space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+
+                        <button
+                            class="flex flex-col items-center justify-center bg-gradient-to-b from-[#2a0a10] to-[#1a0508] border border-[#C0142A] rounded-xl px-3 py-2 shadow-[0_0_15px_rgba(192,20,42,0.3)] active:scale-95 transition-all w-28 group relative overflow-hidden"
+                            onclick="buyBonus()">
+                            <div
+                                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700">
+                            </div>
+                            <span class="text-[9px] text-gray-300 font-bold uppercase tracking-wide">Buy Feature</span>
+                            <div class="text-[#FFD700] font-black text-sm group-hover:scale-105 transition-transform drop-shadow-md"
+                                id="bbPrice">100.00</div>
+                        </button>
+
+
+                        <div
+                            class="flex-1 flex items-center justify-between glass-panel rounded-xl px-4 py-2 border border-white/5">
+                            <div class="flex flex-col leading-tight">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Double</span>
+                                <span
+                                    class="text-[10px] font-extrabold text-white uppercase tracking-wider">Chance</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer group">
+                                <input type="checkbox" class="sr-only peer" id="doubleChanceToggle"
+                                    onchange="toggleDoubleChance()">
+                                <div
+                                    class="w-10 h-6 bg-[#1a1a1a] peer-focus:outline-none rounded-full peer shadow-inner border border-gray-700 peer-checked:bg-gradient-to-r peer-checked:from-[#FFD700] peer-checked:to-[#FDB931] transition-all">
+                                </div>
+                                <div
+                                    class="absolute left-[2px] top-[2px] bg-white w-5 h-5 rounded-full shadow-md transition-all peer-checked:translate-x-full peer-checked:border-0 border border-gray-300">
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="flex-1 px-4 flex flex-col justify-center pb-2 relative z-10 min-h-[400px]">
+                    <div class="absolute top-[-10px] left-1/2 -translate-x-1/2 z-20 opacity-0 transition-all duration-300 pointer-events-none scale-0"
+                        id="tumble-badge">
+                        <span
+                            class="bg-gradient-to-r from-[#C0142A] to-[#E91E3F] text-white text-[11px] font-black px-4 py-1 rounded-full shadow-lg uppercase tracking-wider border border-white/20 ring-4 ring-black/50">
+                            Tumble Win
+                        </span>
+                    </div>
+
+                    <div class="slot-frame">
+                        <div id="slot-grid"
+                            class="w-full aspect-[6/5] bg-[#050505] rounded-xl p-1.5 grid grid-cols-6 grid-rows-5 gap-1.5 relative overflow-hidden">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div
+                class="bg-[#0A0A0A] border-t border-white/5 pt-2 pb-24 relative z-20 flex flex-col items-center shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
+
+                <div
+                    class="w-[92%] glass-panel rounded-2xl p-2.5 flex justify-between items-center mb-5 relative group overflow-hidden">
+                    <div class="flex flex-col px-2">
+                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-0.5">Win</span>
+                        <span id="win-display"
+                            class="text-2xl font-black text-[#FFD700] tabular-nums drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]">0.00</span>
+                    </div>
+
+                    <div class="flex items-center gap-3 bg-[#000] p-1.5 rounded-xl border border-white/10 shadow-inner">
+                        <button onclick="changeBet(-1)"
+                            class="w-8 h-8 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white hover:bg-[#C0142A] active:scale-90 transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">remove</span>
+                        </button>
+                        <div class="flex flex-col items-center min-w-[50px]">
+                            <span class="text-[8px] text-gray-500 font-bold uppercase">Bet</span>
+                            <span id="betDisplay" class="text-sm font-bold text-white tabular-nums">1.00</span>
+                        </div>
+                        <button onclick="changeBet(1)"
+                            class="w-8 h-8 rounded-lg bg-[#1a1a1a] flex items-center justify-center text-white hover:bg-[#C0142A] active:scale-90 transition-colors">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="w-full px-8 flex items-center justify-between gap-6">
+                    <button
+                        class="flex flex-col items-center gap-2 group active:scale-95 transition-transform opacity-80 hover:opacity-100"
+                        onclick="openAutoModal()">
+                        <div
+                            class="w-12 h-12 rounded-full glass-btn flex items-center justify-center group-hover:border-white/30 transition-colors">
+                            <span class="material-symbols-outlined text-gray-400 group-hover:text-white"
+                                style="font-size: 24px;">cached</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-wide">Auto</span>
+                    </button>
+
+                    <button onclick="doSpin()" id="spinBtn"
+                        class="relative w-[90px] h-[90px] rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-10 group cursor-pointer select-none -mt-4">
+                        <div class="absolute inset-0 rounded-full spin-btn-outer"></div>
+                        <div
+                            class="absolute inset-[-4px] spin-ring opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        </div>
+                        <div class="absolute inset-2 rounded-full spin-btn-inner flex items-center justify-center">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                                class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] group-hover:animate-pulse">
+                                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="white" stroke="#ffcccc"
+                                    stroke-width="0.5" stroke-linejoin="round"></path>
+                            </svg>
+                        </div>
+                    </button>
+
+                    <button
+                        class="flex flex-col items-center gap-2 group active:scale-95 transition-transform opacity-80 hover:opacity-100"
+                        onclick="toggleAutoSpeed()">
+                        <div
+                            class="w-12 h-12 rounded-full glass-btn flex items-center justify-center group-hover:border-white/30 transition-colors">
+                            <span class="material-symbols-outlined text-gray-400" id="turboIcon"
+                                style="font-size: 24px;">bolt</span>
+                        </div>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-wide"
+                            id="autoLabel">Turbo</span>
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="bet-strip-label" id="betAmountLabel">BET AMOUNT</div>
-        <button class="buy-bonus" onclick="buyBonus()">
-            <div class="bb-left">🔥 <span id="bbLabel">Buy Bonus</span></div>
-            <div class="bb-right"><span id="bbPrice">500</span> 🪙</div>
-        </button>
-        <!-- speed is toggled via AUTO button now -->
+        <!-- === PAYTABLE MODAL === -->
+        <div id="paytable-modal" class="absolute inset-0 z-50 flex flex-col justify-end"
+            style="opacity:0; pointer-events:none; transition:opacity 0.3s ease;">
+            <div class="modal-overlay absolute inset-0" onclick="togglePaytable(false)"></div>
+            <div class="modal-content w-full rounded-t-[32px] p-6 pb-12 relative z-10 flex flex-col max-h-[85vh]">
+                <div class="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6" onclick="togglePaytable(false)"></div>
+                <div class="info-header px-1 py-4 flex items-center justify-between z-30 relative rounded-2xl mb-4">
+                    <div class="flex flex-col">
+                        <h1 class="font-black text-xl tracking-wider text-white">PAYTABLE</h1>
+                        <div class="flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#C0142A]"></span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Symbol
+                                Values</span>
+                        </div>
+                    </div>
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-full glass-btn text-gray-400 hover:text-white transition-colors"
+                        onclick="togglePaytable(false)">
+                        <span class="material-symbols-outlined text-xl">close</span>
+                    </button>
+                </div>
+                <!-- Card grids from paytable.html -->
+                <div class="flex-1 overflow-y-auto no-scrollbar pb-10 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Lolly -->
+                        <div class="symbol-card lolly-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <circle cx="32" cy="24" r="18" fill="url(#lollyGrad)" stroke="white"
+                                        stroke-width="2"></circle>
+                                    <path d="M32 42 L32 60" stroke="#eee" stroke-width="4" stroke-linecap="round">
+                                    </path>
+                                    <path d="M32 24 m-12 0 a 12 12 0 1 0 24 0 a 12 12 0 1 0 -24 0" fill="none"
+                                        stroke="white" stroke-width="2" stroke-dasharray="4 4" opacity="0.5"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Lollipop</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x50</div>
+                                <div>10-11</div>
+                                <div>x25</div>
+                                <div>8-9</div>
+                                <div>x10</div>
+                            </div>
+                        </div>
+
+                        <!-- Star -->
+                        <div class="symbol-card star-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <path d="M32 4 L40 22 L60 22 L44 34 L50 54 L32 42 L14 54 L20 34 L4 22 L24 22 Z"
+                                        fill="url(#goldGrad)" stroke="#B38F00" stroke-width="1"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Gold Star</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x25</div>
+                                <div>10-11</div>
+                                <div>x10</div>
+                                <div>8-9</div>
+                                <div>x2.5</div>
+                            </div>
+                        </div>
+
+                        <!-- Heart -->
+                        <div class="symbol-card heart-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <path
+                                        d="M32 56 C 10 40 4 28 4 18 C 4 8 12 4 22 4 C 28 4 32 8 32 8 C 32 8 36 4 42 4 C 52 4 60 18 C 60 28 54 40 32 56 Z"
+                                        fill="url(#heartGrad)" stroke="rgba(255,255,255,0.3)"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Heart Gem</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x15</div>
+                                <div>10-11</div>
+                                <div>x5</div>
+                                <div>8-9</div>
+                                <div>x1.5</div>
+                            </div>
+                        </div>
+
+                        <!-- Ruby -->
+                        <div class="symbol-card ruby-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <path d="M20 12 L44 12 L56 28 L32 58 L8 28 Z" fill="url(#rubyGrad)"
+                                        stroke="rgba(255,255,255,0.3)" stroke-width="1"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Ruby Hex</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x12</div>
+                                <div>10-11</div>
+                                <div>x2</div>
+                                <div>8-9</div>
+                                <div>x1.2</div>
+                            </div>
+                        </div>
+
+                        <!-- Diamond -->
+                        <div class="symbol-card diamond-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <path d="M16 20 L48 20 L56 30 L32 54 L8 30 Z" fill="url(#diamondGrad)"
+                                        stroke="rgba(255,255,255,0.5)" stroke-width="1"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Diamond</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x10</div>
+                                <div>10-11</div>
+                                <div>x1.5</div>
+                                <div>8-9</div>
+                                <div>x0.8</div>
+                            </div>
+                        </div>
+
+                        <!-- Grapes -->
+                        <div class="symbol-card grape-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <circle cx="32" cy="18" r="9" fill="url(#grapeGrad)"></circle>
+                                    <circle cx="22" cy="30" r="9" fill="url(#grapeGrad)"></circle>
+                                    <circle cx="42" cy="30" r="9" fill="url(#grapeGrad)"></circle>
+                                    <circle cx="32" cy="42" r="9" fill="url(#grapeGrad)"></circle>
+                                    <path d="M32 10 Q32 0 42 4" stroke="#8BC34A" stroke-width="3" fill="none"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Grapes</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x8</div>
+                                <div>10-11</div>
+                                <div>x1.2</div>
+                                <div>8-9</div>
+                                <div>x0.5</div>
+                            </div>
+                        </div>
+
+                        <!-- Apple -->
+                        <div class="symbol-card apple-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <path
+                                        d="M32 56 C 20 56 10 46 10 32 C 10 18 20 14 26 14 C 32 16 32 16 38 14 C 44 14 54 18 54 32 C 54 46 44 56 32 56 Z"
+                                        fill="url(#rubyGrad)"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Apple</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x5</div>
+                                <div>10-11</div>
+                                <div>x1</div>
+                                <div>8-9</div>
+                                <div>x0.4</div>
+                            </div>
+                        </div>
+
+                        <!-- Peach -->
+                        <div class="symbol-card peach-glow p-4 flex flex-col items-center">
+                            <div class="mb-3">
+                                <svg viewBox="0 0 64 64" width="48" height="48">
+                                    <circle cx="32" cy="34" r="22" fill="url(#peachGrad)"></circle>
+                                    <path d="M32 12 Q 36 2 44 6" fill="#43A047"></path>
+                                </svg>
+                            </div>
+                            <span class="text-[10px] font-black text-white/40 uppercase mb-2">Peach</span>
+                            <div class="multiplier-grid grid grid-cols-2 w-full text-[11px] gap-y-1">
+                                <div>12+</div>
+                                <div>x2</div>
+                                <div>10-11</div>
+                                <div>x0.8</div>
+                                <div>8-9</div>
+                                <div>x0.25</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-5 rounded-2xl border-white/5 space-y-3 mt-4">
+                        <h3 class="text-xs font-black text-[#FFD700] uppercase tracking-widest">Game Rules</h3>
+                        <p class="text-[11px] text-gray-400 leading-relaxed">
+                            Symbols pay anywhere on the screen. The total number of the same symbol on the screen at the
+                            end of a spin determines the value of the win.
+                        </p>
+                        <div class="pt-2 border-t border-white/5 flex items-center justify-between">
+                            <span class="text-[10px] text-gray-500 font-bold uppercase">RTP</span>
+                            <span class="text-[10px] text-white font-black">96.51%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === AUTO-SPIN MODAL === -->
+        <div id="autospin-modal" class="absolute inset-0 z-50 flex flex-col justify-end"
+            style="opacity:0; pointer-events:none; transition:opacity 0.3s ease;">
+            <div class="modal-overlay absolute inset-0" onclick="toggleAutoModal(false)"></div>
+            <div class="modal-content w-full rounded-t-[32px] p-6 pb-12 relative z-10">
+                <div class="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6" onclick="toggleAutoModal(false)"></div>
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-xl font-black text-white tracking-tight">AUTO-SPIN SETTINGS</h2>
+                    <span class="material-symbols-outlined text-2xl text-[#C0142A]">sync</span>
+                </div>
+                <!-- Numbers -->
+                <div class="mb-8">
+                    <p class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Number of Spins</p>
+                    <div class="grid grid-cols-5 gap-2" id="autoSpinsGrid">
+                        <button class="option-chip py-3 rounded-xl text-sm font-bold"
+                            onclick="selectAutoChip(this, 10)">10</button>
+                        <button class="option-chip py-3 rounded-xl text-sm font-bold selected"
+                            onclick="selectAutoChip(this, 25)">25</button>
+                        <button class="option-chip py-3 rounded-xl text-sm font-bold"
+                            onclick="selectAutoChip(this, 50)">50</button>
+                        <button class="option-chip py-3 rounded-xl text-sm font-bold"
+                            onclick="selectAutoChip(this, 100)">100</button>
+                        <button class="option-chip py-3 rounded-xl text-xs font-black"
+                            onclick="selectAutoChip(this, 9999)"><span
+                                class="material-symbols-outlined text-lg">all_inclusive</span></button>
+                    </div>
+                </div>
+
+                <!-- Start btn -->
+                <button
+                    class="w-full start-autospin-btn py-5 rounded-2xl text-lg font-black uppercase flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                    onclick="startAutoSpinFlow()">
+                    START AUTO-SPIN
+                    <span class="material-symbols-outlined text-xl">play_arrow</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- === BIG WIN OVERLAY === -->
+        <div id="big-win-overlay"
+            style="display:none; position:absolute; inset:0; z-index:100; flex-direction:column; align-items:center; justify-content:center; overflow:hidden;"
+            class="big-win-overlay border-gray-900 rounded-[20px]">
+            <div class="light-ray" style="animation-delay: 0s;"></div>
+            <div class="light-ray" style="animation-delay: -5s;"></div>
+
+            <div id="confetti-box" class="absolute inset-0 pointer-events-none"></div>
+
+            <div class="mt-20 z-10 flex flex-col items-center">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-12 h-px bg-gradient-to-r from-transparent to-[#FFD700]"></div>
+                    <span class="text-[#FFD700] font-black tracking-[0.3em] text-xs uppercase">Incredible</span>
+                    <div class="w-12 h-px bg-gradient-to-l from-transparent to-[#FFD700]"></div>
+                </div>
+                <h1 class="big-win-title">BIG WIN</h1>
+            </div>
+
+            <div class="mt-8 z-10 text-center amount-display">
+                <div class="text-[14px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Payout</div>
+                <div
+                    class="text-6xl font-black text-white gold-glow drop-shadow-2xl flex items-baseline justify-center gap-1">
+                    <span class="text-4xl text-[#FFD700]">🪙</span>
+                    <span id="win-counter-big">0.00</span>
+                </div>
+            </div>
+
+            <div class="w-[85%] mt-12 z-10 flex flex-col gap-3">
+                <div class="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Winning Combinations
+                </div>
+                <div id="combo-list-big" class="flex flex-col gap-2 overflow-y-auto max-h-[150px] no-scrollbar">
+                </div>
+            </div>
+
+            <div class="mt-auto mb-16 w-full px-10 z-10 pb-6">
+                <button
+                    class="collect-btn w-full py-5 rounded-2xl flex items-center justify-center gap-3 group active:scale-95 transition-transform"
+                    onclick="closeBigWin()">
+                    <span class="text-white font-black text-xl tracking-wider uppercase">Collect</span>
+                    <span
+                        class="material-symbols-outlined text-2xl text-white group-hover:rotate-12 transition-transform">check_circle</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ===== SCREEN: BONUSES ===== -->
@@ -5198,7 +6223,8 @@
                         style="position:absolute;inset:0;background:rgba(255,215,0,.2);filter:blur(20px);border-radius:50%">
                     </div>
                     <span class="material-symbols-outlined"
-                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#FFD700,#FDB931);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(255,215,0,.5));position:relative;z-index:10">stars</span>
+                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#FFD700,#FDB931);background-clip: text;
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(255,215,0,.5));position:relative;z-index:10">stars</span>
                 </div>
                 <h1
                     style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px">
@@ -5228,7 +6254,8 @@
                         style="position:absolute;inset:0;background:rgba(227,28,35,.2);filter:blur(20px);border-radius:50%">
                     </div>
                     <span class="material-symbols-outlined"
-                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#e31c23,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 25px rgba(227,28,35,.8));position:relative;z-index:10">lock_clock</span>
+                        style="font-size:96px;font-variation-settings:'FILL' 1,'wght' 700;background:linear-gradient(135deg,#e31c23,#ff6b6b);background-clip: text;
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 25px rgba(227,28,35,.8));position:relative;z-index:10">lock_clock</span>
                 </div>
                 <h1
                     style="font-family:'Montserrat',sans-serif;font-size:28px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px">
@@ -5440,25 +6467,248 @@
             document.getElementById('vipPct').textContent = pct + '%';
         }
 
-        /* === GAME === */
+
+        /* === NEW RUBY SLOT GAME LOGIC === */
+        const emojiToSvgMap = {
+            "🍒": "peach",
+            "🍋": "star",
+            "🍊": "lollipop",
+            "🍇": "grape",
+            "🍫": "diamond",
+            "🍭": "apple",
+            "🍬": "heart",
+            "💎": "ruby",
+            "🎰": "star",
+            "💣": "diamond"
+        };
+        const symbolTypes = ['ruby', 'grape', 'apple', 'peach', 'diamond', 'heart', 'star', 'lollipop'];
+
+        function getSymbolSVG(type) {
+            const shadow = `filter="drop-shadow(0px 4px 4px rgba(0,0,0,0.3))"`;
+
+            switch (type) {
+                case 'ruby':
+                    return `<svg viewBox="0 0 64 64" width="44" height="44" ${shadow}>
+                        <defs>
+                            <radialGradient id="rubyShine" cx="35%" cy="25%" r="55%">
+                                <stop offset="0%" stop-color="#ff9aaa"/>
+                                <stop offset="40%" stop-color="#E8192E"/>
+                                <stop offset="100%" stop-color="#4a0010"/>
+                            </radialGradient>
+                        </defs>
+                        <polygon points="32,4 52,20 58,36 32,62 6,36 12,20" fill="url(#rubyShine)" stroke="rgba(255,100,120,0.5)" stroke-width="1"/>
+                        <polygon points="32,4 52,20 32,24 12,20" fill="rgba(255,180,180,0.25)"/>
+                        <polygon points="32,24 52,20 58,36" fill="rgba(255,100,100,0.15)"/>
+                        <polygon points="32,24 6,36 12,20" fill="rgba(255,100,100,0.1)"/>
+                        <polygon points="32,24 58,36 32,62 6,36" fill="rgba(0,0,0,0.15)"/>
+                        <line x1="32" y1="4" x2="12" y2="20" stroke="rgba(255,255,255,0.25)" stroke-width="0.75"/>
+                        <line x1="32" y1="4" x2="52" y2="20" stroke="rgba(255,255,255,0.25)" stroke-width="0.75"/>
+                        <line x1="12" y1="20" x2="52" y2="20" stroke="rgba(255,255,255,0.2)" stroke-width="0.75"/>
+                        <line x1="12" y1="20" x2="32" y2="24" stroke="rgba(255,255,255,0.2)" stroke-width="0.75"/>
+                        <line x1="52" y1="20" x2="32" y2="24" stroke="rgba(255,255,255,0.2)" stroke-width="0.75"/>
+                        <line x1="6" y1="36" x2="32" y2="24" stroke="rgba(255,255,255,0.15)" stroke-width="0.75"/>
+                        <line x1="58" y1="36" x2="32" y2="24" stroke="rgba(255,255,255,0.15)" stroke-width="0.75"/>
+                        <line x1="6" y1="36" x2="12" y2="20" stroke="rgba(255,255,255,0.15)" stroke-width="0.75"/>
+                        <line x1="58" y1="36" x2="52" y2="20" stroke="rgba(255,255,255,0.15)" stroke-width="0.75"/>
+                        <ellipse cx="28" cy="16" rx="5" ry="3" fill="rgba(255,255,255,0.35)" transform="rotate(-20,28,16)"/>
+                    </svg>`;
+                case 'grape':
+                    return `<svg viewBox="0 0 64 64" width="48" height="48" ${shadow}>
+                        <defs>
+                            <radialGradient id="grapeShine" cx="30%" cy="25%" r="65%">
+                                <stop offset="0%" stop-color="#e8b4f8"/>
+                                <stop offset="35%" stop-color="#9C27B0"/>
+                                <stop offset="100%" stop-color="#4a0072"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="32" cy="17" r="9" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <circle cx="21" cy="29" r="9" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <circle cx="43" cy="29" r="9" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <circle cx="27" cy="41" r="9" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <circle cx="37" cy="41" r="9" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <circle cx="32" cy="53" r="7" fill="url(#grapeShine)" stroke="rgba(200,100,255,0.3)" stroke-width="0.5"/>
+                        <ellipse cx="29" cy="13" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,29,13)"/>
+                        <ellipse cx="18" cy="25" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,18,25)"/>
+                        <ellipse cx="40" cy="25" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,40,25)"/>
+                        <ellipse cx="24" cy="37" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,24,37)"/>
+                        <ellipse cx="34" cy="37" rx="3" ry="2" fill="rgba(255,255,255,0.4)" transform="rotate(-15,34,37)"/>
+                        <ellipse cx="29" cy="49" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.4)" transform="rotate(-15,29,49)"/>
+                        <path d="M32 8 Q36 2 44 5" stroke="#66BB6A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <path d="M32 8 Q28 3 34 1" stroke="#81C784" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                    </svg>`;
+                case 'apple':
+                    return `<svg viewBox="0 0 64 64" width="44" height="44" ${shadow}>
+                        <defs>
+                            <radialGradient id="appleGrad" cx="38%" cy="28%" r="65%">
+                                <stop offset="0%" stop-color="#ff8a8a"/>
+                                <stop offset="40%" stop-color="#e0001a"/>
+                                <stop offset="100%" stop-color="#6b0000"/>
+                            </radialGradient>
+                            <radialGradient id="appleShadow" cx="50%" cy="80%" r="50%">
+                                <stop offset="0%" stop-color="rgba(0,0,0,0.35)"/>
+                                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                            </radialGradient>
+                        </defs>
+                        <path d="M32 57 C 18 57 8 46 8 32 C 8 17 18 13 26 13 C 29.5 13 32 15 32 15 C 32 15 34.5 13 38 13 C 46 13 56 17 56 32 C 56 46 46 57 32 57 Z" fill="url(#appleGrad)" stroke="rgba(255,120,100,0.4)" stroke-width="1"/>
+                        <path d="M32 57 C 18 57 8 46 8 38 C 20 55 44 55 56 38 C 56 46 46 57 32 57Z" fill="url(#appleShadow)"/>
+                        <path d="M32 13 Q 33 3 42 5 Q 45 10 32 13" fill="#558B2F" stroke="#33691E" stroke-width="0.5"/>
+                        <path d="M32 5 Q 38 0 40 5" stroke="#8BC34A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                        <ellipse cx="22" cy="24" rx="5" ry="9" fill="rgba(255,255,255,0.18)" transform="rotate(-20,22,24)" rx="4" ry="8"/>
+                        <path d="M18 30 Q 22 26 22 36" stroke="rgba(255,255,255,0.12)" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>`;
+                case 'peach':
+                    return `<svg viewBox="0 0 64 64" width="46" height="46" ${shadow}>
+                        <defs>
+                            <radialGradient id="peachMain" cx="38%" cy="30%" r="65%">
+                                <stop offset="0%" stop-color="#FFECB3"/>
+                                <stop offset="35%" stop-color="#FFAB76"/>
+                                <stop offset="70%" stop-color="#FF7043"/>
+                                <stop offset="100%" stop-color="#BF360C"/>
+                            </radialGradient>
+                            <radialGradient id="peachBlush" cx="60%" cy="65%" r="40%">
+                                <stop offset="0%" stop-color="rgba(255,80,80,0.4)"/>
+                                <stop offset="100%" stop-color="rgba(255,80,80,0)"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="32" cy="34" r="22" fill="url(#peachMain)" stroke="rgba(255,180,100,0.3)" stroke-width="1"/>
+                        <circle cx="32" cy="34" r="22" fill="url(#peachBlush)"/>
+                        <path d="M32 13 Q 33 26 46 38" stroke="rgba(200,80,30,0.2)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M32 13 Q 28 4 37 7 Q 38 10 32 13" fill="#43A047" stroke="#2E7D32" stroke-width="0.5"/>
+                        <ellipse cx="22" cy="26" rx="4" ry="7" fill="rgba(255,255,255,0.22)" transform="rotate(-20,22,26)"/>
+                    </svg>`;
+                case 'diamond':
+                    return `<svg viewBox="0 0 64 64" width="44" height="44" ${shadow}>
+                        <defs>
+                            <linearGradient id="diamTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#e0f7fa"/>
+                                <stop offset="100%" stop-color="#00BCD4"/>
+                            </linearGradient>
+                            <linearGradient id="diamLeft" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#006064"/>
+                                <stop offset="100%" stop-color="#26C6DA"/>
+                            </linearGradient>
+                            <linearGradient id="diamRight" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#4DD0E1"/>
+                                <stop offset="100%" stop-color="#00838F"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- top face -->
+                        <polygon points="16,22 32,14 48,22 32,30" fill="url(#diamTop)" stroke="rgba(255,255,255,0.4)" stroke-width="0.75"/>
+                        <!-- left face -->
+                        <polygon points="16,22 32,30 24,52 8,34" fill="url(#diamLeft)" stroke="rgba(255,255,255,0.2)" stroke-width="0.75"/>
+                        <!-- right face -->
+                        <polygon points="48,22 56,34 40,52 32,30" fill="url(#diamRight)" stroke="rgba(255,255,255,0.2)" stroke-width="0.75"/>
+                        <!-- bottom -->
+                        <polygon points="24,52 32,30 40,52 32,58" fill="#004D57" stroke="rgba(255,255,255,0.15)" stroke-width="0.75"/>
+                        <!-- inner lines -->
+                        <line x1="16" y1="22" x2="32" y2="14" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
+                        <line x1="32" y1="14" x2="48" y2="22" stroke="rgba(255,255,255,0.35)" stroke-width="0.75"/>
+                        <!-- highlight streak -->
+                        <line x1="24" y1="16" x2="34" y2="22" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"/>
+                        <ellipse cx="28" cy="17" rx="3" ry="1.5" fill="rgba(255,255,255,0.6)" transform="rotate(-30,28,17)"/>
+                    </svg>`;
+                case 'heart':
+                    return `<svg viewBox="0 0 64 64" width="44" height="44" ${shadow}>
+                        <defs>
+                            <radialGradient id="heartMain" cx="40%" cy="30%" r="65%">
+                                <stop offset="0%" stop-color="#ff9aaa"/>
+                                <stop offset="40%" stop-color="#E91E3F"/>
+                                <stop offset="100%" stop-color="#5c0010"/>
+                            </radialGradient>
+                            <radialGradient id="heartInner" cx="50%" cy="70%" r="50%">
+                                <stop offset="0%" stop-color="rgba(0,0,0,0.3)"/>
+                                <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+                            </radialGradient>
+                        </defs>
+                        <path d="M32 56 C 10 40 4 28 4 18 C 4 8 12 4 22 4 C 28 4 32 8 32 8 C 32 8 36 4 42 4 C 52 4 60 8 60 18 C 60 28 54 40 32 56 Z" fill="url(#heartMain)" stroke="rgba(255,150,160,0.4)" stroke-width="1"/>
+                        <path d="M32 56 C 10 40 4 28 4 22 C 12 50 52 50 60 22 C 60 28 54 40 32 56Z" fill="url(#heartInner)"/>
+                        <path d="M14 14 C 18 9 25 9 27 13" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <ellipse cx="20" cy="18" rx="4" ry="6" fill="rgba(255,255,255,0.18)" transform="rotate(-25,20,18)"/>
+                    </svg>`;
+                case 'star':
+                    return `<svg viewBox="0 0 64 64" width="48" height="48" ${shadow}>
+                        <defs>
+                            <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="rgba(255,230,100,0.4)"/>
+                                <stop offset="100%" stop-color="rgba(255,200,0,0)"/>
+                            </radialGradient>
+                            <linearGradient id="starFace" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FFFDE7"/>
+                                <stop offset="40%" stop-color="#FFD700"/>
+                                <stop offset="100%" stop-color="#E65100"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="32" cy="32" r="26" fill="url(#starGlow)"/>
+                        <path d="M32 6 L37.5 22 L54 22 L41 31 L46 48 L32 39 L18 48 L23 31 L10 22 L26.5 22 Z" fill="url(#starFace)" stroke="#B8860B" stroke-width="1" stroke-linejoin="round"/>
+                        <!-- shading on lower half -->
+                        <path d="M32 39 L18 48 L23 31 L10 22 L16 22 L26 30 Z" fill="rgba(0,0,0,0.12)"/>
+                        <!-- highlight -->
+                        <ellipse cx="28" cy="17" rx="4" ry="2.5" fill="rgba(255,255,255,0.55)" transform="rotate(-20,28,17)"/>
+                        <!-- shine ray -->
+                        <line x1="32" y1="2" x2="32" y2="8" stroke="rgba(255,255,200,0.8)" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="54" y1="10" x2="50" y2="15" stroke="rgba(255,255,200,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="10" y1="10" x2="14" y2="15" stroke="rgba(255,255,200,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>`;
+                case 'lollipop':
+                    return `<svg viewBox="0 0 64 64" width="48" height="48" ${shadow}>
+                        <defs>
+                            <radialGradient id="lolBase" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#FCE4EC"/>
+                                <stop offset="40%" stop-color="#F06292"/>
+                                <stop offset="100%" stop-color="#AD1457"/>
+                            </radialGradient>
+                        </defs>
+                        <!-- stick -->
+                        <line x1="32" y1="42" x2="36" y2="62" stroke="#D7CCC8" stroke-width="4.5" stroke-linecap="round"/>
+                        <line x1="32" y1="42" x2="36" y2="62" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round"/>
+                        <!-- candy body -->
+                        <circle cx="32" cy="24" r="19" fill="url(#lolBase)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                        <!-- spiral segments -->
+                        <path d="M32 5 A19 19 0 0 1 51 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="4" stroke-linecap="round"/>
+                        <path d="M32 8 A16 16 0 0 0 17 32" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M32 11 A13 13 0 0 1 45 24" fill="none" stroke="rgba(255,100,150,0.8)" stroke-width="3" stroke-linecap="round"/>
+                        <!-- center dot -->
+                        <circle cx="32" cy="24" r="4" fill="rgba(255,255,255,0.5)"/>
+                        <!-- highlight -->
+                        <ellipse cx="25" cy="15" rx="5" ry="3.5" fill="rgba(255,255,255,0.4)" transform="rotate(-30,25,15)"/>
+                    </svg>`;
+            }
+        }
+
+        var BET_STEPS = [1, 5, 10, 25, 50, 100, 200];
+        var betIndex = 1;
+
         function initGame() {
-            var g = document.getElementById('grid');
-            if (!g.children.length) { for (var i = 0; i < 30; i++) { var c = document.createElement('div'); c.className = 'cell'; c.textContent = BSYM[Math.floor(Math.random() * BSYM.length)]; g.appendChild(c) } }
+            var g = document.getElementById('slot-grid');
+            if (g && !g.children.length) {
+                g.innerHTML = '';
+                for (let i = 0; i < 30; i++) {
+                    const type = symbolTypes[Math.floor(Math.random() * symbolTypes.length)];
+                    createTile(i, type);
+                }
+            }
             updateSpinBtn(); updateBetDisplay();
         }
-        function updateSpinBtn() {
-            var btn = document.getElementById('spinBtn'), txt = document.getElementById('spinTxt'), ico = document.getElementById('spinIcon');
-            btn.className = 'spin-btn'; btn.disabled = false;
-            if (balance === null) { btn.classList.add('m-load'); txt.textContent = '...'; ico.textContent = 'hourglass_empty' }
-            else if (balance < bet && freeSpins <= 0) { btn.classList.add('m-deposit'); txt.textContent = T.deposit; ico.textContent = 'add_card' }
-            else { btn.classList.add('m-spin'); txt.textContent = freeSpins > 0 ? '⚡ ' + T.spin : T.spin; ico.textContent = 'play_arrow' }
+
+        function createTile(index, type, animateClass = '') {
+            const g = document.getElementById('slot-grid');
+            const div = document.createElement('div');
+            const col = index % 6;
+            const delay = col * 50;
+            div.className = `symbol-tile ${animateClass}`;
+            div.style.animationDelay = `${delay}ms`;
+            div.innerHTML = getSymbolSVG(type);
+            div.dataset.index = index;
+            div.dataset.type = type;
+            if (g) g.appendChild(div);
+            return div;
         }
-        var BET_STEPS = [5, 10, 25, 50];
-        var betIndex = 0;
+
         function updateBetDisplay() {
-            document.getElementById('betDisplay').textContent = bet + '.0';
-            document.getElementById('bbPrice').textContent = bet * 100;
+            var bd = document.getElementById('betDisplay');
+            if (bd) bd.textContent = bet.toFixed(2);
         }
+
         function changeBet(dir) {
             if (spinning) return;
             betIndex = BET_STEPS.indexOf(bet);
@@ -5469,50 +6719,329 @@
             bet = BET_STEPS[betIndex];
             updateBetDisplay(); updateSpinBtn();
         }
+
         function setMaxBet() {
             if (spinning) return;
             bet = BET_STEPS[BET_STEPS.length - 1];
             betIndex = BET_STEPS.length - 1;
             updateBetDisplay(); updateSpinBtn();
         }
+
         function toggleAutoSpeed() {
             speedMode = (speedMode + 1) % 3;
             var labels = ['🐢', '▶️', '⚡'];
-            document.getElementById('autoLabel').textContent = labels[speedMode];
+            var al = document.getElementById('autoLabel');
+            var icon = document.getElementById('turboIcon');
+            if (al) al.textContent = labels[speedMode];
+            if (icon) {
+                if (speedMode === 0) icon.textContent = 'speed';
+                if (speedMode === 1) icon.textContent = 'play_arrow';
+                if (speedMode === 2) icon.textContent = 'bolt';
+            }
         }
+
+        function updateSpinBtn() {
+            var btn = document.getElementById('spinBtn');
+            if (btn) btn.disabled = (balance === null);
+        }
+
+        function triggerSparkles(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                sparkle.style.left = x + 'px';
+                sparkle.style.top = y + 'px';
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 30 + Math.random() * 50;
+                sparkle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                sparkle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                document.body.appendChild(sparkle);
+                setTimeout(() => sparkle.remove(), 1000);
+            }
+        }
+
+        function showBigWin(amount) {
+            var bwOverlay = document.getElementById('big-win-overlay');
+            var bwAmount = document.getElementById('win-counter-big');
+            if (bwOverlay) bwOverlay.style.display = 'flex';
+            if (bwAmount) bwAmount.innerText = amount;
+
+            const colors = ['#FFD700', '#C0142A', '#FFFFFF'];
+            const container = document.getElementById('confetti-box');
+            if (container) {
+                container.innerHTML = '';
+                for (let i = 0; i < 50; i++) {
+                    const conf = document.createElement('div');
+                    conf.style.position = 'absolute';
+                    conf.style.width = '8px';
+                    conf.style.height = '16px';
+                    conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    conf.style.left = Math.random() * 100 + '%';
+                    conf.style.top = -20 + 'px';
+                    conf.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    conf.animate([
+                        { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translateY(100vh) rotate(${720 + Math.random() * 360}deg)`, opacity: 0 }
+                    ], {
+                        duration: 1000 + Math.random() * 1000,
+                        easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                        fill: 'forwards'
+                    });
+                    container.appendChild(conf);
+                }
+            }
+        }
+
+        function closeBigWin() {
+            var bwOverlay = document.getElementById('big-win-overlay');
+            if (bwOverlay) bwOverlay.style.display = 'none';
+        }
+
         function doSpin() {
             if (balance === null) return;
-            if (balance < bet && freeSpins <= 0) { nav('wallet'); return }
+            if ((balance < bet && freeSpins <= 0) && activeWallet !== 'stars') { nav('wallet'); return }
+            if ((activeWallet === 'stars' && starsBalance < bet && freeSpins <= 0)) { selectPayMethod('stars'); nav('wallet'); return; }
             spin();
         }
 
-        /* === SPIN === */
         async function spin() {
-            if (spinning) return; spinning = true; var btn = document.getElementById('spinBtn'); btn.disabled = true;
-            document.getElementById('gameResult').innerHTML = '';
-            document.querySelectorAll('#grid .cell').forEach(function (c) { c.className = 'cell' });
-            var cells = document.querySelectorAll('#grid .cell'); var sp = S(); var frame = 0;
-            var anim = setInterval(function () { cells.forEach(function (c) { c.textContent = BSYM[Math.floor(Math.random() * BSYM.length)] }); frame++; if (frame >= sp.af) clearInterval(anim) }, sp.ai);
+            if (spinning) return;
+            spinning = true;
+            var btn = document.getElementById('spinBtn');
+            if (btn) btn.disabled = true;
+            if (btn) btn.style.transform = 'scale(0.9)';
+            setTimeout(() => { if (btn) btn.style.transform = 'scale(1)' }, 150);
+
+            var wd = document.getElementById('win-display');
+            var badge = document.getElementById('tumble-badge');
+            var g = document.getElementById('slot-grid');
+            if (wd) { wd.innerText = '0.00'; wd.classList.remove('text-[#FFD700]', 'scale-110'); wd.classList.add('text-white'); }
+            if (badge) { badge.classList.remove('scale-100', 'opacity-100'); badge.classList.add('scale-0', 'opacity-0'); }
+
+            var tiles = Array.from(g.children);
+            tiles.forEach((tile, i) => {
+                const col = i % 6;
+                setTimeout(() => {
+                    tile.classList.add('spinning-column');
+                }, col * 60);
+            });
+
+            const SPIN_BASE = speedMode === 2 ? 300 : 700;
+            const COL_STAGGER = speedMode === 2 ? 40 : 90;
+
             try {
-                var useFree = freeSpins > 0 && balance < bet;
-                var r = await fetch(API + '/api/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree })) });
-                var d = await r.json(); await sleep(sp.ai * sp.af); clearInterval(anim);
-                if (!d.ok) { spinning = false; btn.disabled = false; if (d.balance !== undefined) balance = d.balance; updateBalanceUI(); return }
-                balance = d.balance; freeSpins = d.free_spins || freeSpins;
-                d.grid.forEach(function (s, i) { cells[i].textContent = s; if (s === '🎰') cells[i].classList.add('scatter') });
-                if (d.winnings > 0) {
-                    var co = {}; d.grid.forEach(function (s) { if (s !== '🎰') co[s] = (co[s] || 0) + 1 });
-                    var ws = new Set(Object.entries(co).filter(function (e) { return e[1] >= 8 }).map(function (e) { return e[0] }));
-                    cells.forEach(function (c) { if (ws.has(c.textContent)) c.classList.add('win') })
+                var useFree = freeSpins > 0 && ((activeWallet === 'usdt' && balance < bet) || (activeWallet === 'stars' && starsBalance < bet));
+                var r = await fetch(API + '/api/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet })) });
+                var d = await r.json();
+
+                if (!d.ok) {
+                    spinning = false;
+                    if (btn) btn.disabled = false;
+                    if (d.balance !== undefined) balance = d.balance;
+                    if (d.stars !== undefined) starsBalance = d.stars;
+                    updateBalanceUI();
+                    tiles.forEach(t => t.classList.remove('spinning-column'));
+                    return;
                 }
-                await sleep(sp.rd); var res = document.getElementById('gameResult');
-                if (d.triggered_bonus) {
-                    res.innerHTML = '<span style="color:var(--red)">🎰 BONUS! ' + d.scatter_count + 'x</span>';
-                    updateBalanceUI(); setTimeout(function () { startBonus('triggered') }, speedMode === 2 ? 400 : 1200)
+
+                if (d.balance !== undefined) balance = d.balance;
+                if (d.stars !== undefined) starsBalance = d.stars;
+                freeSpins = d.free_spins || freeSpins;
+                updateBalanceUI();
+
+                var newTypes = d.grid.map(emoji => emojiToSvgMap[emoji] || 'ruby');
+
+                setTimeout(() => {
+                    g.innerHTML = '';
+                    const newTiles = [];
+                    for (let i = 0; i < 30; i++) {
+                        const div = document.createElement('div');
+                        div.className = 'symbol-tile';
+                        div.style.opacity = '0';
+                        div.style.transform = 'translateY(-110%) scaleY(1.15)';
+                        div.dataset.type = newTypes[i];
+                        div.dataset.index = i;
+                        div.innerHTML = getSymbolSVG(newTypes[i]);
+                        g.appendChild(div);
+                        newTiles.push(div);
+                    }
+
+                    for (let col = 0; col < 6; col++) {
+                        const colDelay = col * COL_STAGGER;
+                        setTimeout(() => {
+                            for (let row = 0; row < 5; row++) {
+                                const tile = newTiles[row * 6 + col];
+                                const rowDelay = row * 35;
+                                setTimeout(() => {
+                                    tile.style.opacity = '1';
+                                    tile.style.transform = '';
+                                    void tile.offsetWidth;
+                                    tile.classList.add('reel-land');
+                                }, rowDelay);
+                            }
+                        }, colDelay);
+                    }
+
+                    const totalAnim = (5) * COL_STAGGER + (4) * 35 + 520;
+                    setTimeout(() => {
+                        if (d.winnings > 0) {
+                            var co = {}; d.grid.forEach(function (s) { if (s !== '🎰') co[s] = (co[s] || 0) + 1 });
+                            var ws = new Set(Object.entries(co).filter(function (e) { return e[1] >= 8 }).map(function (e) { return emojiToSvgMap[e[0]] || 'ruby' }));
+
+                            newTiles.forEach(t => {
+                                if (ws.has(t.dataset.type)) {
+                                    t.classList.add('winning-tile');
+                                    const rect = t.getBoundingClientRect();
+                                    triggerSparkles(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                                } else {
+                                    t.style.opacity = '0.3';
+                                }
+                            });
+
+                            animateValue(wd, 0, parseFloat(d.winnings), 1000);
+                            wd.classList.remove('text-white');
+                            wd.classList.add('text-[#FFD700]');
+                            if (badge) {
+                                badge.classList.remove('scale-0', 'opacity-0');
+                                badge.classList.add('scale-100', 'opacity-100');
+                            }
+                            if (d.winnings > bet * 5) {
+                                setTimeout(() => showBigWin(d.winnings.toFixed(2)), 500);
+                            }
+                        }
+
+                        if (d.triggered_bonus) {
+                            setTimeout(function () { startBonus('triggered') }, 1200);
+                        }
+
+                        spinning = false;
+                        if (btn) btn.disabled = false;
+                    }, totalAnim);
+
+                }, Math.max(0, SPIN_BASE - 500));
+
+            } catch (e) {
+                spinning = false;
+                if (btn) btn.disabled = false;
+                tiles.forEach(t => t.classList.remove('spinning-column'));
+            }
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = (progress * (end - start) + start).toFixed(2);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
                 }
-                else { res.innerHTML = d.winnings > 0 ? '<span class="win-text">' + T.win + ': +' + d.winnings + ' 🪙</span>' : '<span class="lose-text">' + T.lose + '</span>'; updateBalanceUI() }
-            } catch (e) { clearInterval(anim) }
-            spinning = false; btn.disabled = false;
+            };
+            window.requestAnimationFrame(step);
+
+            /* === NEW SLOTS MODALS & AUTOSPIN === */
+            function togglePaytable(show) {
+                const modal = document.getElementById('paytable-modal');
+                if (!modal) return;
+                if (show) {
+                    modal.style.opacity = '1';
+                    modal.style.pointerEvents = 'auto';
+                } else {
+                    modal.style.opacity = '0';
+                    modal.style.pointerEvents = 'none';
+                }
+            }
+
+            let isAutoSpinning = false;
+            let autoSpinsLeft = 0;
+            let selectedAutoAmount = 25;
+
+            function openAutoModal() {
+                if (spinning || isAutoSpinning) return;
+                selectedAutoAmount = 25;
+                updateAutoChips();
+                const modal = document.getElementById('autospin-modal');
+                if (modal) {
+                    modal.style.opacity = '1';
+                    modal.style.pointerEvents = 'auto';
+                }
+            }
+
+            function toggleAutoModal(show) {
+                const modal = document.getElementById('autospin-modal');
+                if (!modal) return;
+                modal.style.opacity = show ? '1' : '0';
+                modal.style.pointerEvents = show ? 'auto' : 'none';
+            }
+
+            function selectAutoChip(btn, amount) {
+                selectedAutoAmount = amount;
+                updateAutoChips();
+            }
+
+            function updateAutoChips() {
+                const btns = document.querySelectorAll('#autoSpinsGrid .option-chip');
+                if (!btns.length) return;
+                btns.forEach(b => b.classList.remove('selected'));
+                const map = { 10: 0, 25: 1, 50: 2, 100: 3, 9999: 4 };
+                if (map[selectedAutoAmount] !== undefined && btns[map[selectedAutoAmount]]) {
+                    btns[map[selectedAutoAmount]].classList.add('selected');
+                }
+            }
+
+            function startAutoSpinFlow() {
+                autoSpinsLeft = selectedAutoAmount;
+                isAutoSpinning = true;
+                toggleAutoModal(false);
+
+                var al = document.getElementById('autoLabel');
+                if (al) al.textContent = 'STOP';
+                var icon = document.getElementById('turboIcon');
+                if (icon) icon.textContent = 'stop';
+
+                doAutoSpin();
+            }
+
+            function stopAutoSpinFlow() {
+                isAutoSpinning = false;
+                autoSpinsLeft = 0;
+
+                var labels = ['🐢', '▶️', '⚡'];
+                var al = document.getElementById('autoLabel');
+                if (al) al.textContent = labels[speedMode];
+                var icon = document.getElementById('turboIcon');
+                if (icon) {
+                    if (speedMode === 0) icon.textContent = 'speed';
+                    if (speedMode === 1) icon.textContent = 'play_arrow';
+                    if (speedMode === 2) icon.textContent = 'bolt';
+                }
+            }
+
+            // Intercept Auto button depending on state
+            function handleAutoBtnClick() {
+                if (isAutoSpinning) {
+                    stopAutoSpinFlow();
+                } else {
+                    openAutoModal();
+                }
+            }
+
+            function doAutoSpin() {
+                if (!isAutoSpinning || autoSpinsLeft <= 0) {
+                    stopAutoSpinFlow();
+                    return;
+                }
+                if (!spinning) {
+                    autoSpinsLeft--;
+                    doSpin();
+                    const checkInterval = setInterval(() => {
+                        if (!spinning) {
+                            clearInterval(checkInterval);
+                            setTimeout(doAutoSpin, speedMode === 2 ? 200 : 700);
+                        }
+                    }, 100);
+                }
+            }
         }
 
         /* === BONUS === */
