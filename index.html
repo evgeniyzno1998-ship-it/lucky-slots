@@ -5415,7 +5415,8 @@
                             <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Enter Amount</h3>
                             <div
                                 class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
-                                <span class="material-symbols-outlined text-[10px]">bolt</span> Instant</div>
+                                <span class="material-symbols-outlined text-[10px]">bolt</span> Instant
+                            </div>
                         </div>
                         <div style="position:relative;margin-bottom:8px">
                             <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
@@ -8396,36 +8397,22 @@
             /* Crypto */
             var pmc = document.getElementById('pmCrypto');
             if (pmc) pmc.style.borderColor = method === 'crypto' ? 'var(--red)' : 'var(--border)';
-            var pmcCheck = document.querySelector('#pmCrypto .material-symbols-outlined:last-child');
-            if (pmcCheck) {
-                pmcCheck.textContent = method === 'crypto' ? 'check_circle' : 'radio_button_unchecked';
-                pmcCheck.style.color = method === 'crypto' ? 'var(--red)' : 'var(--dim)';
-            }
+
             /* Stars */
             var pmStars = document.getElementById('pmStars');
-            if (pmStars) {
-                pmStars.style.borderColor = method === 'stars' ? '#FFD700' : 'var(--border)';
-                var pmStarsCheck = document.getElementById('pmStarsCheck');
-                if (pmStarsCheck) {
-                    pmStarsCheck.textContent = method === 'stars' ? 'check_circle' : 'radio_button_unchecked';
-                    pmStarsCheck.style.color = method === 'stars' ? '#FFD700' : 'var(--dim)';
-                }
-            }
-            /* Card */
-            var pmCard = document.getElementById('pmCard');
-            if (pmCard) {
-                pmCard.style.borderColor = method === 'card' ? 'var(--red)' : 'var(--border)';
-                var pmCardCheck = document.getElementById('pmCardCheck');
-                if (pmCardCheck) {
-                    pmCardCheck.textContent = method === 'card' ? 'check_circle' : 'radio_button_unchecked';
-                    pmCardCheck.style.color = method === 'card' ? 'var(--red)' : 'var(--dim)';
-                }
-            }
+            if (pmStars) pmStars.style.borderColor = method === 'stars' ? '#FFD700' : 'var(--border)';
+
+            /* Solana */
+            var pmSolana = document.getElementById('pmSolana');
+            if (pmSolana) pmSolana.style.borderColor = method === 'solana' ? '#14f195' : 'var(--border)';
+
             /* Show/hide sections */
             var cs = document.getElementById('depositCryptoSection');
             var ss = document.getElementById('depositStarsSection');
+            var sol = document.getElementById('depositSolanaSection');
             if (cs) cs.style.display = (method === 'crypto' || method === 'card') ? 'block' : 'none';
             if (ss) ss.style.display = method === 'stars' ? 'block' : 'none';
+            if (sol) sol.style.display = method === 'solana' ? 'block' : 'none';
 
             if (typeof updateMainDepBtn === 'function') updateMainDepBtn();
         }
@@ -8703,13 +8690,88 @@
                         /* fallback: open inside Telegram's webview */
                         tg.openLink(url, { try_instant_view: true });
                     }
-                    pollPayment(d.invoice_id || null);
+                    if (typeof pollPayment === 'function') pollPayment(d.invoice_id || null);
                 } else {
                     showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
                 }
             } catch (e) {
                 closeToast();
                 showToast('❌', 'Network error', 'OK', '', function () { closeToast() });
+            }
+        }
+
+        async function buySolana(amountSol) {
+            try {
+                const getProvider = () => {
+                    if ('phantom' in window && window.phantom.solana) {
+                        return window.phantom.solana;
+                    }
+                    if ('solana' in window) {
+                        return window.solana;
+                    }
+                    return null;
+                };
+
+                showToast('👻', 'Connecting to Phantom...', '⏳', '', null);
+
+                // If on mobile inside TG WebApp, we might not have the injected provider easily accessible
+                // In a perfect production model we'd deep-link `https://phantom.app/ul/v1/connect...`
+                // Here we attempt standard Web3 Provider model first.
+                var provider = getProvider();
+                if (!provider) {
+                    closeToast();
+                    showToast('⚠️', 'Phantom Wallet not detected! Open in Phantom Browser.', 'OK');
+                    return;
+                }
+
+                const resp = await provider.connect();
+                var senderObj = resp.publicKey; // Phantom Web3 API returns PublicKey
+                if (!senderObj) {
+                    closeToast();
+                    showToast('❌', 'Wallet Connection Failed.', 'OK');
+                    return;
+                }
+
+                showToast('👻', 'Wallet Connected. Please Approve Transaction (Simulated for Demo)...', '⏳');
+
+                // --- MOCK TRANSACTION FOR DEMONSTRATION ---
+                // Since this environment may lack @solana/web3.js payload constructors,
+                // we mock the signed Hash here. In actual prod, we build `new Transaction().add(SystemProgram.transfer(...))`
+                // and call `provider.signAndSendTransaction(tx)`.
+
+                setTimeout(async () => {
+                    var mockPhantomTxHash = '3V2Rkwx' + Math.floor(Math.random() * 9999999999) + 'PhantomDemoHash';
+
+                    // Send to our backend adapter:
+                    var r = await fetch(API + '/api/solana-deposit', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.assign({}, auth(), {
+                            txHash: mockPhantomTxHash,
+                            amountSol: amountSol
+                        }))
+                    });
+
+                    var d = await r.json();
+                    closeToast();
+
+                    if (d.ok) {
+                        // Gamified celebratory micro-interaction
+                        showToast('🎉', 'Deposit Verified! +$' + parseFloat(d.amount_usd).toFixed(2), 'OK', '', function () { closeToast() });
+
+                        // Fire confetti if available
+                        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                        }
+
+                        loadBalance();
+                    } else {
+                        showToast('❌', d.error || 'Verification Failed', 'OK', '', function () { closeToast() });
+                    }
+                }, 1500); // Simulate network signing delay
+
+            } catch (e) {
+                closeToast();
+                showToast('❌', 'Transaction Cancelled or Failed', 'OK');
             }
         }
 
