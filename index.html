@@ -4,12 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>RubyBet</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?v=2.1.4"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@1.87.0/lib/index.iife.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
-    <script src="casino_math.js"></script>
+    <script src="casino_math.js?v=2.1.4"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -6487,7 +6490,9 @@
                 activeTab: 'deposit',
                 selectedMethod: null,
                 paymentStatus: 'idle',
-                solanaStatus: 'loading'
+                solanaStatus: 'loading',
+                authStatus: 'idle', // idle, authenticating, success, failed
+                sessionToken: localStorage.getItem('ruby_jwt') || null
             },
             balanceReloading: false,
             _subs: {},
@@ -6536,6 +6541,19 @@
             }
         };
 
+        async function apiFetch(path, options = {}) {
+            const token = AppState.ui.sessionToken;
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            // Auto-append API prefix if NOT an absolute URL
+            const url = path.startsWith('http') ? path : (API + path);
+            return fetch(url, { ...options, headers });
+        }
+
         /* ================================================================
            AppState Utilities & Reactive Bindings
            ================================================================ */
@@ -6552,8 +6570,9 @@
             const msg = document.getElementById('authErrorMsg');
             if (el) el.style.display = 'flex';
             if (msg && err) {
-                if (err === 'unauthorized') msg.textContent = 'Invalid Telegram session. Please open via official bot.';
-                if (err === 'network_error') msg.textContent = 'Network timeout. Check your connection and retry.';
+                if (err === 'unauthorized') msg.textContent = 'Telegram session expired or invalid. Please reopen from the official bot menu.';
+                if (err === 'network_error') msg.textContent = 'Connection timeout. Please check your internet and try again.';
+                if (err === 'environment_error') msg.textContent = 'Please open this app inside the official Telegram application.';
             }
         }
 
@@ -6732,15 +6751,45 @@
             `;
         }
 
-        /* ================================================================
-           Boot Sequence (Hardened)
-           ================================================================ */
+        async function waitForTelegramUser(timeout = 3000) {
+            return new Promise((resolve) => {
+                const start = Date.now();
+                const interval = setInterval(() => {
+                    const tg = window.Telegram?.WebApp;
+                    const user = tg?.initDataUnsafe?.user;
+                    if (user || (Date.now() - start > timeout)) {
+                        clearInterval(interval);
+                        resolve(user || null);
+                    }
+                }, 100);
+            });
+        }
+
         async function boot() {
             const tg = window.Telegram?.WebApp;
-            const user = tg?.initDataUnsafe?.user;
+            if (!tg) {
+                console.error('[BOOT] Not inside Telegram environment');
+                showAuthFallback('environment_error');
+                return;
+            }
 
+            // Detect if we have a stale session (JWT) but no Telegram context (reopen via /start)
+            // Note: The backend will validate the initData anyway, but we can proactively clear.
+            if (!tg.initData && localStorage.getItem('ruby_jwt')) {
+                console.warn('[BOOT] Stale session detected without initData. Clearing.');
+                localStorage.removeItem('ruby_jwt');
+            }
+
+            tg.ready();
+            tg.expand();
+
+            const user = await waitForTelegramUser(3000);
+
+            // Strict check: if no user data after wait, and not in debug, we must stop.
             if (!user && !P.get('debug')) {
-                showAuthFallback(); return;
+                console.error('[BOOT] Telegram session not available.');
+                showAuthFallback('unauthorized');
+                return;
             }
 
             try {
@@ -6751,8 +6800,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        init_data: tg.initData,
-                        uid: user?.id,
+                        init_data: tg.initData, // ALWAYS use raw initData for backend validation
                         debug: P.get('debug')
                     }),
                     signal: controller.signal
@@ -6761,17 +6809,27 @@
 
                 const d = await r.json();
                 if (d.ok) {
+                    if (d.session_token) {
+                        localStorage.setItem('ruby_jwt', d.session_token);
+                        AppState.update({ ui: { sessionToken: d.session_token } });
+                    }
                     AppState.update({
                         user: d.user,
                         wallet: { ...d.wallet, loading: false }
                     });
-                    initApp(); // Resume legacy app initialization
+
+                    // Proceed with legacy initialization
+                    if (typeof initApp === 'function') {
+                        initApp();
+                    } else {
+                        console.error('[BOOT] initApp not found');
+                    }
                 } else {
-                    showAuthFallback(d.error);
+                    showAuthFallback(d.error || 'unauthorized');
                 }
             } catch (e) {
                 console.error('[BOOT] Error:', e);
-                showAuthFallback(e.name === 'AbortError' ? 'network_error' : null);
+                showAuthFallback(e.name === 'AbortError' ? 'network_error' : 'unauthorized');
             }
         }
 
@@ -6797,7 +6855,7 @@
                 console.log('[SOLANA] Initializing Module...');
                 try {
                     // 1. Treasury Integrity Sync (Operational Safeguard)
-                    var r = await fetch(API + '/api/solana-config');
+                    var r = await apiFetch('/api/solana-config');
                     var d = await r.json();
                     if (d.ok) {
                         this.config.treasury = d.treasury;
@@ -7023,7 +7081,7 @@
 
             async getFreshNonce() {
                 try {
-                    var r = await fetch(API + '/api/solana-nonce', {
+                    var r = await apiFetch('/api/solana-nonce', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(auth())
                     });
@@ -7036,7 +7094,7 @@
             async verifyWithBackend(txHash, nonce) {
                 this.updateStatus('verifying');
                 try {
-                    var r = await fetch(API + '/api/solana-deposit', {
+                    var r = await apiFetch('/api/solana-deposit', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(Object.assign({}, auth(), { txHash: txHash, nonce: nonce }))
                     });
@@ -7616,7 +7674,7 @@
                     } else {
                         var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
                         var useFree = freeSpins > 0 && ((activeWallet === 'usdt' && balance < bet) || (activeWallet === 'stars' && starsBalance < bet));
-                        var r = await fetch(API + '/api/spin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet, double_chance: isDoubleChance })) });
+                        var r = await apiFetch('/api/spin', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet, double_chance: isDoubleChance })) });
                         d = await r.json();
 
                         if (!d.ok) {
@@ -7837,7 +7895,7 @@
         async function startBonus(mode) {
             var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
             try {
-                var r = await fetch(API + '/api/bonus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode, double_chance: isDoubleChance })) });
+                var r = await apiFetch('/api/bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode, double_chance: isDoubleChance })) });
                 var d = await r.json();
                 if (!d.ok) {
                     if (d.error === 'funds') showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') });
@@ -7955,7 +8013,7 @@
             disc.style.transform = 'rotate(' + wheelAngle + 'deg)';
 
             try {
-                var r = await fetch(API + '/api/wheel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(auth()) });
+                var r = await apiFetch('/api/wheel', { method: 'POST', body: JSON.stringify(auth()) });
                 var d = await r.json();
                 await sleep(4200);
 
@@ -8024,7 +8082,7 @@
 
         async function checkWheel() {
             try {
-                var r = await fetch(API + '/api/wheel-status?' + qs());
+                var r = await apiFetch('/api/wheel-status?' + qs());
                 var d = await r.json();
                 if (d.ok && !d.available) {
                     document.getElementById('wheelBanner').classList.add('done');
@@ -8136,7 +8194,7 @@
                     document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + displayName.charAt(0).toUpperCase() + '</div>';
                 }
 
-                var r = await fetch(API + '/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
+                var r = await apiFetch('/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
 
                 if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
 
@@ -8229,7 +8287,7 @@
         var wheelLockTimer = null;
         async function checkWheel() {
             try {
-                var r = await fetch(API + '/api/wheel-status?' + qs());
+                var r = await apiFetch('/api/wheel-status?' + qs());
                 var d = await r.json();
                 var btn = document.querySelector('.wheel-spin-btn') || document.getElementById('wheelSpinBtn');
                 var timerEl = document.getElementById('wheelLockTimer');
@@ -8438,7 +8496,7 @@
             if (!period) period = 'day';
             /* Try API first, fallback to demo data */
             try {
-                var r = await fetch(API + '/api/top-winnings?period=' + period + '&' + qs());
+                var r = await apiFetch('/api/top-winnings?period=' + period + '&' + qs());
                 var d = await r.json();
                 if (d.ok && d.winners && d.winners.length > 0) { renderTopWinnings(d.winners); return; }
             } catch (e) { }
@@ -8591,7 +8649,7 @@
 
         async function fetchPromos() {
             try {
-                var res = await fetch(API + '/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
+                var res = await apiFetch('/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
                 var data = await res.json();
                 if (data.ok && data.promos) {
                     allPromos = data.promos;
@@ -8704,7 +8762,7 @@
 
         async function loadBonuses() {
             try {
-                var r = await fetch(API + '/api/bonuses?' + qs()); var d = await r.json();
+                var r = await apiFetch('/api/bonuses?' + qs()); var d = await r.json();
                 if (d.ok) {
                     userBonuses.balance = d.balance || 0;
                     if (d.active && d.active.length > 0) userBonuses.active = d.active;
@@ -8824,7 +8882,7 @@
 
         async function claimBonus(id, amount) {
             try {
-                var r = await fetch(API + '/api/claim-bonus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
+                var r = await apiFetch('/api/claim-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
                 var d = await r.json();
                 if (d.ok) {
                     showToast('✅', 'Claimed $' + (amount || 0).toFixed(2) + '!', 'OK', '', function () { closeToast() });
@@ -8837,7 +8895,7 @@
 
         async function activateBonus(id) {
             try {
-                var r = await fetch(API + '/api/activate-bonus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
+                var r = await apiFetch('/api/activate-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
                 var d = await r.json();
                 if (d.ok) {
                     var msg = d.free_spins_added ? '+' + d.free_spins_added + ' Free Spins!' : 'Bonus activated!';
@@ -8968,7 +9026,7 @@
         var loadBalanceRetries = 0;
         async function loadBalance() {
             try {
-                var r = await fetch(API + '/api/balance?' + qs()); var d = await r.json();
+                var r = await apiFetch('/api/balance?' + qs()); var d = await r.json();
                 if (d.ok) {
                     loadBalanceRetries = 0; // reset retries on success
                     balance = d.balance; // this is balance_cents coming directly from bot.py
@@ -9096,7 +9154,7 @@
             console.log('[API CALL] POST', url);
             try {
                 showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
-                var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
+                var r = await apiFetch('/api/withdraw', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
                 console.log('[API RESPONSE] POST', url, 'Status:', r.status);
                 var text = await r.text();
                 console.log('[API RESPONSE BODY]', text);
@@ -9125,7 +9183,7 @@
             if (!el) return;
             el.innerHTML = '<div style="text-align:center;padding:30px 0;opacity:.5"><span class="material-symbols-outlined" style="font-size:24px;animation:spin 1s linear infinite">sync</span></div>';
             try {
-                var r = await fetch(API + '/api/transactions?' + qs());
+                var r = await apiFetch('/api/transactions?' + qs());
                 var d = await r.json();
                 if (d.ok && d.transactions && d.transactions.length > 0) {
                     renderTransactions(d.transactions);
@@ -9368,8 +9426,8 @@
             console.log('[API CALL] POST', url);
             try {
                 showToast('⭐', T.creatingInv, '⏳', '', null);
-                var r = await fetch(url, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                var r = await apiFetch('/api/create-stars-invoice', {
+                    method: 'POST',
                     body: JSON.stringify(Object.assign({}, auth(), { stars: amount }))
                 });
                 console.log('[API RESPONSE] POST', url, 'Status:', r.status);
@@ -9408,8 +9466,8 @@
             console.log('[API CALL] POST', urlCall);
             try {
                 showToast('💎', T.creatingCrypto, '⏳', '', null);
-                var r = await fetch(urlCall, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                var r = await apiFetch('/api/create-invoice', {
+                    method: 'POST',
                     body: JSON.stringify(Object.assign({}, auth(), {
                         coins: coins ? parseInt(coins) : Math.floor(parseFloat(price) * 100),
                         amount: parseFloat(price)
@@ -9459,8 +9517,8 @@
             console.log('[API CALL] POST', url);
             try {
                 showToast('💳', T.creatingPay, '⏳', '', null);
-                var r = await fetch(url, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                var r = await apiFetch('/api/create-card-payment', {
+                    method: 'POST',
                     body: JSON.stringify(Object.assign({}, auth(), { coins: parseInt(coins), amount: parseFloat(price) }))
                 });
                 console.log('[API RESPONSE] POST', url, 'Status:', r.status);
@@ -9508,7 +9566,7 @@
         var userNotifs = [];
         async function loadNotifications() {
             try {
-                var r = await fetch(API + '/api/notifications?' + qs());
+                var r = await apiFetch('/api/notifications?' + qs());
                 var d = await r.json();
                 if (d.ok && d.notifications) {
                     userNotifs = d.notifications;
@@ -9564,7 +9622,7 @@
             userNotifs.forEach(function (n) { n.is_read = 1 });
             updateNotifBadge();
             renderNotifs();
-            try { await fetch(API + '/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(auth()) }); } catch (e) { }
+            try { await apiFetch('/api/notifications/read', { method: 'POST', body: JSON.stringify(auth()) }); } catch (e) { }
         }
         async function readSingleNotif(id) {
             var notif = userNotifs.find(function (n) { return n.id === id });
@@ -9572,7 +9630,7 @@
                 notif.is_read = 1;
                 updateNotifBadge();
                 renderNotifs();
-                try { await fetch(API + '/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { id: id })) }); } catch (e) { }
+                try { await apiFetch('/api/notifications/read', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { id: id })) }); } catch (e) { }
             }
             closeNotifPopup();
         }
@@ -9660,7 +9718,7 @@
 
         function setLanguage(code) {
             /* Save via API and reload */
-            fetch(API + '/api/set-language', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { language: code })) })
+            apiFetch('/api/set-language', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { language: code })) })
                 .then(function () {
                     /* Reload page with new lang */
                     var params = new URLSearchParams(location.search);
