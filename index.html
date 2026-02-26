@@ -6277,6 +6277,9 @@
     <div class="toast" id="toast">
         <div class="toast-icon" id="toastIcon">💰</div>
         <div class="toast-text" id="toastText">Not enough coins!</div>
+        <div id="toastRequestId"
+            style="display:none;font-size:9px;color:rgba(255,255,255,0.4);font-family:monospace;margin-top:-4px;margin-bottom:8px">
+        </div>
         <div class="toast-btns">
             <button class="toast-btn secondary" onclick="closeToast()" id="toastCancel">✕</button>
             <button class="toast-btn primary" onclick="toastAction()" id="toastOk">Deposit</button>
@@ -6541,9 +6544,21 @@
             }
         };
 
+        // Step 4: Race Condition & Duplication Protection
+        window._inFlight = new Set();
+        async function withGuard(key, fn) {
+            if (window._inFlight.has(key)) {
+                if (new URLSearchParams(window.location.search).get('debug') === '1') console.log(`[GUARD] Blocked concurrent: ${key}`);
+                return;
+            }
+            window._inFlight.add(key);
+            try { return await fn(); } finally { window._inFlight.delete(key); }
+        }
+
         async function apiFetch(path, options = {}) {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s hard timeout
+            const startTime = Date.now();
 
             const token = AppState.ui.sessionToken;
             const headers = {
@@ -6552,8 +6567,10 @@
             };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            // Auto-append API prefix if NOT an absolute URL
             const url = path.startsWith('http') ? path : (API + path);
+            const isDebug = new URLSearchParams(window.location.search).get('debug') === '1';
+
+            if (isDebug) console.log(`[API] START: ${path}`);
 
             try {
                 const response = await fetch(url, {
@@ -6563,23 +6580,91 @@
                 });
                 clearTimeout(timeoutId);
 
-                // Auto-clear session on Auth failure
+                const latency = Date.now() - startTime;
+                if (isDebug) console.log(`[API] END: ${path} (${latency}ms) Status: ${response.status}`);
+
+                // Handle Auth 401/403
                 if (response.status === 401 || response.status === 403) {
-                    console.warn('[API] Auth failed (401/403). Clearing stale session.');
+                    console.warn(`[API] Auth failed (${response.status}) on ${path}`);
                     localStorage.removeItem('ruby_jwt');
                     AppState.update({ ui: { sessionToken: null } });
-                    // Optional: trigger re-auth or reload if critical
+
+                    // Re-auth logic (Step 2)
+                    if (!path.includes('/api/auth') && !window._reauthing) {
+                        if (window._reauthAttempts > 0) {
+                            console.error('[API] Secondary re-auth attempt failed. Forcing reload.');
+                            window._reauthAttempts = 0;
+                            // Instead of infinite loop, we might need a full reload if re-auth keeps failing
+                            // but for now we follow the "force full reload if retry fails" rule
+                            setTimeout(() => window.location.reload(), 2000);
+                            throw new Error('reauth_failed');
+                        }
+
+                        window._reauthing = true;
+                        window._reauthAttempts = (window._reauthAttempts || 0) + 1;
+                        console.log('[API] Triggering silent re-authentication...');
+
+                        try {
+                            await boot();
+                            window._reauthing = false;
+
+                            const newToken = AppState.ui.sessionToken;
+                            if (newToken) {
+                                console.log('[API] Retrying original request with new token...');
+                                const retryHeaders = { ...headers, 'Authorization': `Bearer ${newToken}` };
+                                const retryResponse = await fetch(url, { ...options, headers: retryHeaders, signal: controller.signal });
+                                window._reauthAttempts = 0; // Reset on success
+                                return retryResponse;
+                            }
+                        } catch (e) {
+                            window._reauthing = false;
+                            console.error('[API] Re-auth boot failed:', e);
+                        }
+                    }
+                }
+
+                if (response.status >= 500) {
+                    console.error(`[API] Server Error (${response.status}) reaching ${path}`);
+                    const reqId = response.headers.get('X-Request-Id');
+                    if (window.showToast) showToast('⚠️', 'Server error. Please try again.', 'OK', '', null, reqId);
                 }
 
                 return response;
             } catch (err) {
                 clearTimeout(timeoutId);
+                const latency = Date.now() - startTime;
+
                 if (err.name === 'AbortError') {
-                    console.error(`[API] Timeout reaching ${path}`);
-                } else {
-                    console.error(`[API] Fetch Error:`, err);
+                    console.error(`[API] TIMEOUT: ${path} after ${latency}ms`);
+                    return { ok: false, error: 'timeout', message: 'Request timed out' };
                 }
-                throw err;
+
+                console.error(`[API] FETCH ERROR: ${path}`, err);
+                return { ok: false, error: 'network_error', message: err.message, req_id: null };
+            }
+        }
+
+        /**
+         * Standardized API Error Handler
+         * displays toast with Request ID for correlation
+         */
+        function handleApiError(data, defaultMsg = 'Operation failed') {
+            const err = (data && data.error) || {};
+            const msg = err.message || defaultMsg;
+            const reqId = err.req_id || null;
+            showToast('❌', msg, 'OK', '', function () { closeToast(); }, reqId);
+            return false;
+        }
+
+        // Safe JSON parsing helper (Step 1.2)
+        async function safeJson(response) {
+            if (!response || typeof response.json !== 'function') return { ok: false, error: 'invalid_response' };
+            try {
+                const data = await response.json();
+                return data;
+            } catch (e) {
+                console.error('[API] JSON Parse Error:', e);
+                return { ok: false, error: 'parse_error', message: 'Invalid JSON signature from server' };
             }
         }
 
@@ -6802,41 +6887,44 @@
                 return;
             }
 
+            // Step 3.1: Early tg.ready() & Loading Overlay
+            tg.ready();
+            tg.expand();
+
+            const overlay = document.getElementById('authFallback');
+            const msg = document.getElementById('authErrorMsg');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                if (msg) msg.textContent = 'RUBYBET: INITIALIZING...';
+            }
+
             // Detect if we have a stale session (JWT) but no Telegram context (reopen via /start)
-            // Note: The backend will validate the initData anyway, but we can proactively clear.
             if (!tg.initData && localStorage.getItem('ruby_jwt')) {
                 console.warn('[BOOT] Stale session detected without initData. Clearing.');
                 localStorage.removeItem('ruby_jwt');
+                AppState.update({ ui: { sessionToken: null } });
             }
-
-            tg.ready();
-            tg.expand();
 
             const user = await waitForTelegramUser(3000);
 
             // Strict check: if no user data after wait, and not in debug, we must stop.
-            if (!user && !P.get('debug')) {
+            if (!user && !new URLSearchParams(window.location.search).get('debug')) {
                 console.error('[BOOT] Telegram session not available.');
                 showAuthFallback('unauthorized');
                 return;
             }
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-                const r = await fetch(API + '/api/auth', {
+                // Step 1: Use hardened transport for Auth
+                const r = await apiFetch('/api/auth', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        init_data: tg.initData, // ALWAYS use raw initData for backend validation
-                        debug: P.get('debug')
-                    }),
-                    signal: controller.signal
+                        init_data: tg.initData,
+                        debug: new URLSearchParams(window.location.search).get('debug')
+                    })
                 });
-                clearTimeout(timeoutId);
 
-                const d = await r.json();
+                const d = await safeJson(r);
                 if (d.ok) {
                     if (d.session_token) {
                         localStorage.setItem('ruby_jwt', d.session_token);
@@ -6844,10 +6932,14 @@
                     }
                     AppState.update({
                         user: d.user,
-                        wallet: { ...d.wallet, loading: false }
+                        wallet: { ...d.wallet, loading: false },
+                        ui: { authStatus: 'success' }
                     });
 
-                    // Proceed with legacy initialization
+                    // Hide overlay on success
+                    if (overlay) overlay.style.display = 'none';
+
+                    // Proceed with legacy initialization (Step 3: Parallelized)
                     if (typeof initApp === 'function') {
                         initApp();
                     } else {
@@ -6858,7 +6950,7 @@
                 }
             } catch (e) {
                 console.error('[BOOT] Error:', e);
-                showAuthFallback(e.name === 'AbortError' ? 'network_error' : 'unauthorized');
+                showAuthFallback(e.message === 'reauth_failed' ? 'unauthorized' : 'network_error');
             }
         }
 
@@ -6881,38 +6973,39 @@
             },
 
             async init() {
-                console.log('[SOLANA] Initializing Module...');
-                try {
-                    // 1. Treasury Integrity Sync (Operational Safeguard)
-                    var r = await apiFetch('/api/solana-config');
-                    var d = await r.json();
-                    if (d.ok) {
-                        this.config.treasury = d.treasury;
-                        this.config.network = d.network;
-                        if (this.config.treasury !== this.TREASURY) {
-                            console.error('[SOLANA] TREASURY INTEGRITY MISMATCH!', this.config.treasury, 'vs', this.TREASURY);
-                            this.state.status = 'blocked';
-                            return;
+                return await withGuard('solana_init', async () => {
+                    console.log('[SOLANA] Initializing Module...');
+                    try {
+                        var r = await apiFetch('/api/solana-config');
+                        var d = await safeJson(r);
+                        if (d.ok) {
+                            this.config.treasury = d.treasury;
+                            this.config.network = d.network;
+                            if (this.config.treasury !== this.TREASURY) {
+                                console.error('[SOLANA] TREASURY INTEGRITY MISMATCH!', this.config.treasury, 'vs', this.TREASURY);
+                                this.state.status = 'blocked';
+                                return;
+                            }
                         }
-                    }
 
-                    // 2. Resume Strategy (Operational Safeguard)
-                    var pending = JSON.parse(localStorage.getItem('solana_pending_tx') || 'null');
-                    if (pending && pending.txHash) {
-                        var age = (Date.now() - pending.timestamp) / 1000 / 60;
-                        if (age < 10) {
-                            console.log('[SOLANA] Resuming pending TX:', pending.txHash, 'Age:', Math.round(age), 'm');
-                            this.state.txHash = pending.txHash;
-                            this.state.nonce = pending.nonce;
-                            this.verifyWithBackend(pending.txHash, pending.nonce);
-                        } else {
-                            localStorage.removeItem('solana_pending_tx');
+                        // 2. Resume Strategy (Operational Safeguard)
+                        var pending = JSON.parse(localStorage.getItem('solana_pending_tx') || 'null');
+                        if (pending && pending.txHash) {
+                            var age = (Date.now() - pending.timestamp) / 1000 / 60;
+                            if (age < 10) {
+                                console.log('[SOLANA] Resuming pending TX:', pending.txHash, 'Age:', Math.round(age), 'm');
+                                this.state.txHash = pending.txHash;
+                                this.state.nonce = pending.nonce;
+                                this.verifyWithBackend(pending.txHash, pending.nonce);
+                            } else {
+                                localStorage.removeItem('solana_pending_tx');
+                            }
                         }
-                    }
 
-                    // 3. App Boot Check for Deep Links
-                    this.onAppBootCheck();
-                } catch (e) { console.error('[SOLANA] Init Exception:', e); }
+                        // 3. App Boot Check for Deep Links
+                        this.onAppBootCheck();
+                    } catch (e) { console.error('[SOLANA] Init Exception:', e); }
+                });
             },
 
             updateStatus(s, err) {
@@ -7109,37 +7202,39 @@
             },
 
             async getFreshNonce() {
-                try {
-                    var r = await apiFetch('/api/solana-nonce', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(auth())
-                    });
-                    var d = await r.json();
-                    if (d.ok) return d.nonce;
-                } catch (e) { console.error('[SOLANA] Nonce Fetch Error:', e); }
-                return null;
+                return await withGuard('solana_nonce', async () => {
+                    try {
+                        var r = await apiFetch('/api/solana-nonce', {
+                            method: 'POST', body: JSON.stringify(auth())
+                        });
+                        var d = await safeJson(r);
+                        if (d.ok) return d.nonce;
+                    } catch (e) { console.error('[SOLANA] Nonce Fetch Error:', e); }
+                    return null;
+                });
             },
 
             async verifyWithBackend(txHash, nonce) {
-                this.updateStatus('verifying');
-                try {
-                    var r = await apiFetch('/api/solana-deposit', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(Object.assign({}, auth(), { txHash: txHash, nonce: nonce }))
-                    });
-                    var d = await r.json();
-                    if (d.ok) {
-                        this.updateStatus('success');
-                        localStorage.removeItem('solana_pending_tx');
-                        if (window.showToast) showToast('🎉', 'Solana Deposit Confirmed!', 'OK');
-                        if (window.loadBalance) loadBalance();
-                    } else {
-                        this.updateStatus('failed', d.error);
-                        if (window.showToast) showToast('❌', d.error || 'Verification Failed', 'OK');
+                return await withGuard('solana_verify', async () => {
+                    this.updateStatus('verifying');
+                    try {
+                        var r = await apiFetch('/api/solana-deposit', {
+                            method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { txHash: txHash, nonce: nonce }))
+                        });
+                        var d = await safeJson(r);
+                        if (d.ok) {
+                            this.updateStatus('success');
+                            localStorage.removeItem('solana_pending_tx');
+                            if (window.showToast) showToast('🎉', 'Solana Deposit Confirmed!', 'OK');
+                            if (window.loadBalance) loadBalance();
+                        } else {
+                            this.updateStatus('failed', d.error);
+                            if (window.showToast) showToast('❌', d.error || 'Verification Failed', 'OK');
+                        }
+                    } catch (e) {
+                        this.updateStatus('failed', e.message);
                     }
-                } catch (e) {
-                    this.updateStatus('failed', e.message);
-                }
+                });
             }
         };
 
@@ -7250,10 +7345,25 @@
 
         /* === TOAST === */
         var toastCb = null;
-        function showToast(icon, text, ok, cancel, onOk) {
-            document.getElementById('toastIcon').textContent = icon; document.getElementById('toastText').textContent = text;
-            document.getElementById('toastOk').textContent = ok; document.getElementById('toastCancel').textContent = cancel || '✕';
-            toastCb = onOk; document.getElementById('toast').classList.add('show');
+        function showToast(icon, text, ok, cancel, onOk, requestId) {
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastText').textContent = text;
+            document.getElementById('toastOk').textContent = ok;
+            document.getElementById('toastCancel').textContent = cancel || '✕';
+
+            // Add Request ID for correlation if provided
+            const ridEl = document.getElementById('toastRequestId');
+            if (ridEl) {
+                if (requestId) {
+                    ridEl.textContent = 'ID: ' + requestId.slice(0, 8);
+                    ridEl.style.display = 'block';
+                } else {
+                    ridEl.style.display = 'none';
+                }
+            }
+
+            toastCb = onOk;
+            document.getElementById('toast').classList.add('show');
         }
         function closeToast() { document.getElementById('toast').classList.remove('show'); toastCb = null }
         function toastAction() { var c = toastCb; closeToast(); if (c) c() }
@@ -7704,7 +7814,7 @@
                         var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
                         var useFree = freeSpins > 0 && ((activeWallet === 'usdt' && balance < bet) || (activeWallet === 'stars' && starsBalance < bet));
                         var r = await apiFetch('/api/spin', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bet: bet, use_free_spin: useFree, wallet: activeWallet, double_chance: isDoubleChance })) });
-                        d = await r.json();
+                        d = await safeJson(r);
 
                         if (!d.ok) {
                             spinning = false;
@@ -7922,35 +8032,37 @@
 
         /* === BONUS === */
         async function startBonus(mode) {
-            var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
-            try {
-                var r = await apiFetch('/api/bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode, double_chance: isDoubleChance })) });
-                var d = await r.json();
-                if (!d.ok) {
-                    if (d.error === 'funds') showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') });
-                    return;
-                }
+            return await withGuard('bonus_start', async () => {
+                var isDoubleChance = document.getElementById('doubleChanceToggle') ? document.getElementById('doubleChanceToggle').checked : false;
+                try {
+                    var r = await apiFetch('/api/bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bet: bet, mode: mode, double_chance: isDoubleChance })) });
+                    var d = await safeJson(r);
+                    if (!d.ok) {
+                        if (d.error === 'funds') showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') });
+                        return;
+                    }
 
-                var al = document.getElementById('autoLabel');
-                var originalLabel = al ? al.textContent : 'Auto';
+                    var al = document.getElementById('autoLabel');
+                    var originalLabel = al ? al.textContent : 'Auto';
 
-                for (var j = 0; j < d.spins.length; j++) {
-                    var sn = d.spins[j];
-                    if (al) al.textContent = (j + 1) + '/' + d.spins.length;
+                    for (var j = 0; j < d.spins.length; j++) {
+                        var sn = d.spins[j];
+                        if (al) al.textContent = (j + 1) + '/' + d.spins.length;
 
-                    await spin(sn);
-                    await sleep(1500);
-                }
+                        await spin(sn);
+                        await sleep(1500);
+                    }
 
-                balance = d.balance;
-                updateBalanceUI();
+                    balance = d.balance;
+                    updateBalanceUI();
 
-                if (d.total_win > 0) {
-                    showBigWin(d.total_win.toFixed(2));
-                }
+                    if (d.total_win > 0) {
+                        showBigWin(d.total_win.toFixed(2));
+                    }
 
-                if (al) al.textContent = originalLabel;
-            } catch (e) { console.error('Bonus error', e); }
+                    if (al) al.textContent = originalLabel;
+                } catch (e) { console.error('Bonus error', e); }
+            });
         }
         function buyBonus() { if (!balance || balance < bet * 100) { showToast('💰', T.noMoney + '\n' + T.noMoneyDesc, T.depositBtn, T.cancelBtn, function () { nav('wallet') }); return; } startBonus('bought'); }
         function closeBonus() { document.getElementById('bonusOL').classList.remove('show'); spinning = false; updateBalanceUI() }
@@ -8043,7 +8155,7 @@
 
             try {
                 var r = await apiFetch('/api/wheel', { method: 'POST', body: JSON.stringify(auth()) });
-                var d = await r.json();
+                var d = await safeJson(r);
                 await sleep(4200);
 
                 if (d.ok) {
@@ -8109,16 +8221,6 @@
             closeWheel();
         }
 
-        async function checkWheel() {
-            try {
-                var r = await apiFetch('/api/wheel-status?' + qs());
-                var d = await r.json();
-                if (d.ok && !d.available) {
-                    document.getElementById('wheelBanner').classList.add('done');
-                    if (d.next_available) wheelCooldownEnd = new Date(d.next_available);
-                }
-            } catch (e) { }
-        }
 
         /* === LIVE DROPS === */
         var LIVE_DROP_NAMES = ['Play***7', 'Win***92', 'Gam***01', 'Luc***77', 'Bet***44', 'Ton***99', 'Max***23', 'Pro***88', 'Ace***11', 'Top***55', 'Vip***33', 'Cry***66'];
@@ -8223,7 +8325,7 @@
                     document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + displayName.charAt(0).toUpperCase() + '</div>';
                 }
 
-                var r = await apiFetch('/api/profile?' + qs()); var d = await r.json(); if (!d.ok) return;
+                var r = await apiFetch('/api/profile?' + qs()); var d = await safeJson(r); if (!d || !d.ok) return;
 
                 if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
 
@@ -8315,29 +8417,31 @@
 
         var wheelLockTimer = null;
         async function checkWheel() {
-            try {
-                var r = await apiFetch('/api/wheel-status?' + qs());
-                var d = await r.json();
-                var btn = document.querySelector('.wheel-spin-btn') || document.getElementById('wheelSpinBtn');
-                var timerEl = document.getElementById('wheelLockTimer');
+            return await withGuard('wheel', async () => {
+                try {
+                    var r = await apiFetch('/api/wheel-status?' + qs());
+                    var d = await safeJson(r);
+                    var btn = document.querySelector('.wheel-spin-btn') || document.getElementById('wheelSpinBtn');
+                    var timerEl = document.getElementById('wheelLockTimer');
 
-                if (d.ok && !d.available) {
-                    document.getElementById('wheelBanner').classList.add('done');
-                    if (btn) btn.style.display = 'none';
-                    if (timerEl) {
-                        timerEl.style.display = 'block';
-                        startWheelCountdown(d.next_spin);
+                    if (d.ok && !d.available) {
+                        document.getElementById('wheelBanner').classList.add('done');
+                        if (btn) btn.style.display = 'none';
+                        if (timerEl) {
+                            timerEl.style.display = 'block';
+                            startWheelCountdown(d.next_spin);
+                        }
+                    } else {
+                        document.getElementById('wheelBanner').classList.remove('done');
+                        if (btn) btn.style.display = 'block';
+                        if (timerEl) timerEl.style.display = 'none';
                     }
-                } else {
-                    document.getElementById('wheelBanner').classList.remove('done');
-                    if (btn) btn.style.display = 'block';
-                    if (timerEl) timerEl.style.display = 'none';
+                    return d;
+                } catch (e) {
+                    console.error('API /wheel-status fetch failed:', e);
+                    throw e;
                 }
-                return d;
-            } catch (e) {
-                console.error('API /wheel-status fetch failed:', e);
-                throw e;
-            }
+            });
         }
 
         function startWheelCountdown(nextSpinTime) {
@@ -8527,30 +8631,33 @@
         }
         async function loadTopWinnings(period) {
             if (!period) period = 'day';
-            /* Try API first, fallback to demo data */
-            try {
-                var r = await apiFetch('/api/top-winnings?period=' + period + '&' + qs());
-                var d = await r.json();
-                if (d.ok && d.winners && d.winners.length > 0) { renderTopWinnings(d.winners); return; }
-            } catch (e) { }
-            /* Demo fallback */
-            var demoNames = ['Ton***99', 'Max***23', 'Luc***77', 'Pro***88', 'Vip***33', 'Ace***11', 'Win***42', 'Bet***55'];
-            var demoGames = ['Ruby Slots', 'Crash', 'Lucky Bonanza', 'Crash', 'Mines', 'Ruby Slots', 'Plinko', 'Crash'];
-            var demoColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
-            var demoData = [];
-            for (var i = 0; i < 15; i++) {
-                var mult = (Math.random() * 150 + 1.5).toFixed(1);
-                var amt = (Math.random() * 2500 + 10).toFixed(2);
-                demoData.push({
-                    username: demoNames[i % demoNames.length],
-                    game: demoGames[i % demoGames.length],
-                    win_amount: parseFloat(amt),
-                    multiplier: parseFloat(mult),
-                    color: demoColors[i % demoColors.length]
-                });
-            }
-            demoData.sort(function (a, b) { return b.win_amount - a.win_amount });
-            renderTopWinnings(demoData);
+            return await withGuard('top_winnings', async () => {
+                try {
+                    var r = await apiFetch('/api/top-winnings?period=' + period + '&' + qs());
+                    var d = await safeJson(r);
+                    if (d.ok && d.winners && d.winners.length > 0) { renderTopWinnings(d.winners); return; }
+                } catch (e) { }
+
+                /* Demo fallback remains... */
+                /* Demo fallback */
+                var demoNames = ['Ton***99', 'Max***23', 'Luc***77', 'Pro***88', 'Vip***33', 'Ace***11', 'Win***42', 'Bet***55'];
+                var demoGames = ['Ruby Slots', 'Crash', 'Lucky Bonanza', 'Crash', 'Mines', 'Ruby Slots', 'Plinko', 'Crash'];
+                var demoColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+                var demoData = [];
+                for (var i = 0; i < 15; i++) {
+                    var mult = (Math.random() * 150 + 1.5).toFixed(1);
+                    var amt = (Math.random() * 2500 + 10).toFixed(2);
+                    demoData.push({
+                        username: demoNames[i % demoNames.length],
+                        game: demoGames[i % demoGames.length],
+                        win_amount: parseFloat(amt),
+                        multiplier: parseFloat(mult),
+                        color: demoColors[i % demoColors.length]
+                    });
+                }
+                demoData.sort(function (a, b) { return b.win_amount - a.win_amount });
+                renderTopWinnings(demoData);
+            });
         }
         function renderTopWinnings(winners) {
             var el = document.getElementById('topWinsList');
@@ -8681,18 +8788,20 @@
         var activePromoCat = 'all';
 
         async function fetchPromos() {
-            try {
-                var res = await apiFetch('/api/promos?' + qs());
-                var data = await res.json();
-                if (data.ok && data.promos) {
-                    allPromos = data.promos;
-                    renderPromos(activePromoCat);
-                    return data;
+            return await withGuard('promos', async () => {
+                try {
+                    var res = await apiFetch('/api/promos?' + qs());
+                    var data = await safeJson(res);
+                    if (data.ok && data.promos) {
+                        allPromos = data.promos;
+                        renderPromos(activePromoCat);
+                        return data;
+                    }
+                } catch (e) {
+                    console.error('Error fetching promos:', e);
+                    throw e;
                 }
-            } catch (e) {
-                console.error('Error fetching promos:', e);
-                throw e;
-            }
+            });
         }
 
         function initBonuses() {
@@ -8798,19 +8907,22 @@
         };
 
         async function loadBonuses() {
-            try {
-                var r = await apiFetch('/api/bonuses?' + qs()); var d = await r.json();
-                if (d.ok) {
-                    userBonuses.balance = d.balance || 0;
-                    if (d.active && d.active.length > 0) userBonuses.active = d.active;
-                    if (d.history && d.history.length > 0) userBonuses.history = d.history;
+            return await withGuard('bonuses', async () => {
+                try {
+                    var r = await apiFetch('/api/bonuses?' + qs());
+                    var d = await safeJson(r);
+                    if (d.ok) {
+                        userBonuses.balance = d.balance || 0;
+                        if (d.active && d.active.length > 0) userBonuses.active = d.active;
+                        if (d.history && d.history.length > 0) userBonuses.history = d.history;
+                    }
+                    renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
+                    return d;
+                } catch (e) {
+                    console.error('API /bonuses fetch failed:', e);
+                    throw e;
                 }
-                renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
-                return d;
-            } catch (e) {
-                console.error('API /bonuses fetch failed:', e);
-                throw e;
-            }
+            });
         }
 
         function switchBonusTab(tab) {
@@ -8922,30 +9034,34 @@
         }
 
         async function claimBonus(id, amount) {
-            try {
-                var r = await apiFetch('/api/claim-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
-                var d = await r.json();
-                if (d.ok) {
-                    showToast('✅', 'Claimed $' + (amount || 0).toFixed(2) + '!', 'OK', '', function () { closeToast() });
-                    loadBalance();
-                } else {
-                    showToast('❌', d.error || 'Failed to claim', 'OK', '', function () { closeToast() });
-                }
-            } catch (e) { showToast('❌', 'Network error', 'OK', '', function () { closeToast() }) }
+            return await withGuard('claim_bonus', async () => {
+                try {
+                    var r = await apiFetch('/api/claim-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
+                    var d = await safeJson(r);
+                    if (d.ok) {
+                        showToast('✅', 'Claimed $' + (amount || 0).toFixed(2) + '!', 'OK', '', function () { closeToast() });
+                        loadBalance();
+                    } else {
+                        showToast('❌', d.error || 'Failed to claim', 'OK', '', function () { closeToast() });
+                    }
+                } catch (e) { showToast('❌', 'Network error', 'OK', '', function () { closeToast() }) }
+            });
         }
 
         async function activateBonus(id) {
-            try {
-                var r = await apiFetch('/api/activate-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
-                var d = await r.json();
-                if (d.ok) {
-                    var msg = d.free_spins_added ? '+' + d.free_spins_added + ' Free Spins!' : 'Bonus activated!';
-                    showToast('⚡', msg, 'OK', '', function () { closeToast() });
-                    loadBalance();
-                } else {
-                    showToast('❌', d.error || 'Failed', 'OK', '', function () { closeToast() });
-                }
-            } catch (e) { showToast('❌', 'Network error', 'OK', '', function () { closeToast() }) }
+            return await withGuard('activate_bonus', async () => {
+                try {
+                    var r = await apiFetch('/api/activate-bonus', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { bonus_id: id })) });
+                    var d = await safeJson(r);
+                    if (d.ok) {
+                        var msg = d.free_spins_added ? '+' + d.free_spins_added + ' Free Spins!' : 'Bonus activated!';
+                        showToast('⚡', msg, 'OK', '', function () { closeToast() });
+                        loadBalance();
+                    } else {
+                        showToast('❌', d.error || 'Failed', 'OK', '', function () { closeToast() });
+                    }
+                } catch (e) { showToast('❌', 'Network error', 'OK', '', function () { closeToast() }) }
+            });
         }
 
         function viewBonusDetails(id) {
@@ -9066,21 +9182,24 @@
         /* Override loadBalance to set usdtBalance directly from balance_cents */
         var loadBalanceRetries = 0;
         async function loadBalance() {
-            try {
-                var r = await apiFetch('/api/balance?' + qs()); var d = await r.json();
-                if (d.ok) {
-                    balance = d.balance;
-                    freeSpins = d.free_spins || 0;
-                    usdtBalance = parseFloat((balance / 100).toFixed(2));
-                    AppState.loaded = true;
-                    updateBalanceUI(); updateWallet();
-                    if (d.vip) updateVIP(d.vip);
-                    return d;
+            return await withGuard('balance', async () => {
+                try {
+                    var r = await apiFetch('/api/balance?' + qs());
+                    var d = await safeJson(r);
+                    if (d.ok) {
+                        balance = d.balance;
+                        freeSpins = d.free_spins || 0;
+                        usdtBalance = parseFloat((balance / 100).toFixed(2));
+                        AppState.loaded = true;
+                        updateBalanceUI(); updateWallet();
+                        if (d.vip) updateVIP(d.vip);
+                        return d;
+                    }
+                } catch (e) {
+                    console.error('API /balance fetch failed:', e);
+                    throw e;
                 }
-            } catch (e) {
-                console.error('API /balance fetch failed:', e);
-                throw e;
-            }
+            });
         }
 
         /* === WALLET TAB SWITCH (legacy — now using cashier tabs) === */
@@ -9176,58 +9295,53 @@
             document.getElementById('wdAvailable').textContent = usdtBalance.toFixed(2) + ' ' + unit;
         }
         async function submitWithdraw() {
-            var amt = parseFloat(document.getElementById('withdrawAmount').value);
-            if (!amt || amt <= 0) { showToast('❌', 'Enter valid amount', 'OK', '', function () { closeToast() }); return; }
-            if (amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
-            if (amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
+            return await withGuard('withdraw', async () => {
+                var amt = parseFloat(document.getElementById('withdrawAmount').value);
+                if (!amt || amt <= 0) { showToast('❌', 'Enter valid amount', 'OK', '', function () { closeToast() }); return; }
+                if (amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
+                if (amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
 
-            var url = API + '/api/withdraw';
-            console.log('[API CALL] POST', url);
-            try {
-                showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
-                var r = await apiFetch('/api/withdraw', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
-                console.log('[API RESPONSE] POST', url, 'Status:', r.status);
-                var text = await r.text();
-                console.log('[API RESPONSE BODY]', text);
-                closeToast();
+                var url = API + '/api/withdraw';
+                try {
+                    showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
+                    var r = await apiFetch('/api/withdraw', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
+                    var d = await safeJson(r);
+                    closeToast();
 
-                if (!r.ok) {
-                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
-                    return;
+                    if (d.ok) {
+                        showToast('✅', 'Withdrawal request submitted! ' + (withdrawMethod === 'crypto' ? '$' + amt.toFixed(2) : amt + ' ⭐'), 'OK', '', function () { closeToast() });
+                        loadBalance();
+                    } else {
+                        showToast('❌', d.error || 'Withdrawal failed', 'OK', '', function () { closeToast() });
+                    }
+                } catch (e) {
+                    closeToast(); showToast('❌', 'Network failure: ' + e.message, 'OK', '', function () { closeToast() });
                 }
-                var d = JSON.parse(text);
-                if (d.ok) {
-                    showToast('✅', 'Withdrawal request submitted! ' + (withdrawMethod === 'crypto' ? '$' + amt.toFixed(2) : amt + ' ⭐'), 'OK', '', function () { closeToast() });
-                    loadBalance();
-                } else {
-                    showToast('❌', d.error || 'Withdrawal failed', 'OK', '', function () { closeToast() });
-                }
-            } catch (e) {
-                console.error('[API ERROR] POST', url, e);
-                closeToast(); showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
-            }
+            });
         }
 
         /* === TRANSACTION HISTORY === */
         async function loadTransactionHistory() {
-            var el = document.getElementById('txHistoryList');
-            if (!el) return;
-            el.innerHTML = '<div style="text-align:center;padding:30px 0;opacity:.5"><span class="material-symbols-outlined" style="font-size:24px;animation:spin 1s linear infinite">sync</span></div>';
-            try {
-                var r = await apiFetch('/api/transactions?' + qs());
-                var d = await r.json();
-                if (d.ok && d.transactions && d.transactions.length > 0) {
-                    renderTransactions(d.transactions);
-                    return;
-                }
-            } catch (e) { }
-            /* Demo fallback */
-            var demoTxs = [
-                { type: 'deposit', amount: 50.00, label: 'USDT Deposit', status: 'completed', created_at: new Date().toISOString() },
-                { type: 'win', amount: 25.50, label: 'Slots Win', status: 'completed', created_at: new Date(Date.now() - 3600000).toISOString() },
-                { type: 'withdraw', amount: 10.00, label: 'USDT Withdraw', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString() }
-            ];
-            renderTransactions(demoTxs);
+            return await withGuard('transactions', async () => {
+                var el = document.getElementById('txHistoryList');
+                if (!el) return;
+                el.innerHTML = '<div style="text-align:center;padding:30px 0;opacity:.5"><span class="material-symbols-outlined" style="font-size:24px;animation:spin 1s linear infinite">sync</span></div>';
+                try {
+                    var r = await apiFetch('/api/transactions?' + qs());
+                    var d = await safeJson(r);
+                    if (d.ok && d.transactions && d.transactions.length > 0) {
+                        renderTransactions(d.transactions);
+                        return;
+                    }
+                } catch (e) { }
+                /* Demo fallback */
+                var demoTxs = [
+                    { type: 'deposit', amount: 50.00, label: 'USDT Deposit', status: 'completed', created_at: new Date().toISOString() },
+                    { type: 'win', amount: 25.50, label: 'Slots Win', status: 'completed', created_at: new Date(Date.now() - 3600000).toISOString() },
+                    { type: 'withdraw', amount: 10.00, label: 'USDT Withdraw', status: 'pending', created_at: new Date(Date.now() - 86400000).toISOString() }
+                ];
+                renderTransactions(demoTxs);
+            });
         }
         function renderTransactions(txs) {
             var el = document.getElementById('txHistoryList');
@@ -9596,18 +9710,20 @@
         /* === NOTIFICATIONS POPUP === */
         var userNotifs = [];
         async function loadNotifications() {
-            try {
-                var r = await apiFetch('/api/notifications?' + qs());
-                var d = await r.json();
-                if (d.ok && d.notifications) {
-                    userNotifs = d.notifications;
-                    updateNotifBadge();
-                    return d;
+            return await withGuard('notifications', async () => {
+                try {
+                    var r = await apiFetch('/api/notifications?' + qs());
+                    var d = await safeJson(r);
+                    if (d.ok && d.notifications) {
+                        userNotifs = d.notifications;
+                        updateNotifBadge();
+                        return d;
+                    }
+                } catch (e) {
+                    console.error('API /notifications fetch failed:', e);
+                    throw e;
                 }
-            } catch (e) {
-                console.error('API /notifications fetch failed:', e);
-                throw e;
-            }
+            });
         }
         function updateNotifBadge() {
             var dot = document.getElementById('notifDot');
@@ -10054,18 +10170,16 @@
                 loadNotifications(),
                 checkWheel(),
                 loadBonuses(),
-                fetchPromos(),
-                // updateBonusBadge is called inside loadBonuses
+                fetchPromos()
             ]);
 
-            // Log any failures for debugging but allow boot to proceed
             results.forEach((res, i) => {
                 if (res.status === 'rejected') {
                     console.error(`[BOOT] Task ${i} failed:`, res.reason);
                 }
             });
 
-            loadReferral(); // synchronous/local
+            if (typeof loadReferral === 'function') loadReferral();
         }
 
         initCarousel();
