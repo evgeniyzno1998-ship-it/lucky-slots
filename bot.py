@@ -700,6 +700,55 @@ async def process_successful_payment(msg: Message):
 H={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"*"}
 async def opts(r): return web.Response(headers=H)
 
+async def api_auth(req):
+    """POST /api/auth - Validates initData and returns initial AppState."""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    try:
+        data = await req.json()
+        uid = get_uid(data, validate=True)
+        if not uid: return web.json_response({"ok": False, "error": "unauthorized"}, status=401, headers=H)
+        
+        u = await get_user(uid)
+        if not u:
+            # Auto-register if user doesn't exist but has valid initData
+            try:
+                import json
+                from urllib.parse import parse_qsl
+                params = dict(parse_qsl(data.get("init_data", "")))
+                user_data = json.loads(params.get("user", "{}"))
+                await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+                        (uid, user_data.get("username"), user_data.get("first_name"), user_data.get("last_name"), 
+                         bool(user_data.get("is_premium")), user_data.get("language_code"), _now(), _now()))
+                u = await get_user(uid)
+            except Exception as e:
+                logging.error(f"Auto-reg error: {e}")
+                return web.json_response({"ok": False, "error": "registration_failed"}, headers=H)
+
+        v = vip_level(u['total_wagered'])
+        cur = u['display_currency'] or 'USD'
+        
+        return web.json_response({
+            "ok": True,
+            "user": {
+                "id": uid,
+                "username": u['username'],
+                "first_name": u['first_name'],
+                "last_name": u['last_name'],
+                "language": u['language'] or 'en',
+                "vip": {"name": v['name'], "icon": v['icon'], "level": v['id']}
+            },
+            "wallet": {
+                "balance": u['balance_cents'],
+                "bonus_balance": 0, # Future-proof
+                "currency": cur,
+                "symbol": CURRENCY_SYMBOLS.get(cur, '$'),
+                "rate": CURRENCY_RATES.get(cur, 1.0)
+            }
+        }, headers=H)
+    except Exception as e:
+        logging.error(f"Auth Endpoint Error: {e}")
+        return web.json_response({"ok": False, "error": "server_error"}, headers=H)
+
 async def api_balance(req):
     uid=get_uid(query=dict(req.rel_url.query))
     if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
@@ -1518,7 +1567,7 @@ async def api_create_card_payment(req):
     """POST /api/create-card-payment — placeholder for card payments"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     return web.json_response({"ok":False,"error":"card_not_yet_available"},headers=H)
-
+ 
 async def api_transactions(req):
     """GET /api/transactions — return user's payment history"""
     uid = get_uid(query=req.rel_url.query)
@@ -1608,7 +1657,7 @@ async def api_notifications_read(req):
 
 async def start_api():
     app=web.Application(client_max_size=200*1024*1024)
-    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications),("/api/solana-config",api_solana_config)]:
+    for path,handler in [("/api/auth",api_auth),("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications),("/api/solana-config",api_solana_config)]:
         app.router.add_get(path,handler)
     for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read),("/api/solana-deposit",api_solana_deposit),("/api/solana-nonce",api_solana_nonce)]:
         app.router.add_post(path,handler)
