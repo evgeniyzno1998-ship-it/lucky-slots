@@ -1,4 +1,4 @@
-import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections
+import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections, datetime
 import jwt as pyjwt
 import bcrypt
 from aiogram import Bot, Dispatcher, types, F
@@ -31,6 +31,10 @@ REFERRAL_BONUS = 10
 JWT_SECRET = os.getenv("JWT_SECRET", BOT_TOKEN[:32] if BOT_TOKEN else "change-me-in-production")
 JWT_EXPIRY_HOURS = 12
 ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_PASSWORD", "rubybet2024")
+
+# ==================== SOLANA CONFIG ====================
+SOLANA_TREASURY_PUBKEY = os.getenv("SOLANA_TREASURY_PUBKEY", "11111111111111111111111111111111")
+SOLANA_NONCES = {}
 
 # ==================== DUAL BALANCE & CURRENCY ====================
 # USDT balance is stored as cents (integer) for precision: 500 = $5.00
@@ -119,8 +123,8 @@ async def init_db():
             ("created_at","TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),("language","TEXT DEFAULT 'pl'"),
             ("referred_by","BIGINT DEFAULT NULL"),("last_name","TEXT"),
             ("tg_language_code","TEXT"),("is_premium","INTEGER DEFAULT 0"),
-            ("last_game","TEXT DEFAULT ''"),("last_login","TEXT DEFAULT ''"),
-            ("last_bot_interaction","TEXT DEFAULT ''"),
+            ("last_game","TEXT DEFAULT ''"),("last_login","TIMESTAMP WITH TIME ZONE"),
+            ("last_bot_interaction","TIMESTAMP WITH TIME ZONE"),
             ("total_deposited_usd","DECIMAL(20,8) DEFAULT 0"),("total_withdrawn_usd","DECIMAL(20,8) DEFAULT 0"),
             ("balance_cents","BIGINT DEFAULT 0"),  # Unified active balance
             ("admin_note","TEXT DEFAULT ''"),
@@ -350,7 +354,7 @@ class DB:
 db = DB() # Instantiate the DB class
 
 def _now():
-    return time.strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.datetime.now(datetime.timezone.utc)
 
 async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=False):
     """Создаёт или обновляет пользователя. Сохраняет все TG данные."""
