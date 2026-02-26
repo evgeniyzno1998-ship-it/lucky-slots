@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, LabeledPrice, MenuButtonWebApp
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
+import contextlib
 
 # ==================== CONFIG ====================
 if os.path.exists('.env'):
@@ -75,53 +76,23 @@ VIP_LEVELS = [
 # ==================== DATABASE ====================
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.xlkjdtfnqzmrblaomfrp:pOy8CePzLBKgNMvB@aws-1-eu-central-1.pooler.supabase.com:5432/postgres")
 db_pool = None
-
-# ==================== SOLANA WEB3 CONFIG ====================
-SOLANA_TREASURY_PUBKEY = os.getenv("SOLANA_TREASURY_PUBKEY", "RubyBetyPSB1ExY6D2C9v9j9m9n9o9p9q9r9s9t9u")
-SOLANA_NONCES = {} # {nonce: {"uid": uid, "exp": timestamp}}
-
 async def init_db():
-    global db_pool
-    db_pool = await asyncpg.create_pool(DB_URL, min_size=1, max_size=20)
     async with db_pool.acquire() as c:
-        # === USERS — основная таблица клиентов ===
-        await c.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id BIGINT PRIMARY KEY,
-
-    is_premium INTEGER DEFAULT 0,
-    is_blocked INTEGER DEFAULT 0,
-
-    balance_cents BIGINT DEFAULT 0,
-    free_spins INTEGER DEFAULT 0,
-
-    total_wagered BIGINT DEFAULT 0,
-    total_won BIGINT DEFAULT 0,
-    total_spins INTEGER DEFAULT 0,
-    biggest_win BIGINT DEFAULT 0,
-
-    total_deposited_usd DECIMAL(20,8) DEFAULT 0,
-    total_withdrawn_usd DECIMAL(20,8) DEFAULT 0,
-
-    referrals_count INTEGER DEFAULT 0,
-    referred_by BIGINT DEFAULT NULL,
-
-    language TEXT DEFAULT 'pl',
-    last_wheel TEXT DEFAULT '',
-    last_game TEXT DEFAULT '',
-    last_login TEXT DEFAULT '',
-    last_bot_interaction TEXT DEFAULT '',
-    admin_note TEXT DEFAULT '',
-
-    username TEXT,
-    first_name TEXT,
-    last_name TEXT,
-    tg_language_code TEXT,
-
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-""")
-        # Migration: add new columns to existing DB
+        # === USERS — main table for all players ===
+        await c.execute('''
+            CREATE TABLE IF NOT EXISTS users(
+                user_id BIGINT PRIMARY KEY,
+                username TEXT,
+                first_name TEXT NOT NULL,
+                balance INTEGER DEFAULT 0,
+                is_bot INTEGER DEFAULT 0,
+                is_admin INTEGER DEFAULT 0,
+                is_tester INTEGER DEFAULT 0,
+                is_banned INTEGER DEFAULT 0,
+                last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        # Add new columns if they don't exist
         new_cols = [
             ("free_spins","INTEGER DEFAULT 0"),("total_wagered","BIGINT DEFAULT 0"),
             ("total_won","BIGINT DEFAULT 0"),("total_spins","INTEGER DEFAULT 0"),
@@ -314,25 +285,52 @@ CREATE TABLE IF NOT EXISTS users (
             )
             logging.info(f"🔑 Default admin created: username='owner', password='{ADMIN_DEFAULT_PASSWORD}'")
 
-async def db(q, p=(), fetch=False, one=False):
-    if not db_pool:
-        logging.error("DB pool not initialized!")
-        return None
-        
-    nq = q
-    for i in range(1, len(p) + 1):
-        nq = nq.replace('?', f'${i}', 1)
-        
-    async with db_pool.acquire() as conn:
-        if fetch:
-            rows = await conn.fetch(nq, *p)
-            return [dict(r) for r in rows] if rows else []
-        elif one:
-            row = await conn.fetchrow(nq, *p)
-            return dict(row) if row else None
-        else:
-            await conn.execute(nq, *p)
+class DB:
+    def __init__(self):
+        self.pool = None
+
+    async def __call__(self, q, p=(), fetch=False, one=False, conn=None):
+        if not self.pool and not conn:
+            logging.error("DB pool not initialized and no connection provided!")
             return None
+
+        nq = q
+        for i in range(1, len(p) + 1):
+            nq = nq.replace('?', f'${i}', 1)
+
+        if conn: # Use provided connection (e.g., from a transaction)
+            if fetch:
+                rows = await conn.fetch(nq, *p)
+                return [dict(r) for r in rows] if rows else []
+            elif one:
+                row = await conn.fetchrow(nq, *p)
+                return dict(row) if row else None
+            else:
+                await conn.execute(nq, *p)
+                return None
+        else: # Acquire a connection from the pool
+            async with self.pool.acquire() as conn:
+                if fetch:
+                    rows = await conn.fetch(nq, *p)
+                    return [dict(r) for r in rows] if rows else []
+                elif one:
+                    row = await conn.fetchrow(nq, *p)
+                    return dict(row) if row else None
+                else:
+                    await conn.execute(nq, *p)
+                    return None
+
+    @asyncio.coroutine
+    @contextlib.asynccontextmanager
+    async def transaction(self):
+        if not self.pool:
+            logging.error("DB pool not initialized for transaction!")
+            raise RuntimeError("DB pool not initialized")
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                yield conn
+
+db = DB() # Instantiate the DB class
 
 def _now():
     return time.strftime("%Y-%m-%d %H:%M:%S")
@@ -480,22 +478,45 @@ async def record_payment(uid, direction, amount_usd, amount_coins, method="crypt
         await db("UPDATE users SET total_withdrawn_usd=total_withdrawn_usd+? WHERE user_id=?", (amount_usd, int(uid)))
 
 # ==================== AUTH ====================
-def mktok(uid): return hmac.new(BOT_TOKEN.encode(), str(uid).encode(), hashlib.sha256).hexdigest()[:32]
+def validate_telegram_init_data(init_data: str) -> dict | None:
+    """Strict HMAC-SHA256 validation of Telegram initData (standard production approach)."""
+    if not init_data: return None
+    try:
+        vals = dict(urllib.parse.parse_qsl(init_data))
+        h = vals.pop('hash', None)
+        if not h: return None
+        
+        # 1. Check expiration (24 hours) to prevent replay attacks
+        auth_date = int(vals.get('auth_date', 0))
+        if time.time() - auth_date > 86400:
+            logging.warning(f"[AUTH] Expired init_data (age: {int(time.time() - auth_date)}s)")
+            return None
+            
+        # 2. Reconstruct check string
+        data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(vals.items())])
+        
+        # 3. Derive secret key and calculate hash
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+        
+        # 4. Constant-time comparison to prevent timing attacks
+        if hmac.compare_digest(calculated_hash, h):
+            return vals
+        else:
+            logging.warning("[AUTH] HMAC mismatch for init_data")
+    except Exception as e:
+        logging.error(f"[AUTH] Validation error: {e}")
+    return None
 
 def get_uid(data=None, query=None):
-    idata = ""; uid_p = tok_p = None
-    if query: idata=query.get("init_data",""); uid_p=query.get("uid",""); tok_p=query.get("token","")
-    if data: idata=data.get("init_data","") or idata; uid_p=data.get("uid","") or uid_p; tok_p=data.get("token","") or tok_p
+    """Refactored to support strict validation but maintain backward compatibility where needed."""
+    idata = data.get("init_data", "") if data else (query.get("init_data", "") if query else "")
     if idata:
-        try:
-            p=dict(urllib.parse.parse_qsl(idata)); u=p.get("user","")
-            if u:
-                uid=json.loads(u).get("id")
-                if uid: return int(uid)
-        except: pass
-    if uid_p:
-        try: return int(uid_p)
-        except: pass
+        p = validate_telegram_init_data(idata)
+        if p:
+            u = json.loads(p.get("user", "{}"))
+            uid = u.get("id")
+            if uid: return int(uid)
     return None
 
 # ==================== GAME LOGIC ====================
@@ -701,34 +722,46 @@ H={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,OP
 async def opts(r): return web.Response(headers=H)
 
 async def api_auth(req):
-    """POST /api/auth - Validates initData and returns initial AppState."""
+    """POST /api/auth - Strictly validates initData and returns initial AppState."""
     if req.method == "OPTIONS": return web.Response(headers=H)
     try:
         data = await req.json()
-        uid = get_uid(data, validate=True)
-        if not uid: return web.json_response({"ok": False, "error": "unauthorized"}, status=401, headers=H)
+        init_data = data.get("init_data")
+        
+        # 1. Strict HMAC Validation
+        params = validate_telegram_init_data(init_data)
+        if not params:
+            return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
+            
+        # 2. Extract User ID from validated params
+        user_json = params.get("user", "{}")
+        user_data = json.loads(user_json)
+        uid = int(user_data.get("id"))
         
         u = await get_user(uid)
         if not u:
             # Auto-register if user doesn't exist but has valid initData
             try:
-                import json
-                from urllib.parse import parse_qsl
-                params = dict(parse_qsl(data.get("init_data", "")))
-                user_data = json.loads(params.get("user", "{}"))
                 await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
                         (uid, user_data.get("username"), user_data.get("first_name"), user_data.get("last_name"), 
                          bool(user_data.get("is_premium")), user_data.get("language_code"), _now(), _now()))
                 u = await get_user(uid)
             except Exception as e:
-                logging.error(f"Auto-reg error: {e}")
-                return web.json_response({"ok": False, "error": "registration_failed"}, headers=H)
+                logging.error(f"[AUTH] Auto-reg failed for {uid}: {e}")
+                return web.json_response({"ok": False, "error": "Registration failed"}, headers=H)
 
+        # 3. Issue JWT session token
+        token = _jwt_encode(uid, u['username'], role="user", permissions=[])
+        
+        # 4. Update last login
+        await update_last_login(uid)
+        
         v = vip_level(u['total_wagered'])
         cur = u['display_currency'] or 'USD'
         
         return web.json_response({
             "ok": True,
+            "session_token": token,
             "user": {
                 "id": uid,
                 "username": u['username'],
@@ -739,20 +772,18 @@ async def api_auth(req):
             },
             "wallet": {
                 "balance": u['balance_cents'],
-                "bonus_balance": 0, # Future-proof
+                "bonus_balance": 0,
                 "currency": cur,
                 "symbol": CURRENCY_SYMBOLS.get(cur, '$'),
                 "rate": CURRENCY_RATES.get(cur, 1.0)
             }
         }, headers=H)
     except Exception as e:
-        logging.error(f"Auth Endpoint Error: {e}")
-        return web.json_response({"ok": False, "error": "server_error"}, headers=H)
+        logging.error(f"[AUTH] Fatal Endpoint Error: {e}")
+        return web.json_response({"ok": False, "error": "server_error"}, status=500, headers=H)
 
 async def api_balance(req):
-    uid=get_uid(query=dict(req.rel_url.query))
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
-    await ensure_user(uid)
+    uid = req['uid']
     await update_last_login(uid)
     u=await get_user(uid); v=vip_level(u['total_wagered'])
     cur = u['display_currency'] or 'USD'
@@ -768,9 +799,8 @@ async def api_balance(req):
 
 
 async def api_spin(req):
-    if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']
+    data = await req.json()
     bet=int(data.get("bet",0))
     dc=data.get("double_chance",False)
     actual_bet=int(bet*1.25) if dc else bet
@@ -794,9 +824,8 @@ async def api_spin(req):
     return web.json_response({"ok":True,**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
 
 async def api_bonus(req):
-    if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']
+    data = await req.json()
     bet=int(data.get("bet",0)); mode=data.get("mode","triggered")
     if bet not in(5,10,25,50): return web.json_response({"ok":False,"error":"bad_bet"},headers=H)
     cost = 0
@@ -816,9 +845,8 @@ async def api_bonus(req):
     return web.json_response({"ok":True,**b,"balance":u2['balance_cents']},headers=H)
 
 async def api_wheel(req):
-    if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']
+    data = await req.json()
     u=await get_user(uid)
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
     if time.time() - last_spin < 86400: return web.json_response({"ok":False,"error":"done"},headers=H)
@@ -834,15 +862,13 @@ async def api_wheel(req):
     return web.json_response({"ok":True,"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
 
 async def api_wheel_status(req):
-    uid=get_uid(query=dict(req.rel_url.query))
-    if not uid: return web.json_response({"ok":False},headers=H)
+    uid = req['uid']
     u=await get_user(uid)
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
     return web.json_response({"ok":True,"available":(time.time() - last_spin >= 86400)},headers=H)
 
 async def api_profile(req):
-    uid=get_uid(query=dict(req.rel_url.query))
-    if not uid: return web.json_response({"ok":False},headers=H)
+    uid = req['uid']
     u=await get_user(uid); v=vip_level(u['total_wagered'])
     nxt=None
     for l in VIP_LEVELS:
@@ -1084,8 +1110,7 @@ async def api_solana_config(req):
 async def api_solana_nonce(req):
     """POST /api/solana-nonce - Generates a 2-minute expiring single-use nonce for the user"""
     if req.method == "OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    uid = req['uid']; data = await req.json()
     
     # Generate unique 32-char hex nonce
     nonce = hashlib.sha256(f"{uid}-{time.time()}-{random.random()}".encode()).hexdigest()[:32]
@@ -1111,8 +1136,8 @@ async def api_solana_deposit(req):
     """
     if req.method == "OPTIONS": return web.Response(headers=H)
     data = await req.json()
-    uid = get_uid(data)
-    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    uid = _get_user_from_req(req)
+    if not uid: return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
     
     tx_hash = data.get("txHash")
     nonce = data.get("nonce")
@@ -1225,8 +1250,7 @@ async def api_solana_deposit(req):
 
 async def api_promos(req):
     if req.method == "OPTIONS": return web.Response(headers=H)
-    uid = get_uid(query=dict(req.rel_url.query))
-    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    uid = req['uid']
     
     # Fetch active campaigns with their template info
     campaigns = await db("SELECT c.id, c.title, c.bonus_type, t.description, t.amount FROM bonus_campaigns c LEFT JOIN bonus_templates t ON c.template_id = t.id WHERE c.status = 'active'", fetch=True)
@@ -1280,8 +1304,7 @@ async def api_promos(req):
 
 async def api_bonuses(req):
     """GET /api/bonuses — get user's personal bonuses (active + history)"""
-    uid = get_uid(query=dict(req.rel_url.query))
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']
     
     # Get active bonuses
     active = await db("SELECT * FROM user_bonuses WHERE user_id=? AND status='active' ORDER BY created_at DESC", (uid,), fetch=True)
@@ -1305,8 +1328,7 @@ async def api_bonuses(req):
 async def api_claim_bonus(req):
     """POST /api/claim-bonus — claim a specific bonus"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     bonus_id = int(data.get("bonus_id", 0))
     if not bonus_id: return web.json_response({"ok":False,"error":"invalid_bonus"},headers=H)
     
@@ -1329,8 +1351,7 @@ async def api_claim_bonus(req):
 async def api_activate_bonus(req):
     """POST /api/activate-bonus — activate a pending bonus (e.g. free spins)"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     bonus_id = int(data.get("bonus_id", 0))
     
     b = await db("SELECT * FROM user_bonuses WHERE id=? AND user_id=? AND status='active'", (bonus_id, uid), one=True)
@@ -1349,8 +1370,7 @@ async def api_activate_bonus(req):
 async def api_set_currency(req):
     """POST /api/set-currency — change display currency"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     cur = data.get("currency","USD").upper()
     if cur not in CURRENCY_RATES: return web.json_response({"ok":False,"error":"invalid_currency"},headers=H)
     await db("UPDATE users SET display_currency=? WHERE user_id=?",(cur,uid))
@@ -1362,8 +1382,7 @@ async def api_set_currency(req):
 async def api_set_language(req):
     """POST /api/set-language — change language from miniapp"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     lang = data.get("language","en")
     if lang not in LANGUAGES: return web.json_response({"ok":False,"error":"invalid_lang"},headers=H)
     await db("UPDATE users SET language=? WHERE user_id=?",(lang,uid))
@@ -1372,8 +1391,7 @@ async def api_set_language(req):
 async def api_create_deposit(req):
     """POST /api/create-deposit — create payment (CryptoBot USDT or Telegram Stars)"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     method = data.get("method","cryptobot")  # cryptobot | stars | card
     amount = data.get("amount", 0)
     u = await get_user(uid); lang = u['language'] if u else 'en'
@@ -1426,8 +1444,7 @@ STARS_USD_RATE = 0.013
 async def api_stars_webhook(req):
     """POST /api/stars-webhook — called after successful Telegram Stars payment"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     
     stars = int(data.get("stars", 0))
     # Telegram sends a charge_id (or invoice payload ID) we must use for idempotency
@@ -1479,10 +1496,10 @@ async def api_top_winnings(req):
     """GET /api/top-winnings — leaderboard of top wins for period"""
     period = req.rel_url.query.get("period", "day")
     period_map = {
-        "day": "datetime('now','-1 day')",
-        "week": "datetime('now','-7 days')",
-        "month": "datetime('now','-30 days')",
-        "all": "datetime('now','-100 years')"
+        "day": "NOW() - INTERVAL '1 day'",
+        "week": "NOW() - INTERVAL '7 days'",
+        "month": "NOW() - INTERVAL '30 days'",
+        "all": "NOW() - INTERVAL '100 years'"
     }
     since = period_map.get(period, period_map["day"])
     rows = await db(
@@ -1510,8 +1527,7 @@ async def api_top_winnings(req):
 async def api_create_stars_invoice(req):
     """POST /api/create-stars-invoice — create Telegram Stars invoice for purchase"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     stars = int(data.get("stars", 50))
     if stars <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
     
@@ -1535,8 +1551,7 @@ async def api_create_stars_invoice(req):
 async def api_create_crypto_invoice(req):
     """POST /api/create-invoice — create CryptoBot USDT invoice (legacy endpoint)"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data=await req.json(); uid=get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     coins = int(data.get("coins", 50))
     amount = float(data.get("amount", PACKAGES.get(str(coins), 0.50)))
     if amount <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
@@ -1570,8 +1585,7 @@ async def api_create_card_payment(req):
  
 async def api_transactions(req):
     """GET /api/transactions — return user's payment history"""
-    uid = get_uid(query=req.rel_url.query)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']
     rows = await db(
         "SELECT direction,amount_usd,amount_coins,method,status,created_at FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 50",
         (uid,), fetch=True
@@ -1593,8 +1607,7 @@ async def api_transactions(req):
 async def api_withdraw(req):
     """POST /api/withdraw — submit withdrawal request"""
     if req.method=="OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok":False,"error":"auth"},headers=H)
+    uid = req['uid']; data = await req.json()
     amount = float(data.get("amount", 0))
     method = data.get("method", "crypto")
     u = await get_user(uid)
@@ -1637,8 +1650,7 @@ async def apply_crypto_bonus(uid, deposit_usd):
 
 async def api_notifications(req):
     """GET /api/notifications"""
-    uid = get_uid(query=req.rel_url.query)
-    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    uid = req['uid']
     rows = await db("SELECT id, title, message, action_url, is_read, created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
     notifs = [dict(r) for r in (rows or [])]
     return web.json_response({"ok": True, "notifications": notifs}, headers=H)
@@ -1646,8 +1658,7 @@ async def api_notifications(req):
 async def api_notifications_read(req):
     """POST /api/notifications/read"""
     if req.method == "OPTIONS": return web.Response(headers=H)
-    data = await req.json(); uid = get_uid(data)
-    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    uid = req['uid']; data = await req.json()
     nid = data.get("id")
     if nid:
         await db("UPDATE notifications SET is_read=1 WHERE id=$1 AND user_id=$2", (nid, uid))
@@ -1656,11 +1667,51 @@ async def api_notifications_read(req):
     return web.json_response({"ok": True}, headers=H)
 
 async def start_api():
-    app=web.Application(client_max_size=200*1024*1024)
-    for path,handler in [("/api/auth",api_auth),("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications),("/api/solana-config",api_solana_config)]:
-        app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read),("/api/solana-deposit",api_solana_deposit),("/api/solana-nonce",api_solana_nonce)]:
-        app.router.add_post(path,handler)
+    app = web.Application(client_max_size=200*1024*1024)
+    
+    # 1. Public API
+    app.router.add_post("/api/auth", api_auth) # Hand-shakes & initial validation
+    app.router.add_get("/api/currencies", api_currencies)
+    app.router.add_get("/api/top-winnings", api_top_winnings)
+    app.router.add_get("/api/solana-config", api_solana_config)
+    
+    # 2. Webhooks (External validation)
+    app.router.add_post("/api/crypto-webhook", api_webhook)
+    app.router.add_post("/api/stars-webhook", api_stars_webhook)
+    
+    # 3. Authenticated User API (GET)
+    for path, handler in [
+        ("/api/balance", api_balance),
+        ("/api/promos", api_promos),
+        ("/api/wheel-status", api_wheel_status),
+        ("/api/profile", api_profile),
+        ("/api/bonuses", api_bonuses),
+        ("/api/transactions", api_transactions),
+        ("/api/notifications", api_notifications),
+    ]:
+        app.router.add_get(path, auth_required(handler))
+        
+    # 4. Authenticated User API (POST)
+    for path, handler in [
+        ("/api/spin", api_spin),
+        ("/api/bonus", api_bonus),
+        ("/api/wheel", api_wheel),
+        ("/api/set-currency", api_set_currency),
+        ("/api/set-language", api_set_language),
+        ("/api/create-deposit", api_create_deposit),
+        ("/api/create-stars-invoice", api_create_stars_invoice),
+        ("/api/create-invoice", api_create_crypto_invoice),
+        ("/api/create-card-payment", api_create_card_payment),
+        ("/api/claim-bonus", api_claim_bonus),
+        ("/api/activate-bonus", api_activate_bonus),
+        ("/api/withdraw", api_withdraw),
+        ("/api/notifications/read", api_notifications_read),
+        ("/api/solana-deposit", api_solana_deposit),
+        ("/api/solana-nonce", api_solana_nonce),
+    ]:
+        app.router.add_post(path, auth_required(handler))
+        
+    # 5. Admin API routes (JWT protected)
     # Admin API routes (JWT protected)
     # Admin API (GET)
     for path, handler in [
@@ -1727,21 +1778,35 @@ def _jwt_decode(token):
         return None
 
 def _get_admin_from_req(req):
-    """Extract and verify JWT from Authorization header or ?key= fallback."""
+    """Strictly verify JWT from Authorization header for admins."""
     auth = req.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         token = auth[7:]
         payload = _jwt_decode(token)
-        if payload:
+        if payload and payload.get("role") in ["owner", "admin", "agent"]:
             return payload
-        else:
-            logging.warning(f"JWT decode returned None for token: {token[:20]}...")
-    # Legacy fallback: ?key=BOT_TOKEN[:16]
-    key = req.rel_url.query.get("key","")
-    if key == BOT_TOKEN[:16]:
-
-        return {"sub": 0, "username": "legacy", "role": "owner", "permissions": ["*"]}
     return None
+
+def _get_user_from_req(req):
+    """Strictly verify JWT from Authorization header for users."""
+    auth = req.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        payload = _jwt_decode(token)
+        if payload and payload.get("role") == "user":
+            return int(payload.get("sub"))
+    return None
+
+def auth_required(handler):
+    """Decorator to enforce JWT authentication and extract UID."""
+    async def wrapper(req):
+        if req.method == "OPTIONS": return web.Response(headers=H)
+        uid = _get_user_from_req(req)
+        if not uid:
+            return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
+        req['uid'] = uid
+        return await handler(req)
+    return wrapper
 
 def _has_permission(admin, section):
     """Check if admin has access to a section."""
@@ -1774,8 +1839,7 @@ async def admin_auth_login(req):
     if not username or not password:
         return web.json_response({"ok": False, "error": "missing_credentials"}, headers=H)
 
-    with _conn() as c:
-        row = c.execute("SELECT * FROM admin_users WHERE username=? AND is_active=1", (username,)).fetchone()
+    row = await db("SELECT * FROM admin_users WHERE username=? AND is_active=1", (username,), one=True)
     if not row:
         return web.json_response({"ok": False, "error": "invalid_credentials"}, headers=H)
 
@@ -1786,8 +1850,7 @@ async def admin_auth_login(req):
     token = _jwt_encode(row['id'], row['username'], row['role'], perms)
 
     # Update last_login
-    with _conn() as c:
-        c.execute("UPDATE admin_users SET last_login=? WHERE id=?", (_now(), row['id']))
+    await db("UPDATE admin_users SET last_login=? WHERE id=?", (_now(), row['id']))
 
     return web.json_response({"ok": True, "token": token, "admin": {
         "id": row['id'], "username": row['username'], "display_name": row['display_name'],
@@ -1806,9 +1869,8 @@ async def admin_auth_list(req):
     if err: return err
     if admin['role'] not in ('owner', 'admin'):
         return web.json_response({"ok": False, "error": "forbidden"}, status=403, headers=H)
-    with _conn() as c:
-        rows = c.execute("SELECT id,username,display_name,role,permissions,is_active,last_login,created_at FROM admin_users ORDER BY id").fetchall()
-    return web.json_response({"ok": True, "admins": [dict(r) for r in rows] if rows else []}, headers=H)
+    rows = await db("SELECT id,username,display_name,role,permissions,is_active,last_login,created_at FROM admin_users ORDER BY id", fetch=True)
+    return web.json_response({"ok": True, "admins": rows if rows else []}, headers=H)
 
 async def admin_auth_create(req):
     """POST /admin/auth/create — create new admin user (owner only)."""
@@ -1829,14 +1891,15 @@ async def admin_auth_create(req):
         return web.json_response({"ok": False, "error": "invalid_role"}, headers=H)
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     try:
-        with _conn() as c:
-            c.execute(
-                "INSERT INTO admin_users(username,password_hash,display_name,role,permissions,created_by) VALUES(?,?,?,?,?,?)",
-                (username, pw_hash, display_name, role, json.dumps(permissions), admin['sub'])
-            )
+        await db(
+            "INSERT INTO admin_users(username,password_hash,display_name,role,permissions,created_by) VALUES(?,?,?,?,?,?)",
+            (username, pw_hash, display_name, role, json.dumps(permissions), admin['sub'])
+        )
         return web.json_response({"ok": True, "message": f"Admin '{username}' created"}, headers=H)
-    except sqlite3.IntegrityError:
-        return web.json_response({"ok": False, "error": "username_exists"}, headers=H)
+    except Exception as e:
+        if "unique constraint" in str(e).lower():
+             return web.json_response({"ok": False, "error": "username_exists"}, headers=H)
+        raise e
 
 async def admin_auth_update(req):
     """POST /admin/auth/update — update admin user (owner or self)."""
@@ -1878,8 +1941,7 @@ async def admin_auth_update(req):
         return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
         
     params.append(admin_id)
-    with _conn() as c:
-        c.execute(f"UPDATE admin_users SET {','.join(updates)} WHERE id=?", params)
+    await db(f"UPDATE admin_users SET {','.join(updates)} WHERE id=?", tuple(params))
     return web.json_response({"ok": True}, headers=H)
 
 async def admin_auth_delete(req):
@@ -1894,8 +1956,7 @@ async def admin_auth_delete(req):
     # Can't delete self
     if admin_id == admin['sub']:
         return web.json_response({"ok": False, "error": "cannot_delete_self"}, headers=H)
-    with _conn() as c:
-        c.execute("DELETE FROM admin_users WHERE id=? AND role!='owner'", (admin_id,))
+    await db("DELETE FROM admin_users WHERE id=? AND role!='owner'", (admin_id,))
     return web.json_response({"ok": True}, headers=H)
 
 # --- Data Endpoints (JWT protected) ---
@@ -1905,17 +1966,17 @@ async def admin_stats(req):
     if err: return err
     total_users = await db("SELECT COUNT(*) as cnt FROM users", one=True)
     active_today = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
-    active_week = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= date('now','-7 days')", one=True)
-    new_today = await db("SELECT COUNT(*) as cnt FROM users WHERE created_at LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
+    active_week = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYY-MM-DD HH24:MI:SS')", one=True)
+    new_today = await db("SELECT COUNT(*) as cnt FROM users WHERE created_at >= CURRENT_DATE", one=True)
     total_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history", one=True)
-    today_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history WHERE created_at LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
+    today_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history WHERE created_at >= CURRENT_DATE", one=True)
     total_deposits = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE direction='deposit' AND status='completed'", one=True)
     total_withdrawals = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE direction='withdrawal' AND status='completed'", one=True)
     total_referrals = await db("SELECT COALESCE(SUM(referrals_count),0) as cnt FROM users", one=True)
     # Revenue per day (last 14 days)
-    revenue_daily = await db("SELECT date(created_at) as day, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, COUNT(*) as bets FROM bet_history WHERE created_at >= date('now','-14 days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    revenue_daily = await db("SELECT created_at::date as day, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, COUNT(*) as bets FROM bet_history WHERE created_at >= CURRENT_DATE - INTERVAL '14 days' GROUP BY created_at::date ORDER BY day", fetch=True)
     # Registrations per day (last 14 days)
-    reg_daily = await db("SELECT date(created_at) as day, COUNT(*) as cnt FROM users WHERE created_at >= date('now','-14 days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    reg_daily = await db("SELECT created_at::date as day, COUNT(*) as cnt FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '14 days' GROUP BY created_at::date ORDER BY day", fetch=True)
     top_winners = await db("SELECT user_id,username,first_name,total_won,total_wagered,biggest_win FROM users ORDER BY total_won DESC LIMIT 10", fetch=True)
     top_depositors = await db("SELECT user_id,username,first_name,total_deposited_usd,coins FROM users WHERE total_deposited_usd>0 ORDER BY total_deposited_usd DESC LIMIT 10", fetch=True)
     ggr = total_bets['wagered'] - total_bets['won']
@@ -1953,9 +2014,9 @@ async def admin_users(req):
     if segment == "vip":
         where += " AND total_wagered >= 5000"
     elif segment == "new":
-        where += " AND created_at >= date('now','-7 days')"
+        where += " AND created_at >= CURRENT_DATE - INTERVAL '7 days'"
     elif segment == "churn_risk":
-        where += " AND last_login < date('now','-14 days')"
+        where += " AND last_login < TO_CHAR(CURRENT_DATE - INTERVAL '14 days', 'YYYY-MM-DD HH24:MI:SS')"
     elif segment == "depositors":
         where += " AND total_deposited_usd > 0"
     rows = await db(f"SELECT user_id,username,first_name,last_name,is_premium,coins,balance_usdt_cents,balance_stars,total_wagered,total_won,total_deposited_usd,total_withdrawn_usd,total_spins,biggest_win,referrals_count,last_login,last_game,created_at FROM users WHERE {where} ORDER BY {sort} DESC LIMIT ? OFFSET ?", (*params, limit, offset), fetch=True)
@@ -2035,7 +2096,7 @@ async def admin_games(req):
     if err: return err
     games = await db("SELECT game, COUNT(*) as total_bets, COUNT(DISTINCT user_id) as unique_players, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, AVG(bet_amount) as avg_bet, MAX(win_amount) as biggest_win FROM bet_history GROUP BY game ORDER BY wagered DESC", fetch=True)
     # Per game per day (last 7 days)
-    daily = await db("SELECT game, date(created_at) as day, COUNT(*) as bets, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= date('now','-7 days') GROUP BY game, date(created_at) ORDER BY day", fetch=True)
+    daily = await db("SELECT game, created_at::date as day, COUNT(*) as bets, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= CURRENT_DATE - INTERVAL '7 days' GROUP BY game, created_at::date ORDER BY day", fetch=True)
     return web.json_response({"ok": True,
         "games": [dict(g) for g in games] if games else [],
         "daily": [dict(d) for d in daily] if daily else [],
@@ -2046,9 +2107,9 @@ async def admin_financial(req):
     admin, err = _require_admin(req, "financial")
     if err: return err
     days = int(req.rel_url.query.get("days", 30))
-    dep_daily = await db(f"SELECT date(created_at) as day, COUNT(*) as cnt, SUM(amount_usd) as usd, method FROM payments WHERE direction='deposit' AND status='completed' AND created_at >= date('now','-{days} days') GROUP BY date(created_at), method ORDER BY day", fetch=True)
-    wd_daily = await db(f"SELECT date(created_at) as day, COUNT(*) as cnt, SUM(amount_usd) as usd FROM payments WHERE direction='withdrawal' AND status='completed' AND created_at >= date('now','-{days} days') GROUP BY date(created_at) ORDER BY day", fetch=True)
-    ggr_daily = await db(f"SELECT date(created_at) as day, SUM(bet_amount)-SUM(win_amount) as ggr, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= date('now','-{days} days') GROUP BY date(created_at) ORDER BY day", fetch=True)
+    dep_daily = await db(f"SELECT created_at::date as day, COUNT(*) as cnt, SUM(amount_usd) as usd, method FROM payments WHERE direction='deposit' AND status='completed' AND created_at >= CURRENT_DATE - INTERVAL '{days} days' GROUP BY created_at::date, method ORDER BY day", fetch=True)
+    wd_daily = await db(f"SELECT created_at::date as day, COUNT(*) as cnt, SUM(amount_usd) as usd FROM payments WHERE direction='withdrawal' AND status='completed' AND created_at >= CURRENT_DATE - INTERVAL '{days} days' GROUP BY created_at::date ORDER BY day", fetch=True)
+    ggr_daily = await db(f"SELECT created_at::date as day, SUM(bet_amount)-SUM(win_amount) as ggr, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= CURRENT_DATE - INTERVAL '{days} days' GROUP BY created_at::date ORDER BY day", fetch=True)
     # Totals
     totals = await db("SELECT COALESCE(SUM(CASE WHEN direction='deposit' THEN amount_usd ELSE 0 END),0) as deposits, COALESCE(SUM(CASE WHEN direction='withdrawal' THEN amount_usd ELSE 0 END),0) as withdrawals FROM payments WHERE status='completed'", one=True)
     # By method
@@ -2068,15 +2129,15 @@ async def admin_cohorts(req):
     # Weekly cohorts for last 8 weeks
     cohorts = await db("""
         SELECT
-            strftime('%Y-W%W', created_at) as cohort,
+            TO_CHAR(created_at, 'IYYY-"W"IW') as cohort,
             COUNT(*) as size,
             SUM(CASE WHEN total_deposited_usd > 0 THEN 1 ELSE 0 END) as depositors,
             AVG(total_wagered) as avg_wagered,
             AVG(total_deposited_usd) as avg_deposit,
             SUM(total_deposited_usd) as total_ltv,
-            SUM(CASE WHEN last_login >= date('now','-7 days') THEN 1 ELSE 0 END) as retained_7d
-        FROM users WHERE created_at >= date('now','-56 days')
-        GROUP BY strftime('%Y-W%W', created_at) ORDER BY cohort
+            SUM(CASE WHEN last_login >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYY-MM-DD HH24:MI:SS') THEN 1 ELSE 0 END) as retained_7d
+        FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '56 days'
+        GROUP BY TO_CHAR(created_at, 'IYYY-"W"IW') ORDER BY cohort
     """, fetch=True)
     return web.json_response({"ok": True, "cohorts": [dict(c) for c in cohorts] if cohorts else []}, headers=H)
 
@@ -2087,7 +2148,7 @@ async def admin_live(req):
     limit = min(int(req.rel_url.query.get("limit", 50)), 200)
     recent_bets = await db("SELECT b.*, u.username, u.first_name FROM bet_history b LEFT JOIN users u ON b.user_id=u.user_id ORDER BY b.id DESC LIMIT ?", (limit,), fetch=True)
     recent_deps = await db("SELECT p.*, u.username, u.first_name FROM payments p LEFT JOIN users u ON p.user_id=u.user_id WHERE p.direction='deposit' AND p.status='completed' ORDER BY p.id DESC LIMIT 20", fetch=True)
-    active_now = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= datetime('now','-5 minutes')", one=True)
+    active_now = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= TO_CHAR(NOW() - INTERVAL '5 minutes', 'YYYY-MM-DD HH24:MI:SS')", one=True)
     return web.json_response({"ok": True,
         "recent_bets": [dict(r) for r in recent_bets] if recent_bets else [],
         "recent_deposits": [dict(r) for r in recent_deps] if recent_deps else [],
@@ -2177,39 +2238,42 @@ async def admin_bonus_issue(req):
     if target == "vip":
         rows = await db("SELECT user_id, first_name FROM users WHERE total_wagered >= 5000", fetch=True)
     elif target == "new":
-        rows = await db("SELECT user_id, first_name FROM users WHERE created_at >= date('now','-7 days')", fetch=True)
+        rows = await db("SELECT user_id, first_name FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'", fetch=True)
     elif target == "churn_risk":
-        rows = await db("SELECT user_id, first_name FROM users WHERE last_login <= date('now','-14 days')", fetch=True)
+        rows = await db("SELECT user_id, first_name FROM users WHERE last_login <= TO_CHAR(CURRENT_DATE - INTERVAL '14 days', 'YYYY-MM-DD HH24:MI:SS')", fetch=True)
     else:
         rows = await db("SELECT user_id, first_name FROM users", fetch=True)
     
     targets = rows if rows else []
     
-    # Create campaign record
-    await db(
-        "INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment, total_players, notification_sent) VALUES(?,?,?,?,?,?)",
-        (title, bonus_type, template_id if is_template else None, target, len(targets), 1 if send_notif else 0)
-    )
-
-    count = 0
-    notif_count = 0
-    for u in targets:
-        uid = u['user_id']
+    async with db.transaction() as conn:
+        # Create campaign record
         await db(
-            "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
-            (uid, bonus_type, title, description, "redeem", amount, "active", bonus_type.upper().replace("_", " "))
+            "INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment, total_players, notification_sent) VALUES(?,?,?,?,?,?)",
+            (title, bonus_type, template_id if is_template else None, target, len(targets), 1 if send_notif else 0),
+            conn=conn
         )
-        count += 1
-        
-        if send_notif:
-            try:
-                # Basic personalization
-                personal_msg = notif_msg.replace("{name}", u['first_name'] or "Player")
-                # Try to send via bot if it exists
-                await bot.send_message(uid, personal_msg)
-                notif_count += 1
-            except Exception as e:
-                logging.debug(f"Could not send push to {uid}: {e}")
+
+        count = 0
+        notif_count = 0
+        for u in targets:
+            uid = u['user_id']
+            await db(
+                "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
+                (uid, bonus_type, title, description, "redeem", amount, "active", bonus_type.upper().replace("_", " ")),
+                conn=conn
+            )
+            count += 1
+            
+            if send_notif:
+                try:
+                    # Basic personalization
+                    personal_msg = notif_msg.replace("{name}", u['first_name'] or "Player")
+                    # Try to send via bot if it exists
+                    await bot.send_message(uid, personal_msg)
+                    notif_count += 1
+                except Exception as e:
+                    logging.debug(f"Could not send push to {uid}: {e}")
             
     return web.json_response({"ok": True, "assigned_count": count, "notif_sent": notif_count}, headers=H)
 
