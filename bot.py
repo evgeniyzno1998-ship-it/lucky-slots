@@ -135,10 +135,10 @@ async def init_db():
             except: pass
 
         # Fix existing column types if they were created as TEXT previously
-        # Users table
+        # This is critical for asyncpg compatibility with datetime objects
         for col in ["created_at", "last_login", "last_bot_interaction", "last_activity"]:
             try:
-                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING {col}::timestamp with time zone")
+                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
                 logging.info(f"✅ DB Migration: users.{col} is now TIMESTAMP")
             except Exception as e:
                 if "already" not in str(e).lower() and "column" not in str(e).lower():
@@ -147,7 +147,7 @@ async def init_db():
         # user_bonuses table
         for col in ["claimed_at", "expires_at"]:
             try:
-                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING {col}::timestamp with time zone")
+                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
                 logging.info(f"✅ DB Migration: user_bonuses.{col} is now TIMESTAMP")
             except Exception as e:
                 if "already" not in str(e).lower() and "column" not in str(e).lower():
@@ -155,7 +155,7 @@ async def init_db():
 
         # admin_users table
         try:
-            await c.execute(f"ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMP WITH TIME ZONE USING last_login::timestamp with time zone")
+            await c.execute(f"ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMP WITH TIME ZONE USING NULLIF(last_login, '')::timestamp with time zone")
             logging.info(f"✅ DB Migration: admin_users.last_login is now TIMESTAMP")
         except Exception as e:
             if "already" not in str(e).lower() and "column" not in str(e).lower():
@@ -388,7 +388,7 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
     e = await db("SELECT user_id FROM users WHERE user_id=$1", (int(uid),), one=True)
     if not e:
         await db(
-            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (user_id) DO NOTHING",
+            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES($1,$2,$3,$4,$5,$6,$7::timestamp,$8::timestamp) ON CONFLICT (user_id) DO NOTHING",
             (int(uid), un, fn, ln, lang_code, 1 if is_prem else 0, _now(), _now())
         )
         # Auto-assign welcome bonuses for new user
@@ -866,7 +866,7 @@ async def api_auth(req):
         if not u:
             # Auto-register if user doesn't exist but has valid initData
             try:
-                await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+                await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7::timestamp,$8::timestamp)",
                         (uid, user_data.get("username"), user_data.get("first_name"), user_data.get("last_name"), 
                          bool(user_data.get("is_premium")), user_data.get("language_code"), _now(), _now()))
                 u = await get_user(uid)
