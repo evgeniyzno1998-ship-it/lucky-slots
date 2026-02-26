@@ -93,14 +93,14 @@ db_pool = None
 
 async def ensure_timestamp_column(conn, table: str, column: str):
     """
-    World-class type-aware idempotent migration handler.
-    Detects column type and safely converts TEXT/VARCHAR to TIMESTAMPTZ.
+    Production-grade default-aware idempotent migration handler.
+    Fixes DatatypeMismatchError by dropping incompatible defaults before cast.
     """
     logging.info(f"🔎 Auditing {table}.{column}...")
     
-    # 1. Detect current type
+    # 1. Detect current type and default
     row = await conn.fetchrow("""
-        SELECT data_type 
+        SELECT data_type, column_default
         FROM information_schema.columns 
         WHERE table_name = $1 AND column_name = $2
     """, table, column)
@@ -110,6 +110,7 @@ async def ensure_timestamp_column(conn, table: str, column: str):
         return
 
     current_type = row['data_type'].lower()
+    col_default = row['column_default']
     
     # 2. Branch Logic
     if current_type == "timestamp with time zone":
@@ -119,16 +120,23 @@ async def ensure_timestamp_column(conn, table: str, column: str):
     if current_type in ["text", "character varying"]:
         logging.info(f"🛠 Migrating {table}.{column} from {current_type} to TIMESTAMPTZ...")
         
-        # Step A: Clean empty strings safely without triggering casting errors
-        # trim() handles both pure empty strings and strings with spaces
+        # Step A: Clean empty strings safely
         await conn.execute(f"UPDATE {table} SET {column} = NULL WHERE {column} IS NOT NULL AND trim({column}) = ''")
         
-        # Step B: Alter column type with explicit USING clause
+        # Step B: EXPLICITLY DROP DEFAULT if exists
+        # This prevents "default cannot be cast automatically" error
+        if col_default:
+            logging.info(f"⚠️ {table}.{column} has DEFAULT {col_default}, dropping it for migration.")
+            await conn.execute(f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT")
+        
+        # Step C: Alter column type
         await conn.execute(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TIMESTAMPTZ USING NULLIF(trim({column}), '')::TIMESTAMPTZ")
         
-        logging.info(f"✨ {table}.{column} successfully hardened to TIMESTAMPTZ.")
+        # Step D: Apply SAFE production default
+        await conn.execute(f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT NOW()")
+        
+        logging.info(f"✨ {table}.{column} successfully hardened to TIMESTAMPTZ with NOW() default.")
     else:
-        # Fail loudly if an unexpected type (like INT) is found where a date should be
         err = f"❌ CRITICAL: {table}.{column} has unexpected type {current_type}. Migration halted."
         logging.critical(err)
         raise RuntimeError(err)
