@@ -12,6 +12,12 @@ START_TIME = time.time()
 TOTAL_REQUESTS = 0
 
 # ==================== CONFIG ====================
+H = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With"
+}
+
 if os.path.exists('.env'):
     from dotenv import load_dotenv
     load_dotenv()
