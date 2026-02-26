@@ -1,4 +1,4 @@
-import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math
+import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections
 import jwt as pyjwt
 import bcrypt
 from aiogram import Bot, Dispatcher, types, F
@@ -7,6 +7,9 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardB
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiohttp import web
 import contextlib
+
+START_TIME = time.time()
+TOTAL_REQUESTS = 0
 
 # ==================== CONFIG ====================
 if os.path.exists('.env'):
@@ -20,7 +23,7 @@ PUBLIC_URL = os.getenv("PUBLIC_URL", "https://lucky-slots-production.up.railway.
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://evgeniyzno1998-ship-it.github.io/lucky-slots/")
 REFERRAL_BONUS = 10
 JWT_SECRET = os.getenv("JWT_SECRET", BOT_TOKEN[:32] if BOT_TOKEN else "change-me-in-production")
-JWT_EXPIRY_HOURS = 24
+JWT_EXPIRY_HOURS = 12
 ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_PASSWORD", "rubybet2024")
 
 # ==================== DUAL BALANCE & CURRENCY ====================
@@ -305,8 +308,7 @@ class DB:
             return None
 
         nq = q
-        for i in range(1, len(p) + 1):
-            nq = nq.replace('?', f'${i}', 1)
+        # Removed legacy '?' auto-replacement. Now strictly using native '$n' placeholders for PostgreSQL/asyncpg.
 
         if conn: # Use provided connection (e.g., from a transaction)
             if fetch:
@@ -347,10 +349,10 @@ def _now():
 
 async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=False):
     """Создаёт или обновляет пользователя. Сохраняет все TG данные."""
-    e = await db("SELECT user_id FROM users WHERE user_id=?", (int(uid),), one=True)
+    e = await db("SELECT user_id FROM users WHERE user_id=$1", (int(uid),), one=True)
     if not e:
         await db(
-            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT (user_id) DO NOTHING",
+            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (user_id) DO NOTHING",
             (int(uid), un, fn, ln, lang_code, 1 if is_prem else 0, _now(), _now())
         )
         # Auto-assign welcome bonuses for new user
@@ -358,7 +360,7 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
         return True
     else:
         await db(
-            "UPDATE users SET username=COALESCE(?,username),first_name=COALESCE(?,first_name),last_name=COALESCE(?,last_name),tg_language_code=COALESCE(?,tg_language_code),is_premium=?,last_bot_interaction=? WHERE user_id=?",
+            "UPDATE users SET username=COALESCE($1,username),first_name=COALESCE($2,first_name),last_name=COALESCE($3,last_name),tg_language_code=COALESCE($4,tg_language_code),is_premium=$5,last_bot_interaction=$6 WHERE user_id=$7",
             (un, fn, ln, lang_code, 1 if is_prem else 0, _now(), int(uid))
         )
     # Sync localized menu button
@@ -392,17 +394,67 @@ async def assign_welcome_bonuses(uid):
     ]
     for b in bonuses:
         await db(
-            "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,progress,max_progress,vip_tag,expires_at,status,badge) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,progress,max_progress,vip_tag,expires_at,status,badge) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
             (uid, *b)
         )
 
+# Rate limiting storage: {ip: [timestamp1, timestamp2, ...]}
+rate_limit_records = collections.defaultdict(list)
+
+@web.middleware
+async def rate_limit_middleware(req, handler):
+    # Only rate limit /api/ routes
+    if not req.path.startswith('/api/'):
+        return await handler(req)
+    
+    # Get IP address (handle proxy headers if needed, but req.remote is basic)
+    ip = req.remote
+    now = time.time()
+    
+    # Clean up old records (> 60 seconds)
+    rate_limit_records[ip] = [t for t in rate_limit_records[ip] if now - t < 60]
+    
+    # Check limit: 120 requests per minute
+    if len(rate_limit_records[ip]) >= 120:
+        return json_err("too_many_requests", message="Rate limit exceeded. Try again in a minute.", status=429)
+    
+    rate_limit_records[ip].append(now)
+    return await handler(req)
+
+@web.middleware
+async def global_middleware(req, handler):
+    req_id = str(uuid.uuid4())
+    req['req_id'] = req_id
+    start_time = time.time()
+    
+    try:
+        response = await handler(req)
+        latency = (time.time() - start_time) * 1000
+        uid = req.get('uid', 'anonymous')
+        logging.info(f"REQ_ID={req_id} PATH={req.path} METHOD={req.method} UID={uid} LATENCY={latency:.2f}ms STATUS={response.status}")
+        
+        # Add request_id to response headers for debugging
+        if isinstance(response, web.Response):
+            response.headers['X-Request-Id'] = req_id
+        
+        global TOTAL_REQUESTS
+        TOTAL_REQUESTS += 1
+            
+        return response
+        
+    except Exception as e:
+        latency = (time.time() - start_time) * 1000
+        uid = req.get('uid', 'anonymous')
+        logging.error(f"!!! SERVER ERROR !!! REQ_ID={req_id} PATH={req.path} METHOD={req.method} UID={uid} LATENCY={latency:.2f}ms | ERROR: {e}", exc_info=True)
+        return json_err("server_error", message=str(e), status=500, req_id=req_id)
+
 async def update_last_login(uid):
     """Обновляет last_login при каждом входе в миниапп."""
-    await db("UPDATE users SET last_login=? WHERE user_id=?", (_now(), int(uid)))
+    await db("UPDATE users SET last_login=$1 WHERE user_id=$2", (_now(), int(uid)))
 
 async def update_last_game(uid, game_name):
     """Обновляет последнюю игру в которую играл."""
-    await db("UPDATE users SET last_game=? WHERE user_id=?", (game_name, int(uid)))
+    await db("UPDATE users SET last_game=$1 WHERE user_id=$2", (game_name, int(uid)))
 
 async def get_user(uid):
     return await db("SELECT * FROM users WHERE user_id=$1", (int(uid),), one=True)
@@ -463,12 +515,12 @@ async def record_bet(uid, game, bet_type, bet_amt, win_amt, balance_after, multi
     """Записывает КАЖДУЮ ставку в историю."""
     profit = win_amt - bet_amt
     await db(
-        "INSERT INTO bet_history(user_id,game,bet_type,bet_amount,win_amount,profit,balance_after,multiplier,is_bonus,is_free_spin,details,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO bet_history(user_id,game,bet_type,bet_amount,win_amount,profit,balance_after,multiplier,is_bonus,is_free_spin,details,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
         (int(uid), game, bet_type, bet_amt, win_amt, profit, balance_after, multiplier, 1 if is_bonus else 0, 1 if is_free else 0, details, _now())
     )
     # Обновляем агрегаты в users
     await db(
-        "UPDATE users SET total_spins=total_spins+1,total_wagered=total_wagered+?,total_won=total_won+?,biggest_win=GREATEST(biggest_win,?) WHERE user_id=?",
+        "UPDATE users SET total_spins=total_spins+1,total_wagered=total_wagered+$1,total_won=total_won+$2,biggest_win=GREATEST(biggest_win,$3) WHERE user_id=$4",
         (bet_amt, win_amt, win_amt, int(uid))
     )
 
@@ -478,14 +530,14 @@ async def record_payment(uid, direction, amount_usd, amount_coins, method="crypt
     bal_before = u['coins'] if u else 0
     bal_after = bal_before + amount_coins if direction == "deposit" else bal_before - amount_coins
     await db(
-        "INSERT INTO payments(user_id,direction,amount_usd,amount_coins,method,status,invoice_id,balance_before,balance_after,details,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO payments(user_id,direction,amount_usd,amount_coins,method,status,invoice_id,balance_before,balance_after,details,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
         (int(uid), direction, amount_usd, amount_coins, method, status, invoice_id, bal_before, bal_after, details, _now())
     )
     # Обновляем total_deposited/withdrawn в users
     if direction == "deposit":
-        await db("UPDATE users SET total_deposited_usd=total_deposited_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+        await db("UPDATE users SET total_deposited_usd=total_deposited_usd+$1 WHERE user_id=$2", (amount_usd, int(uid)))
     else:
-        await db("UPDATE users SET total_withdrawn_usd=total_withdrawn_usd+? WHERE user_id=?", (amount_usd, int(uid)))
+        await db("UPDATE users SET total_withdrawn_usd=total_withdrawn_usd+$1 WHERE user_id=$2", (amount_usd, int(uid)))
 
 # ==================== AUTH ====================
 def validate_telegram_init_data(init_data: str) -> dict | None:
@@ -627,8 +679,8 @@ async def cmd_start(msg: Message):
         try:
             rid=int(args[1][3:])
             if rid!=uid:
-                await db("UPDATE users SET referred_by=? WHERE user_id=? AND referred_by IS NULL",(rid,uid))
-                await db("UPDATE users SET referrals_count=referrals_count+1,coins=coins+? WHERE user_id=?",(REFERRAL_BONUS,rid))
+                await db("UPDATE users SET referred_by=$1 WHERE user_id=$2 AND referred_by IS NULL",(rid,uid))
+                await db("UPDATE users SET referrals_count=referrals_count+1,coins=coins+$1 WHERE user_id=$2",(REFERRAL_BONUS,rid))
                 await add_coins(uid,REFERRAL_BONUS)
                 # Record referral bonus as payment for both
                 await record_payment(uid, "deposit", 0, REFERRAL_BONUS, method="referral_bonus", details=f"referred_by={rid}")
@@ -728,7 +780,33 @@ async def process_successful_payment(msg: Message):
         logging.error(f"Stars payment handler error: {e}")
 
 # ==================== API ====================
-H={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET,POST,OPTIONS","Access-Control-Allow-Headers":"*"}
+# ==================== RESPONSE HELPERS ====================
+def json_ok(data: dict = None, message: str = None):
+    """Standardized success response: {ok: true, data: {}, message: ''}"""
+    payload = {"ok": True, "data": data or {}, "error": None}
+    if message: payload["message"] = message
+    return web.json_response(payload, headers=H)
+
+def json_err(code: str, message: str = None, status: int = 400, req_id: str = None):
+    """Standardized error response: {ok: false, data: {}, error: {code: '', message: '', req_id: ''}}"""
+    # Always log the error internally
+    logging.warning(f"[API_ERR] REQ_ID={req_id or 'N/A'} {code}: {message or ''}")
+    body = {
+        "ok": False,
+        "data": {},
+        "error": {
+            "code": code,
+            "message": message or ""
+        }
+    }
+    if req_id:
+        body["error"]["req_id"] = req_id
+        
+    res = web.json_response(body, status=status, headers=H)
+    if req_id:
+        res.headers['X-Request-Id'] = req_id
+    return res
+
 async def opts(r): return web.Response(headers=H)
 
 async def api_auth(req):
@@ -741,7 +819,7 @@ async def api_auth(req):
         # 1. Strict HMAC Validation
         params = validate_telegram_init_data(init_data)
         if not params:
-            return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
+            return json_err("Unauthorized", status=401)
             
         # 2. Extract User ID from validated params
         user_json = params.get("user", "{}")
@@ -758,7 +836,7 @@ async def api_auth(req):
                 u = await get_user(uid)
             except Exception as e:
                 logging.error(f"[AUTH] Auto-reg failed for {uid}: {e}")
-                return web.json_response({"ok": False, "error": "Registration failed"}, headers=H)
+                return json_err("registration_failed", message="Registration failed")
 
         # 3. Issue JWT session token
         token = _jwt_encode(uid, u['username'], role="user", permissions=[])
@@ -769,8 +847,7 @@ async def api_auth(req):
         v = vip_level(u['total_wagered'])
         cur = u['display_currency'] or 'USD'
         
-        return web.json_response({
-            "ok": True,
+        return json_ok({
             "session_token": token,
             "user": {
                 "id": uid,
@@ -787,17 +864,17 @@ async def api_auth(req):
                 "symbol": CURRENCY_SYMBOLS.get(cur, '$'),
                 "rate": CURRENCY_RATES.get(cur, 1.0)
             }
-        }, headers=H)
+        })
     except Exception as e:
         logging.error(f"[AUTH] Fatal Endpoint Error: {e}")
-        return web.json_response({"ok": False, "error": "server_error"}, status=500, headers=H)
+        return json_err("server_error", status=500)
 
 async def api_balance(req):
     uid = req['uid']
     await update_last_login(uid)
     u=await get_user(uid); v=vip_level(u['total_wagered'])
     cur = u['display_currency'] or 'USD'
-    return web.json_response({"ok":True,
+    return json_ok({
         "balance":int(u['balance_cents']),  
         "display_currency":cur,
         "display_amount":usdt_cents_to_display(u['balance_cents'], cur),
@@ -805,7 +882,8 @@ async def api_balance(req):
         "free_spins":int(u['free_spins']),
         "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],"biggest":u['biggest_win']},
         "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered']},
-        "refs":int(u['referrals_count'])},headers=H)
+        "refs":int(u['referrals_count'])
+    })
 
 
 async def api_spin(req):
@@ -814,14 +892,14 @@ async def api_spin(req):
     bet=int(data.get("bet",0))
     dc=data.get("double_chance",False)
     actual_bet=int(bet*1.25) if dc else bet
-    if bet not in(5,10,25,50): return web.json_response({"ok":False,"error":"bad_bet"},headers=H)
+    if bet not in(5,10,25,50): return json_err("bad_bet")
     free=data.get("use_free_spin",False); u=await get_user(uid)
     is_free = False
     if free and u['free_spins']>0:
         await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=$1",(int(uid),))
         is_free = True
     else:
-        if u['balance_cents']<actual_bet: return web.json_response({"ok":False,"error":"funds","balance":u['balance_cents']},headers=H)
+        if u['balance_cents']<actual_bet: return json_err("funds", message=str(u['balance_cents']))
         await add_balance(uid, -actual_bet, 'bet_slots', 'slots_spin')
     r=base_spin(bet, double_chance=dc)
     if r["winnings"]>0: await add_balance(uid, r["winnings"], 'win_slots', 'slots_spin_win')
@@ -831,17 +909,17 @@ async def api_spin(req):
     details = f"scatters={r['scatter_count']},bonus={'yes' if r['triggered_bonus'] else 'no'}"
     await record_bet(uid, "lucky_bonanza", "base_spin", bet, r["winnings"], u2['balance_cents'], mult, is_free=is_free, details=details)
     await update_last_game(uid, "lucky_bonanza")
-    return web.json_response({"ok":True,**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
+    return json_ok({**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']})
 
 async def api_bonus(req):
     uid = req['uid']
     data = await req.json()
     bet=int(data.get("bet",0)); mode=data.get("mode","triggered")
-    if bet not in(5,10,25,50): return web.json_response({"ok":False,"error":"bad_bet"},headers=H)
+    if bet not in(5,10,25,50): return json_err("bad_bet")
     cost = 0
     if mode=="bought":
         cost=bet*100; u=await get_user(uid)
-        if u['balance_cents']<cost: return web.json_response({"ok":False,"error":"funds","balance":u['balance_cents']},headers=H)
+        if u['balance_cents']<cost: return json_err("funds", message=str(u['balance_cents']))
         await add_balance(uid, -cost, 'buy_bonus', 'slots_bonus')
     b=full_bonus(bet)
     if b["total_win"]>0: await add_balance(uid, b["total_win"], 'win_bonus', 'slots_bonus_win')
@@ -852,14 +930,14 @@ async def api_bonus(req):
     details = f"mode={mode},spins={b['total_spins_played']},total_win={b['total_win']}"
     await record_bet(uid, "lucky_bonanza", "bonus_round", actual_cost or bet, b["total_win"], u2['balance_cents'], mult, is_bonus=True, details=details)
     await update_last_game(uid, "lucky_bonanza")
-    return web.json_response({"ok":True,**b,"balance":u2['balance_cents']},headers=H)
+    return json_ok({**b,"balance":u2['balance_cents']})
 
 async def api_wheel(req):
     uid = req['uid']
     data = await req.json()
     u=await get_user(uid)
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
-    if time.time() - last_spin < 86400: return web.json_response({"ok":False,"error":"done"},headers=H)
+    if time.time() - last_spin < 86400: return json_err("done")
     prize=spin_wheel()
     await db("UPDATE users SET last_wheel=$1 WHERE user_id=$2",(str(int(time.time())),int(uid)))
     if prize['type']=='coins':
@@ -869,13 +947,13 @@ async def api_wheel(req):
     u2=await get_user(uid)
     # Record wheel spin in bet_history (free, no wager)
     await record_bet(uid, "daily_wheel", "wheel_spin", 0, prize['value'] if prize['type']=='coins' else 0, u2['balance_cents'], 0, details=f"prize={prize['type']}:{prize['value']}")
-    return web.json_response({"ok":True,"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']},headers=H)
+    return json_ok({"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']})
 
 async def api_wheel_status(req):
     uid = req['uid']
     u=await get_user(uid)
     last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
-    return web.json_response({"ok":True,"available":(time.time() - last_spin >= 86400)},headers=H)
+    return json_ok({"available":(time.time() - last_spin >= 86400)})
 
 async def api_profile(req):
     uid = req['uid']
@@ -890,10 +968,10 @@ async def api_profile(req):
     payments = await db("SELECT direction,amount_usd,amount_cents,method,status,created_at FROM payments WHERE user_id=$1 ORDER BY id DESC LIMIT 20", (int(uid),), fetch=True)
     pay_list = [dict(p) for p in payments] if payments else []
     cur = u['display_currency'] or 'USD'
-    return web.json_response({"ok":True,
+    return json_ok({
         "username":u['username'] or '',"first_name":u['first_name'] or '',"last_name":u['last_name'] or '',
         "tg_language":u['tg_language_code'] or '',"is_premium":bool(u['is_premium']),
-        "balance":u['balance_cents'],"free_spins":u['free_spins'],
+        "balance":int(u['balance_cents']),"free_spins":int(u['free_spins']),
         "display_currency":cur,
         "display_amount":usdt_cents_to_display(u['balance_cents'], cur),
         "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$'),
@@ -908,7 +986,7 @@ async def api_profile(req):
         "refs":u['referrals_count'],
         "recent_bets":bets_list,
         "recent_payments":pay_list
-    },headers=H)
+    })
 
 
 async def apply_crypto_bonus(uid, amount_usd):
@@ -931,11 +1009,11 @@ async def apply_crypto_bonus(uid, amount_usd):
 async def api_webhook(req):
     try:
         body=await req.json()
-        if body.get("update_type")!="invoice_paid": return web.json_response({"ok":True})
+        if body.get("update_type")!="invoice_paid": return json_ok()
         pl=json.loads(body.get("payload",{}).get("payload","{}"))
         uid=pl.get("user_id"); price_usd=pl.get("amount_usd",0)
         usdt_cents = pl.get("usdt_cents", 0)
-        if not uid or not usdt_cents: return web.json_response({"ok":False})
+        if not uid or not usdt_cents: return json_err("invalid_payload")
         
         invoice_id = str(body.get("payload",{}).get("invoice_id",""))
         amount_usd = float(price_usd)
@@ -944,7 +1022,7 @@ async def api_webhook(req):
         # First check if it's already completed to prevent double processing
         existing = await db("SELECT id, status FROM payments WHERE invoice_id=$1 LIMIT 1", (invoice_id,), one=True)
         if existing and existing['status'] == 'completed':
-            return web.json_response({"ok":True})
+            return json_ok()
             
         # If it doesn't exist, create it as pending first
         if not existing:
@@ -958,7 +1036,7 @@ async def api_webhook(req):
         res = await add_balance(uid, usdt_cents, 'deposit_crypto', invoice_id)
         if not res['ok']:
             logging.error(f"Failed to add balance for {uid} via webhook: {res.get('error')}")
-            return web.json_response({"ok":False})
+            return json_err("balance_update_failed")
             
         # Mark payment as completed
         await db("UPDATE payments SET status='completed', created_at=$1 WHERE invoice_id=$2", (_now(), invoice_id))
@@ -1111,11 +1189,10 @@ async def verify_solana_transaction(tx_hash, expected_receiver):
 
 async def api_solana_config(req):
     """GET /api/solana-config - Returns public treasury and active network"""
-    return web.json_response({
-        "ok": True, 
+    return json_ok({
         "treasury": SOLANA_TREASURY_PUBKEY,
         "network": "mainnet-beta"
-    }, headers=H)
+    })
 
 async def api_solana_nonce(req):
     """POST /api/solana-nonce - Generates a 2-minute expiring single-use nonce for the user"""
@@ -1136,7 +1213,7 @@ async def api_solana_nonce(req):
             del SOLANA_NONCES[n]
             
     logging.info(f"[SOLANA] Issued nonce {nonce} for UID {uid}")
-    return web.json_response({"ok": True, "nonce": nonce}, headers=H)
+    return json_ok({"nonce": nonce})
 
 async def api_solana_deposit(req):
     """
@@ -1147,24 +1224,24 @@ async def api_solana_deposit(req):
     if req.method == "OPTIONS": return web.Response(headers=H)
     data = await req.json()
     uid = _get_user_from_req(req)
-    if not uid: return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
+    if not uid: return json_err("Unauthorized", status=401)
     
     tx_hash = data.get("txHash")
     nonce = data.get("nonce")
-    if not tx_hash: return web.json_response({"ok": False, "error": "missing_hash"}, headers=H)
-    if not nonce: return web.json_response({"ok": False, "error": "missing_nonce"}, headers=H)
+    if not tx_hash: return json_err("missing_hash")
+    if not nonce: return json_err("missing_nonce")
     
     # Nonce Validation (Strict single-use, 2 min expiry)
     if nonce not in SOLANA_NONCES:
-        return web.json_response({"ok": False, "error": "invalid_nonce"}, headers=H)
+        return json_err("invalid_nonce")
     
     nonce_data = SOLANA_NONCES[nonce]
     if nonce_data["uid"] != uid:
-        return web.json_response({"ok": False, "error": "nonce_mismatch"}, headers=H)
+        return json_err("nonce_mismatch")
     
     if nonce_data["exp"] < time.time():
         del SOLANA_NONCES[nonce]
-        return web.json_response({"ok": False, "error": "nonce_expired"}, headers=H)
+        return json_err("nonce_expired")
     
     # Invalidate immediately after first use approach (Operational Safeguard)
     del SOLANA_NONCES[nonce]
@@ -1181,7 +1258,7 @@ async def api_solana_deposit(req):
         logging.warning("RPC Verification failed or mocked out. Proceeding with demo amounts.")
         lamports = float(data.get("amountSol", 0)) * 1_000_000_000 # DEMO bypass
     
-    if lamports <= 0: return web.json_response({"ok": False, "error": "invalid_amount"}, headers=H)
+    if lamports <= 0: return json_err("invalid_amount")
     
     # Deterministic Oracle Fetch
     sol_price, oracle_src = await get_sol_price()
@@ -1190,7 +1267,7 @@ async def api_solana_deposit(req):
     usdt_cents = int(usdt_value * 100)
     
     # Atomic Idempotency Check & Balance Update (Business Layer)
-    if not db_pool: return web.json_response({"ok": False}, headers=H)
+    if not db_pool: return json_err("service_unavailable", status=503)
     async with db_pool.acquire() as conn:
         async with conn.transaction():
             # Check if this precise tx_hash has ever been processed (Idempotency)
@@ -1198,7 +1275,7 @@ async def api_solana_deposit(req):
             existing = await conn.fetchrow("SELECT id FROM payments WHERE invoice_id=$1 AND method='solana'", str(tx_hash))
             if existing:
                 logging.warning(f"🚨 Safe Idempotent Exit. Hash already processed: {tx_hash}")
-                return web.json_response({"ok": True, "status": "already_processed"}, headers=H)
+                return json_ok({"status": "already_processed"})
             
             # Row-level pessimistic lock on the user's balances
             u = await conn.fetchrow("SELECT balance_cents FROM users WHERE user_id=$1 FOR UPDATE", int(uid))
@@ -1256,7 +1333,7 @@ async def api_solana_deposit(req):
         except:
             pass
     
-    return web.json_response({"ok": True, "amount_usd": usdt_value, "balance": bal_after}, headers=H)
+    return json_ok({"amount_usd": usdt_value, "balance": bal_after})
 
 async def api_promos(req):
     if req.method == "OPTIONS": return web.Response(headers=H)
@@ -1310,16 +1387,16 @@ async def api_promos(req):
         "progress_pct": 45
     })
     
-    return web.json_response({"ok": True, "promos": promos}, headers=H)
+    return json_ok({"promos": promos})
 
 async def api_bonuses(req):
     """GET /api/bonuses — get user's personal bonuses (active + history)"""
     uid = req['uid']
     
     # Get active bonuses
-    active = await db("SELECT * FROM user_bonuses WHERE user_id=? AND status='active' ORDER BY created_at DESC", (uid,), fetch=True)
+    active = await db("SELECT * FROM user_bonuses WHERE user_id=$1 AND status='active' ORDER BY created_at DESC", (uid,), fetch=True)
     # Get history (completed/expired)
-    history = await db("SELECT * FROM user_bonuses WHERE user_id=? AND status IN ('completed','expired') ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
+    history = await db("SELECT * FROM user_bonuses WHERE user_id=$1 AND status IN ('completed','expired') ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
     # Calculate total claimable
     total_claimable = 0
     active_list = []
@@ -1329,20 +1406,20 @@ async def api_bonuses(req):
             total_claimable += bd['progress']
         active_list.append(bd)
     
-    return web.json_response({"ok":True,
+    return json_ok({
         "balance": round(total_claimable, 2),
         "active": active_list,
         "history": [dict(h) for h in history] if history else []
-    },headers=H)
+    })
 
 async def api_claim_bonus(req):
     """POST /api/claim-bonus — claim a specific bonus"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     uid = req['uid']; data = await req.json()
     bonus_id = int(data.get("bonus_id", 0))
-    if not bonus_id: return web.json_response({"ok":False,"error":"invalid_bonus"},headers=H)
+    if not bonus_id: return json_err("invalid_bonus")
     
-    b = await db("SELECT * FROM user_bonuses WHERE id=? AND user_id=? AND status='active'", (bonus_id, uid), one=True)
+    b = await db("SELECT * FROM user_bonuses WHERE id=$1 AND user_id=$2 AND status='active'", (bonus_id, uid), one=True)
     if not b: return web.json_response({"ok":False,"error":"bonus_not_found"},headers=H)
     
     # Credit the bonus amount
@@ -1353,10 +1430,10 @@ async def api_claim_bonus(req):
         await record_payment(uid, "deposit", claim_amount, usdt_cents, method="bonus_claim", status="completed", details=f"bonus_id={bonus_id},type={b['bonus_type']}")
     
     # Mark bonus as completed
-    await db("UPDATE user_bonuses SET status='completed',claimed_at=? WHERE id=?", (_now(), bonus_id))
+    await db("UPDATE user_bonuses SET status='completed',claimed_at=$1 WHERE id=$2", (_now(), bonus_id))
     
     u = await get_user(uid)
-    return web.json_response({"ok":True,"claimed":claim_amount,"balance_usdt_cents":u['balance_usdt_cents']},headers=H)
+    return json_ok({"claimed":claim_amount,"balance_usdt_cents":u['balance_usdt_cents']})
 
 async def api_activate_bonus(req):
     """POST /api/activate-bonus — activate a pending bonus (e.g. free spins)"""
@@ -1370,33 +1447,35 @@ async def api_activate_bonus(req):
     # For free spins bonus, credit spins
     if b['bonus_type'] == 'free_spins':
         spins = int(b['amount']) if b['amount'] else 50
-        await db("UPDATE users SET free_spins=free_spins+? WHERE user_id=?", (spins, uid))
-        await db("UPDATE user_bonuses SET status='completed',claimed_at=? WHERE id=?", (_now(), bonus_id))
+        await db("UPDATE users SET free_spins=free_spins+$1 WHERE user_id=$2", (spins, uid))
+        await db("UPDATE user_bonuses SET status='completed',claimed_at=$1 WHERE id=$2", (_now(), bonus_id))
         u = await get_user(uid)
-        return web.json_response({"ok":True,"free_spins_added":spins,"free_spins":u['free_spins']},headers=H)
+        return json_ok({"free_spins_added":spins,"free_spins":u['free_spins']})
     
-    return web.json_response({"ok":True,"activated":True},headers=H)
+    return json_ok({"activated":True})
 
 async def api_set_currency(req):
     """POST /api/set-currency — change display currency"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     uid = req['uid']; data = await req.json()
     cur = data.get("currency","USD").upper()
-    if cur not in CURRENCY_RATES: return web.json_response({"ok":False,"error":"invalid_currency"},headers=H)
-    await db("UPDATE users SET display_currency=? WHERE user_id=?",(cur,uid))
+    if cur not in CURRENCY_RATES: return json_err("invalid_currency")
+    await db("UPDATE users SET display_currency=$1 WHERE user_id=$2",(cur,uid))
     u=await get_user(uid)
-    return web.json_response({"ok":True,"display_currency":cur,
+    return json_ok({
+        "display_currency":cur,
         "display_amount":usdt_cents_to_display(u['balance_usdt_cents'], cur),
-        "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$')},headers=H)
+        "currency_symbol":CURRENCY_SYMBOLS.get(cur,'$')
+    })
 
 async def api_set_language(req):
     """POST /api/set-language — change language from miniapp"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     uid = req['uid']; data = await req.json()
     lang = data.get("language","en")
-    if lang not in LANGUAGES: return web.json_response({"ok":False,"error":"invalid_lang"},headers=H)
-    await db("UPDATE users SET language=? WHERE user_id=?",(lang,uid))
-    return web.json_response({"ok":True,"language":lang},headers=H)
+    if lang not in LANGUAGES: return json_err("invalid_lang")
+    await db("UPDATE users SET language=$1 WHERE user_id=$2",(lang,uid))
+    return json_ok({"language":lang})
 
 async def api_create_deposit(req):
     """POST /api/create-deposit — create payment (CryptoBot USDT or Telegram Stars)"""
@@ -1410,17 +1489,17 @@ async def api_create_deposit(req):
         # Telegram Stars — return stars_amount for client to call tg.openInvoice
         stars_count = int(amount)
         if stars_count not in STARS_PACKAGES.values() and stars_count <= 0:
-            return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
+            return json_err("invalid_amount")
         # Stars are handled client-side via Telegram.WebApp.openInvoice
         # We just return confirmation; the actual crediting happens via stars webhook
-        return web.json_response({"ok":True,"method":"stars","stars_amount":stars_count,
-            "description":f"RubyBet: {stars_count} ⭐ Stars"},headers=H)
+        return json_ok({"method":"stars","stars_amount":stars_count,
+            "description":f"RubyBet: {stars_count} ⭐ Stars"})
 
     elif method == "cryptobot":
         # CryptoBot USDT deposit
         amount_usd = float(amount)
-        if amount_usd < 1.0: return web.json_response({"ok":False,"error":"min_1_usd"},headers=H)
-        if not CRYPTO_TOKEN: return web.json_response({"ok":False,"error":"not_configured"},headers=H)
+        if amount_usd < 1.0: return json_err("min_1_usd")
+        if not CRYPTO_TOKEN: return json_err("not_configured")
         try:
             import aiohttp
             async with aiohttp.ClientSession() as s:
@@ -1433,18 +1512,18 @@ async def api_create_deposit(req):
                     "paid_btn_url":f"https://t.me/{(await bot.get_me()).username}"
                 }, headers={"Crypto-Pay-API-Token":CRYPTO_TOKEN})
                 d = await r.json()
-                if not d.get("ok"): return web.json_response({"ok":False,"error":"invoice_failed"},headers=H)
+                if not d.get("ok"): return json_err("invoice_failed")
                 inv_id = str(d["result"].get("invoice_id",""))
                 pay_url = d["result"]["mini_app_invoice_url"]
                 await record_payment(uid, "deposit", amount_usd, usdt_cents, method="crypto_bot", status="pending", invoice_id=inv_id)
-                return web.json_response({"ok":True,"method":"cryptobot","pay_url":pay_url,"invoice_id":inv_id},headers=H)
+                return json_ok({"method":"cryptobot","pay_url":pay_url,"invoice_id":inv_id})
         except Exception as e:
             logging.error(f"CryptoBot deposit error: {e}")
-            return web.json_response({"ok":False,"error":"service_unavailable"},headers=H)
+            return json_err("service_unavailable")
 
     elif method == "card":
         # Placeholder for card payments — would integrate Stripe/etc
-        return web.json_response({"ok":False,"error":"card_not_yet_available"},headers=H)
+        return json_err("card_not_yet_available")
 
     return web.json_response({"ok":False,"error":"unknown_method"},headers=H)
 
@@ -1460,7 +1539,7 @@ async def api_stars_webhook(req):
     # Telegram sends a charge_id (or invoice payload ID) we must use for idempotency
     charge_id = str(data.get("charge_id", f"stars_{int(time.time())}_{uid}_{stars}")) 
     
-    if stars <= 0: return web.json_response({"ok":False,"error":"invalid"},headers=H)
+    if stars <= 0: return json_err("invalid")
     
     # Calculate unified internal values based on the Developer Withdrawal Rate
     usd_amount = round(stars * STARS_USD_RATE, 2)
@@ -1494,13 +1573,13 @@ async def api_stars_webhook(req):
     bal_after = res['balance_after']
     logging.info(f"⭐ Stars deposit OK: uid={uid}, +{stars} stars (${usd_amount}), new unified bal={bal_after}c")
     
-    return web.json_response({"ok":True, "balance_after": bal_after}, headers=H)
+    return json_ok({"balance_after": bal_after})
 
 async def api_currencies(req):
     """GET /api/currencies — return available currencies and rates"""
-    return web.json_response({"ok":True,
+    return json_ok({
         "currencies":[{"code":c,"rate":r,"symbol":CURRENCY_SYMBOLS.get(c,c)} for c,r in CURRENCY_RATES.items()]
-    },headers=H)
+    })
 
 async def api_top_winnings(req):
     """GET /api/top-winnings — leaderboard of top wins for period"""
@@ -1532,14 +1611,14 @@ async def api_top_winnings(req):
             "multiplier": r['multiplier'] or 0,
             "color": colors[i % len(colors)]
         })
-    return web.json_response({"ok":True,"winners":winners,"period":period},headers=H)
+    return json_ok({"winners":winners,"period":period})
 
 async def api_create_stars_invoice(req):
     """POST /api/create-stars-invoice — create Telegram Stars invoice for purchase"""
     if req.method=="OPTIONS": return web.Response(headers=H)
     uid = req['uid']; data = await req.json()
     stars = int(data.get("stars", 50))
-    if stars <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
+    if stars <= 0: return json_err("invalid_amount")
     
     # Create Telegram Stars invoice via Bot API
     try:
@@ -1553,10 +1632,10 @@ async def api_create_stars_invoice(req):
             currency="XTR",  # Telegram Stars currency code
             prices=prices
         )
-        return web.json_response({"ok":True,"invoice_link":link,"stars":stars},headers=H)
+        return json_ok({"invoice_link":link,"stars":stars})
     except Exception as e:
         logging.error(f"Stars invoice error: {e}")
-        return web.json_response({"ok":False,"error":str(e)},headers=H)
+        return json_err(str(e))
 
 async def api_create_crypto_invoice(req):
     """POST /api/create-invoice — create CryptoBot USDT invoice (legacy endpoint)"""
@@ -1564,8 +1643,8 @@ async def api_create_crypto_invoice(req):
     uid = req['uid']; data = await req.json()
     coins = int(data.get("coins", 50))
     amount = float(data.get("amount", PACKAGES.get(str(coins), 0.50)))
-    if amount <= 0: return web.json_response({"ok":False,"error":"invalid_amount"},headers=H)
-    if not CRYPTO_TOKEN: return web.json_response({"ok":False,"error":"not_configured"},headers=H)
+    if amount <= 0: return json_err("invalid_amount")
+    if not CRYPTO_TOKEN: return json_err("not_configured")
     
     try:
         import aiohttp
@@ -1583,7 +1662,7 @@ async def api_create_crypto_invoice(req):
             inv_id = str(d["result"].get("invoice_id",""))
             pay_url = d["result"]["mini_app_invoice_url"]
             await record_payment(uid, "deposit", amount, usdt_cents or coins, method="crypto_bot", status="pending", invoice_id=inv_id)
-            return web.json_response({"ok":True,"pay_url":pay_url,"invoice_id":inv_id},headers=H)
+            return json_ok({"pay_url":pay_url,"invoice_id":inv_id})
     except Exception as e:
         logging.error(f"CryptoBot invoice error: {e}")
         return web.json_response({"ok":False,"error":"service_unavailable"},headers=H)
@@ -1612,7 +1691,7 @@ async def api_transactions(req):
             "status": r['status'] or 'completed',
             "date": short_date
         })
-    return web.json_response({"ok":True,"transactions":txs},headers=H)
+    return json_ok({"transactions":txs})
 
 async def api_withdraw(req):
     """POST /api/withdraw — submit withdrawal request"""
@@ -1621,26 +1700,26 @@ async def api_withdraw(req):
     amount = float(data.get("amount", 0))
     method = data.get("method", "crypto")
     u = await get_user(uid)
-    if not u: return web.json_response({"ok":False,"error":"user_not_found"},headers=H)
+    if not u: return json_err("user_not_found")
     
     if method == 'crypto':
-        if amount < 5.0: return web.json_response({"ok":False,"error":"Minimum withdrawal: $5.00"},headers=H)
+        if amount < 5.0: return json_err("min_withdrawal_5")
         balance_usd = u['balance_usdt_cents'] / 100.0
-        if amount > balance_usd: return web.json_response({"ok":False,"error":"Insufficient balance"},headers=H)
+        if amount > balance_usd: return json_err("insufficient_balance")
         cents = int(round(amount * 100))
         await add_usdt(uid, -cents)
         await record_payment(uid, "withdrawal", amount, cents, method="crypto_bot", status="pending", details=f"Withdraw ${amount:.2f} USDT")
     elif method == 'stars':
         stars = int(amount)
-        if stars <= 0: return web.json_response({"ok":False,"error":"Invalid amount"},headers=H)
-        if stars > u['balance_stars']: return web.json_response({"ok":False,"error":"Insufficient Stars"},headers=H)
+        if stars <= 0: return json_err("invalid_amount")
+        if stars > u['balance_stars']: return json_err("insufficient_stars")
         await add_stars(uid, -stars)
         await record_payment(uid, "withdrawal", 0, stars, method="telegram_stars", status="pending", details=f"Withdraw {stars} Stars")
     else:
-        return web.json_response({"ok":False,"error":"unknown_method"},headers=H)
+        return json_err("unknown_method")
     
     logging.info(f"💸 Withdrawal request: uid={uid}, {method}, amount={amount}")
-    return web.json_response({"ok":True},headers=H)
+    return json_ok()
 
 async def apply_crypto_bonus(uid, deposit_usd):
     """Apply +7% crypto deposit bonus with x3 wager requirement."""
@@ -1663,7 +1742,7 @@ async def api_notifications(req):
     uid = req['uid']
     rows = await db("SELECT id, title, message, action_url, is_read, created_at FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
     notifs = [dict(r) for r in (rows or [])]
-    return web.json_response({"ok": True, "notifications": notifs}, headers=H)
+    return json_ok({"notifications": notifs})
 
 async def api_notifications_read(req):
     """POST /api/notifications/read"""
@@ -1677,13 +1756,14 @@ async def api_notifications_read(req):
     return web.json_response({"ok": True}, headers=H)
 
 async def start_api():
-    app = web.Application(client_max_size=200*1024*1024)
+    app = web.Application(middlewares=[rate_limit_middleware, global_middleware], client_max_size=200*1024*1024)
     
     # 1. Public API
     app.router.add_post("/api/auth", api_auth) # Hand-shakes & initial validation
     app.router.add_get("/api/currencies", api_currencies)
     app.router.add_get("/api/top-winnings", api_top_winnings)
     app.router.add_get("/api/solana-config", api_solana_config)
+    app.router.add_get("/api/admin/debug", admin_required(api_admin_debug))
     
     # 2. Webhooks (External validation)
     app.router.add_post("/api/crypto-webhook", api_webhook)
@@ -1807,13 +1887,34 @@ def _get_user_from_req(req):
             return int(payload.get("sub"))
     return None
 
+def admin_required(handler):
+    """Decorator to enforce admin JWT authentication."""
+    async def wrapper(req):
+        if req.method == "OPTIONS": return web.Response(headers=H)
+        admin = _get_admin_from_req(req)
+        if not admin:
+            return json_err("unauthorized", status=401)
+        req['admin'] = admin
+        return await handler(req)
+    return wrapper
+
+async def api_admin_debug(req):
+    """GET /api/admin/debug — return system diagnostics."""
+    stats = {
+        "uptime_sec": int(time.time() - START_TIME),
+        "db_connected": db_pool is not None,
+        "rate_limit_ips": len(rate_limit_records),
+        "total_requests": TOTAL_REQUESTS,
+    }
+    return json_ok(data=stats)
+
 def auth_required(handler):
     """Decorator to enforce JWT authentication and extract UID."""
     async def wrapper(req):
         if req.method == "OPTIONS": return web.Response(headers=H)
         uid = _get_user_from_req(req)
         if not uid:
-            return web.json_response({"ok": False, "error": "Unauthorized"}, status=401, headers=H)
+            return json_err("Unauthorized", status=401)
         req['uid'] = uid
         return await handler(req)
     return wrapper
@@ -1847,40 +1948,40 @@ async def admin_auth_login(req):
     username = data.get("username", "").strip().lower()
     password = data.get("password", "")
     if not username or not password:
-        return web.json_response({"ok": False, "error": "missing_credentials"}, headers=H)
+        return json_err("missing_credentials")
 
-    row = await db("SELECT * FROM admin_users WHERE username=? AND is_active=1", (username,), one=True)
+    row = await db("SELECT * FROM admin_users WHERE username=$1 AND is_active=1", (username,), one=True)
     if not row:
-        return web.json_response({"ok": False, "error": "invalid_credentials"}, headers=H)
+        return json_err("invalid_credentials")
 
     if not bcrypt.checkpw(password.encode(), row['password_hash'].encode()):
-        return web.json_response({"ok": False, "error": "invalid_credentials"}, headers=H)
+        return json_err("invalid_credentials")
 
     perms = json.loads(row['permissions']) if row['permissions'] else []
     token = _jwt_encode(row['id'], row['username'], row['role'], perms)
 
     # Update last_login
-    await db("UPDATE admin_users SET last_login=? WHERE id=?", (_now(), row['id']))
+    await db("UPDATE admin_users SET last_login=$1 WHERE id=$2", (_now(), row['id']))
 
-    return web.json_response({"ok": True, "token": token, "admin": {
+    return json_ok({"token": token, "admin": {
         "id": row['id'], "username": row['username'], "display_name": row['display_name'],
         "role": row['role'], "permissions": perms,
-    }}, headers=H)
+    }})
 
 async def admin_auth_me(req):
     """GET /admin/auth/me — get current admin profile."""
     admin, err = _require_admin(req)
     if err: return err
-    return web.json_response({"ok": True, "admin": admin}, headers=H)
+    return json_ok({"admin": admin})
 
 async def admin_auth_list(req):
     """GET /admin/auth/users — list all admin accounts (owner/admin only)."""
     admin, err = _require_admin(req, "settings")
     if err: return err
     if admin['role'] not in ('owner', 'admin'):
-        return web.json_response({"ok": False, "error": "forbidden"}, status=403, headers=H)
+        return json_err("forbidden", status=403)
     rows = await db("SELECT id,username,display_name,role,permissions,is_active,last_login,created_at FROM admin_users ORDER BY id", fetch=True)
-    return web.json_response({"ok": True, "admins": rows if rows else []}, headers=H)
+    return json_ok({"admins": rows if rows else []})
 
 async def admin_auth_create(req):
     """POST /admin/auth/create — create new admin user (owner only)."""
@@ -1896,19 +1997,19 @@ async def admin_auth_create(req):
     role = data.get("role", "viewer")
     permissions = data.get("permissions", [])
     if not username or not password:
-        return web.json_response({"ok": False, "error": "missing_fields"}, headers=H)
+        return json_err("missing_fields")
     if role not in ('admin', 'manager', 'viewer'):
-        return web.json_response({"ok": False, "error": "invalid_role"}, headers=H)
+        return json_err("invalid_role")
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     try:
         await db(
-            "INSERT INTO admin_users(username,password_hash,display_name,role,permissions,created_by) VALUES(?,?,?,?,?,?)",
+            "INSERT INTO admin_users(username,password_hash,display_name,role,permissions,created_by) VALUES($1,$2,$3,$4,$5,$6)",
             (username, pw_hash, display_name, role, json.dumps(permissions), admin['sub'])
         )
-        return web.json_response({"ok": True, "message": f"Admin '{username}' created"}, headers=H)
+        return json_ok({"message": f"Admin '{username}' created"})
     except Exception as e:
         if "unique constraint" in str(e).lower():
-             return web.json_response({"ok": False, "error": "username_exists"}, headers=H)
+             return json_err("username_exists")
         raise e
 
 async def admin_auth_update(req):
@@ -1922,7 +2023,7 @@ async def admin_auth_update(req):
     is_self = admin_id == int(admin['sub'])
     
     if admin['role'] != 'owner' and not is_self:
-        return web.json_response({"ok": False, "error": "owner_only"}, status=403, headers=H)
+        return json_err("owner_only", status=403)
         
     updates = []
     params = []
@@ -1948,11 +2049,14 @@ async def admin_auth_update(req):
         updates.append("password_hash=?"); params.append(pw_hash)
         
     if not updates:
-        return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
+        return json_err("nothing_to_update")
         
     params.append(admin_id)
-    await db(f"UPDATE admin_users SET {','.join(updates)} WHERE id=?", tuple(params))
-    return web.json_response({"ok": True}, headers=H)
+    # Using numbered placeholders for native postgres
+    placeholders = [f"${i+1}" for i in range(len(updates))]
+    update_string = ",".join([f"{updates[i].split('=')[0]}=${i+1}" for i in range(len(updates))])
+    await db(f"UPDATE admin_users SET {update_string} WHERE id=${len(params)}", tuple(params))
+    return json_ok()
 
 async def admin_auth_delete(req):
     """POST /admin/auth/delete — delete admin user (owner only)."""
@@ -1965,9 +2069,9 @@ async def admin_auth_delete(req):
     admin_id = int(data.get("id", 0))
     # Can't delete self
     if admin_id == admin['sub']:
-        return web.json_response({"ok": False, "error": "cannot_delete_self"}, headers=H)
-    await db("DELETE FROM admin_users WHERE id=? AND role!='owner'", (admin_id,))
-    return web.json_response({"ok": True}, headers=H)
+        return json_err("cannot_delete_self")
+    await db("DELETE FROM admin_users WHERE id=$1 AND role!='owner'", (admin_id,))
+    return json_ok()
 
 # --- Data Endpoints (JWT protected) ---
 async def admin_stats(req):
@@ -1975,7 +2079,7 @@ async def admin_stats(req):
     admin, err = _require_admin(req, "dashboard")
     if err: return err
     total_users = await db("SELECT COUNT(*) as cnt FROM users", one=True)
-    active_today = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login LIKE ?", (time.strftime("%Y-%m-%d")+"%",), one=True)
+    active_today = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login LIKE $1", (time.strftime("%Y-%m-%d")+"%",), one=True)
     active_week = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYY-MM-DD HH24:MI:SS')", one=True)
     new_today = await db("SELECT COUNT(*) as cnt FROM users WHERE created_at >= CURRENT_DATE", one=True)
     total_bets = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(bet_amount),0) as wagered, COALESCE(SUM(win_amount),0) as won FROM bet_history", one=True)
@@ -1991,7 +2095,7 @@ async def admin_stats(req):
     top_depositors = await db("SELECT user_id,username,first_name,total_deposited_usd,coins FROM users WHERE total_deposited_usd>0 ORDER BY total_deposited_usd DESC LIMIT 10", fetch=True)
     ggr = total_bets['wagered'] - total_bets['won']
     ggr_today = today_bets['wagered'] - today_bets['won']
-    return web.json_response({"ok": True,
+    return json_ok({
         "users": {"total": total_users['cnt'], "active_today": active_today['cnt'], "active_week": active_week['cnt'], "new_today": new_today['cnt']},
         "bets": {"total": total_bets['cnt'], "wagered": total_bets['wagered'], "won": total_bets['won'], "ggr": ggr, "today_bets": today_bets['cnt'], "today_wagered": today_bets['wagered'], "today_ggr": ggr_today},
         "deposits": {"total": total_deposits['cnt'], "usd": round(total_deposits['usd'], 2)},
@@ -2002,7 +2106,7 @@ async def admin_stats(req):
         "registrations_daily": [dict(r) for r in reg_daily] if reg_daily else [],
         "top_winners": [dict(r) for r in top_winners] if top_winners else [],
         "top_depositors": [dict(r) for r in top_depositors] if top_depositors else [],
-    }, headers=H)
+    })
 
 async def admin_users(req):
     """GET /admin/users — player list with filters."""
@@ -2018,7 +2122,7 @@ async def admin_users(req):
     where = "1=1"
     params = []
     if search:
-        where += " AND (username LIKE ? OR first_name LIKE ? OR CAST(user_id AS TEXT) LIKE ?)"
+        where += " AND (username LIKE $1 OR first_name LIKE $2 OR CAST(user_id AS TEXT) LIKE $3)"
         s = f"%{search}%"
         params.extend([s, s, s])
     if segment == "vip":
@@ -2029,9 +2133,9 @@ async def admin_users(req):
         where += " AND last_login < TO_CHAR(CURRENT_DATE - INTERVAL '14 days', 'YYYY-MM-DD HH24:MI:SS')"
     elif segment == "depositors":
         where += " AND total_deposited_usd > 0"
-    rows = await db(f"SELECT user_id,username,first_name,last_name,is_premium,coins,balance_usdt_cents,balance_stars,total_wagered,total_won,total_deposited_usd,total_withdrawn_usd,total_spins,biggest_win,referrals_count,last_login,last_game,created_at FROM users WHERE {where} ORDER BY {sort} DESC LIMIT ? OFFSET ?", (*params, limit, offset), fetch=True)
+    rows = await db(f"SELECT user_id,username,first_name,last_name,is_premium,coins,balance_usdt_cents,balance_stars,total_wagered,total_won,total_deposited_usd,total_withdrawn_usd,total_spins,biggest_win,referrals_count,last_login,last_game,created_at FROM users WHERE {where} ORDER BY {sort} DESC LIMIT ${len(params)+1} OFFSET ${len(params)+2}", (*params, limit, offset), fetch=True)
     total = await db(f"SELECT COUNT(*) as cnt FROM users WHERE {where}", params, one=True)
-    return web.json_response({"ok": True, "total": total['cnt'], "users": [dict(r) for r in rows] if rows else []}, headers=H)
+    return json_ok({"total": total['cnt'], "users": [dict(r) for r in rows] if rows else []})
 
 async def admin_user_detail(req):
     """GET /admin/user/{uid} — full user info."""
@@ -2039,16 +2143,16 @@ async def admin_user_detail(req):
     if err: return err
     uid = int(req.match_info['uid'])
     u = await get_user(uid)
-    if not u: return web.json_response({"ok": False, "error": "not_found"}, headers=H)
+    if not u: return json_err("not_found", status=404)
     v = vip_level(u['total_wagered'])
-    game_stats = await db("SELECT game,COUNT(*) as cnt,SUM(bet_amount) as wagered,SUM(win_amount) as won,SUM(profit) as profit,MAX(win_amount) as best FROM bet_history WHERE user_id=? GROUP BY game", (uid,), fetch=True)
-    dep_total = await db("SELECT COUNT(*) as cnt,COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE user_id=? AND direction='deposit' AND status='completed'", (uid,), one=True)
-    bonuses = await db("SELECT * FROM user_bonuses WHERE user_id=? ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
-    return web.json_response({"ok": True, "user": dict(u), "vip": {"name": v['name'], "icon": v['icon'], "level_cb": v['cb']},
+    game_stats = await db("SELECT game,COUNT(*) as cnt,SUM(bet_amount) as wagered,SUM(win_amount) as won,SUM(profit) as profit,MAX(win_amount) as best FROM bet_history WHERE user_id=$1 GROUP BY game", (uid,), fetch=True)
+    dep_total = await db("SELECT COUNT(*) as cnt,COALESCE(SUM(amount_usd),0) as usd FROM payments WHERE user_id=$1 AND direction='deposit' AND status='completed'", (uid,), one=True)
+    bonuses = await db("SELECT * FROM user_bonuses WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20", (uid,), fetch=True)
+    return json_ok({"user": dict(u), "vip": {"name": v['name'], "icon": v['icon'], "level_cb": v['cb']},
         "game_stats": [dict(g) for g in game_stats] if game_stats else [],
         "deposit_summary": dict(dep_total) if dep_total else {},
         "bonuses": [dict(b) for b in bonuses] if bonuses else [],
-    }, headers=H)
+    })
 
 async def admin_user_bets(req):
     """GET /admin/bets/{uid} — user bet history."""
@@ -2056,9 +2160,9 @@ async def admin_user_bets(req):
     if err: return err
     uid = int(req.match_info['uid'])
     limit = min(int(req.rel_url.query.get("limit", 100)), 500)
-    rows = await db("SELECT * FROM bet_history WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit), fetch=True)
-    total = await db("SELECT COUNT(*) as cnt FROM bet_history WHERE user_id=?", (uid,), one=True)
-    return web.json_response({"ok": True, "total": total['cnt'], "bets": [dict(r) for r in rows] if rows else []}, headers=H)
+    rows = await db("SELECT * FROM bet_history WHERE user_id=$1 ORDER BY id DESC LIMIT $2", (uid, limit), fetch=True)
+    total = await db("SELECT COUNT(*) as cnt FROM bet_history WHERE user_id=$1", (uid,), one=True)
+    return json_ok({"total": total['cnt'], "bets": [dict(r) for r in rows] if rows else []})
 
 async def admin_user_payments(req):
     """GET /admin/payments/{uid} — user payment history."""
@@ -2066,9 +2170,9 @@ async def admin_user_payments(req):
     if err: return err
     uid = int(req.match_info['uid'])
     limit = min(int(req.rel_url.query.get("limit", 100)), 500)
-    rows = await db("SELECT * FROM payments WHERE user_id=? ORDER BY id DESC LIMIT ?", (uid, limit), fetch=True)
-    total = await db("SELECT COUNT(*) as cnt FROM payments WHERE user_id=?", (uid,), one=True)
-    return web.json_response({"ok": True, "total": total['cnt'], "payments": [dict(r) for r in rows] if rows else []}, headers=H)
+    rows = await db("SELECT * FROM payments WHERE user_id=$1 ORDER BY id DESC LIMIT $2", (uid, limit), fetch=True)
+    total = await db("SELECT COUNT(*) as cnt FROM payments WHERE user_id=$1", (uid,), one=True)
+    return json_ok({"total": total['cnt'], "payments": [dict(r) for r in rows] if rows else []})
 
 async def admin_player_update(req):
     """POST /admin/user/{uid}/update — update player stats/status."""
@@ -2085,10 +2189,14 @@ async def admin_player_update(req):
         updates.append("free_spins=?"); params.append(int(data["free_spins"]))
     if "is_blocked" in data:
         updates.append("is_blocked=?"); params.append(1 if data["is_blocked"] else 0)
-    if not updates: return web.json_response({"ok": False, "error": "nothing_to_update"}, headers=H)
+    if not updates: return json_err("nothing_to_update")
     params.append(uid)
-    await db(f"UPDATE users SET {','.join(updates)} WHERE user_id=?", tuple(params))
-    return web.json_response({"ok": True}, headers=H)
+    # Native postgres placeholders
+    upd_list = []
+    for i, u in enumerate(updates):
+        upd_list.append(f"{u.split('=')[0]}=${i+1}")
+    await db(f"UPDATE users SET {','.join(upd_list)} WHERE user_id=${len(params)}", tuple(params))
+    return json_ok()
 
 async def admin_player_note(req):
     """POST /admin/user/{uid}/note — save admin note for player."""
@@ -2097,8 +2205,8 @@ async def admin_player_note(req):
     uid = int(req.match_info['uid'])
     data = await req.json()
     note = data.get("note", "").strip()
-    await db("UPDATE users SET admin_note=? WHERE user_id=?", (note, uid))
-    return web.json_response({"ok": True}, headers=H)
+    await db("UPDATE users SET admin_note=$1 WHERE user_id=$2", (note, uid))
+    return json_ok()
 
 async def admin_games(req):
     """GET /admin/games — per-game analytics."""
@@ -2107,10 +2215,10 @@ async def admin_games(req):
     games = await db("SELECT game, COUNT(*) as total_bets, COUNT(DISTINCT user_id) as unique_players, SUM(bet_amount) as wagered, SUM(win_amount) as won, SUM(bet_amount)-SUM(win_amount) as ggr, AVG(bet_amount) as avg_bet, MAX(win_amount) as biggest_win FROM bet_history GROUP BY game ORDER BY wagered DESC", fetch=True)
     # Per game per day (last 7 days)
     daily = await db("SELECT game, created_at::date as day, COUNT(*) as bets, SUM(bet_amount) as wagered, SUM(win_amount) as won FROM bet_history WHERE created_at >= CURRENT_DATE - INTERVAL '7 days' GROUP BY game, created_at::date ORDER BY day", fetch=True)
-    return web.json_response({"ok": True,
+    return json_ok({
         "games": [dict(g) for g in games] if games else [],
         "daily": [dict(d) for d in daily] if daily else [],
-    }, headers=H)
+    })
 
 async def admin_financial(req):
     """GET /admin/financial — deposits, withdrawals, GGR trends."""
@@ -2124,13 +2232,13 @@ async def admin_financial(req):
     totals = await db("SELECT COALESCE(SUM(CASE WHEN direction='deposit' THEN amount_usd ELSE 0 END),0) as deposits, COALESCE(SUM(CASE WHEN direction='withdrawal' THEN amount_usd ELSE 0 END),0) as withdrawals FROM payments WHERE status='completed'", one=True)
     # By method
     by_method = await db("SELECT method, COUNT(*) as cnt, SUM(amount_usd) as usd FROM payments WHERE direction='deposit' AND status='completed' GROUP BY method", fetch=True)
-    return web.json_response({"ok": True,
+    return json_ok({
         "deposits_daily": [dict(d) for d in dep_daily] if dep_daily else [],
         "withdrawals_daily": [dict(d) for d in wd_daily] if wd_daily else [],
         "ggr_daily": [dict(d) for d in ggr_daily] if ggr_daily else [],
         "totals": {"deposits": round(totals['deposits'], 2), "withdrawals": round(totals['withdrawals'], 2), "net": round(totals['deposits'] - totals['withdrawals'], 2)},
         "by_method": [dict(m) for m in by_method] if by_method else [],
-    }, headers=H)
+    })
 
 async def admin_cohorts(req):
     """GET /admin/cohorts — cohort analysis by registration date."""
@@ -2149,7 +2257,7 @@ async def admin_cohorts(req):
         FROM users WHERE created_at >= CURRENT_DATE - INTERVAL '56 days'
         GROUP BY TO_CHAR(created_at, 'IYYY-"W"IW') ORDER BY cohort
     """, fetch=True)
-    return web.json_response({"ok": True, "cohorts": [dict(c) for c in cohorts] if cohorts else []}, headers=H)
+    return json_ok({"cohorts": [dict(c) for c in cohorts] if cohorts else []})
 
 async def admin_live(req):
     """GET /admin/live — recent activity feed."""
@@ -2159,11 +2267,11 @@ async def admin_live(req):
     recent_bets = await db("SELECT b.*, u.username, u.first_name FROM bet_history b LEFT JOIN users u ON b.user_id=u.user_id ORDER BY b.id DESC LIMIT ?", (limit,), fetch=True)
     recent_deps = await db("SELECT p.*, u.username, u.first_name FROM payments p LEFT JOIN users u ON p.user_id=u.user_id WHERE p.direction='deposit' AND p.status='completed' ORDER BY p.id DESC LIMIT 20", fetch=True)
     active_now = await db("SELECT COUNT(*) as cnt FROM users WHERE last_login >= TO_CHAR(NOW() - INTERVAL '5 minutes', 'YYYY-MM-DD HH24:MI:SS')", one=True)
-    return web.json_response({"ok": True,
+    return json_ok({
         "recent_bets": [dict(r) for r in recent_bets] if recent_bets else [],
         "recent_deposits": [dict(r) for r in recent_deps] if recent_deps else [],
         "active_now": active_now['cnt'],
-    }, headers=H)
+    })
 
 async def admin_affiliates(req):
     """GET /admin/affiliates — referral stats."""
@@ -2171,11 +2279,11 @@ async def admin_affiliates(req):
     if err: return err
     top_refs = await db("SELECT user_id, username, first_name, referrals_count, total_deposited_usd FROM users WHERE referrals_count > 0 ORDER BY referrals_count DESC LIMIT 50", fetch=True)
     total = await db("SELECT COALESCE(SUM(referrals_count),0) as cnt, COUNT(CASE WHEN referrals_count>0 THEN 1 END) as referrers FROM users", one=True)
-    return web.json_response({"ok": True,
+    return json_ok({
         "top_referrers": [dict(r) for r in top_refs] if top_refs else [],
         "total_referrals": total['cnt'],
         "total_referrers": total['referrers'],
-    }, headers=H)
+    })
 
 async def admin_bonus_stats(req):
     """GET /admin/bonus-stats — bonus analytics."""
@@ -2184,19 +2292,19 @@ async def admin_bonus_stats(req):
     by_type = await db("SELECT bonus_type, status, COUNT(*) as cnt, SUM(amount) as total_amount FROM user_bonuses GROUP BY bonus_type, status", fetch=True)
     active = await db("SELECT COUNT(*) as cnt FROM user_bonuses WHERE status='active'", one=True)
     claimed = await db("SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total FROM user_bonuses WHERE status='completed'", one=True)
-    return web.json_response({"ok": True,
+    return json_ok({
         "by_type": [dict(r) for r in by_type] if by_type else [],
         "active_count": active['cnt'],
         "claimed_count": claimed['cnt'],
         "claimed_total": claimed['total'],
-    }, headers=H)
+    })
 
 async def admin_bonus_templates_get(req):
     """GET /admin/bonus/templates — list all templates."""
     admin, err = _require_admin(req, "bonus_management")
     if err: return err
     rows = await db("SELECT * FROM bonus_templates ORDER BY id DESC", fetch=True)
-    return web.json_response({"ok": True, "templates": [dict(r) for r in rows] if rows else []}, headers=H)
+    return json_ok({"templates": [dict(r) for r in rows] if rows else []})
 
 async def admin_bonus_templates_post(req):
     """POST /admin/bonus/templates — create a new template."""
@@ -2207,16 +2315,16 @@ async def admin_bonus_templates_post(req):
     btype = data.get("bonus_type")
     amount = float(data.get("amount", 0))
     desc = data.get("description", "")
-    if not name or not btype: return web.json_response({"ok": False, "error": "missing_fields"}, headers=H)
-    await db("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES(?,?,?,?)", (name, btype, amount, desc))
-    return web.json_response({"ok": True}, headers=H)
+    if not name or not btype: return json_err("missing_fields")
+    await db("INSERT INTO bonus_templates(name, bonus_type, amount, description) VALUES($1,$2,$3,$4)", (name, btype, amount, desc))
+    return json_ok()
 
 async def admin_bonus_campaigns_get(req):
     """GET /admin/bonus/campaigns — list all active campaigns."""
     admin, err = _require_admin(req, "bonus_management")
     if err: return err
     rows = await db("SELECT * FROM bonus_campaigns ORDER BY id DESC", fetch=True)
-    return web.json_response({"ok": True, "campaigns": [dict(r) for r in rows] if rows else []}, headers=H)
+    return json_ok({"campaigns": [dict(r) for r in rows] if rows else []})
 
 async def admin_bonus_issue(req):
     """POST /admin/bonus/issue — send bonuses to players with notification support."""
@@ -2229,7 +2337,7 @@ async def admin_bonus_issue(req):
     
     if is_template and template_id:
         tpl = await db("SELECT * FROM bonus_templates WHERE id=?", (template_id,), one=True)
-        if not tpl: return web.json_response({"ok": False, "error": "template_not_found"}, headers=H)
+        if not tpl: return json_err("template_not_found")
         bonus_type = tpl['bonus_type']
         amount = tpl['amount']
         title = tpl['name']
@@ -2259,7 +2367,7 @@ async def admin_bonus_issue(req):
     async with db.transaction() as conn:
         # Create campaign record
         await db(
-            "INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment, total_players, notification_sent) VALUES(?,?,?,?,?,?)",
+            "INSERT INTO bonus_campaigns(title, bonus_type, template_id, target_segment, total_players, notification_sent) VALUES($1,$2,$3,$4,$5,$6)",
             (title, bonus_type, template_id if is_template else None, target, len(targets), 1 if send_notif else 0),
             conn=conn
         )
@@ -2269,7 +2377,7 @@ async def admin_bonus_issue(req):
         for u in targets:
             uid = u['user_id']
             await db(
-                "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES(?,?,?,?,?,?,?,?)",
+                "INSERT INTO user_bonuses(user_id,bonus_type,title,description,icon,amount,status,badge) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
                 (uid, bonus_type, title, description, "redeem", amount, "active", bonus_type.upper().replace("_", " ")),
                 conn=conn
             )
@@ -2285,7 +2393,7 @@ async def admin_bonus_issue(req):
                 except Exception as e:
                     logging.debug(f"Could not send push to {uid}: {e}")
             
-    return web.json_response({"ok": True, "assigned_count": count, "notif_sent": notif_count}, headers=H)
+    return json_ok({"assigned_count": count, "notif_sent": notif_count})
 
 async def setup_bot_menu():
     """Sets the permanent Menu Button next to the attachment clip."""
