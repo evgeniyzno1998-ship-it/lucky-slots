@@ -6546,9 +6546,15 @@
 
         // Step 4: Race Condition & Duplication Protection
         window._inFlight = new Set();
+        function debugLog(...args) {
+            if (new URLSearchParams(window.location.search).get('debug') === '1') {
+                console.log('%c[DEBUG]', 'color:#E31E24;font-weight:bold', new Date().toLocaleTimeString(), ...args);
+            }
+        }
+
         async function withGuard(key, fn) {
             if (window._inFlight.has(key)) {
-                if (new URLSearchParams(window.location.search).get('debug') === '1') console.log(`[GUARD] Blocked concurrent: ${key}`);
+                debugLog(`Blocked concurrent: ${key}`);
                 return;
             }
             window._inFlight.add(key);
@@ -6556,6 +6562,7 @@
         }
 
         async function apiFetch(path, options = {}) {
+            debugLog(`FETCH START: ${path}`);
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s hard timeout
             const startTime = Date.now();
@@ -8312,76 +8319,82 @@
 
         /* === PROFILE === */
         async function loadProfile() {
-            try {
-                var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? window.Telegram.WebApp.initDataUnsafe.user : null;
-                var displayName = 'Player';
-                if (u && (u.first_name || u.username)) displayName = u.first_name || u.username;
-                document.getElementById('profName').textContent = displayName;
-                document.getElementById('profId').textContent = 'ID: ' + (UID ? UID.toString().slice(-8) : '...');
+            return await withGuard('profile', async () => {
+                try {
+                    var u = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user ? window.Telegram.WebApp.initDataUnsafe.user : null;
+                    var displayName = 'Player';
+                    if (u && (u.first_name || u.username)) displayName = u.first_name || u.username;
+                    document.getElementById('profName').textContent = displayName;
+                    document.getElementById('profId').textContent = 'ID: ' + (UID ? UID.toString().slice(-8) : '...');
 
-                if (u && u.photo_url) {
-                    document.getElementById('profAvatarInner').innerHTML = '<img src="' + u.photo_url + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover">';
-                } else {
-                    document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + displayName.charAt(0).toUpperCase() + '</div>';
-                }
-
-                var r = await apiFetch('/api/profile?' + qs()); var d = await safeJson(r); if (!d || !d.ok) return;
-
-                if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
-
-                var tiers = [
-                    { name: 'Bronze', icon: '🥉', cb: '0%', perks: 'Basic access' },
-                    { name: 'Silver', icon: '🥈', cb: '3%', perks: 'Weekly tournaments' },
-                    { name: 'Gold', icon: '🥇', cb: '5%', perks: 'Priority support' },
-                    { name: 'Platinum', icon: '💎', cb: '8%', perks: 'Personal manager' },
-                    { name: 'Diamond', icon: '👑', cb: '10%', perks: 'Exclusive events' }
-                ];
-                var currentIndex = tiers.findIndex(function (t) { return t.name === d.vip.name });
-                if (currentIndex === -1) currentIndex = 0;
-
-                var html = '';
-                tiers.forEach(function (t, i) {
-                    var isCurrent = i === currentIndex;
-                    var isLocked = i > currentIndex;
-                    var isPassed = i < currentIndex;
-
-                    var bg = isCurrent ? 'linear-gradient(135deg, rgba(227,30,36,.15), rgba(227,30,36,.05))' : 'rgba(255,255,255,.02)';
-                    var border = isCurrent ? '1px solid var(--red)' : '1px solid rgba(255,255,255,.05)';
-                    var opacity = isLocked ? '0.5' : '1';
-
-                    var progressHtml = '';
-                    if (isCurrent && d.vip.next_at) {
-                        var pct = Math.min(100, Math.round(d.vip.wagered / d.vip.next_at * 100));
-                        progressHtml = '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-bottom:4px"><span>Wagered</span><span>$' + d.vip.wagered + ' / $' + d.vip.next_at + '</span></div><div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--red);border-radius:2px"></div></div></div>';
-                    } else if (isPassed) {
-                        progressHtml = '<div style="margin-top:12px;font-size:10px;color:var(--green);font-weight:700">• Completed</div>';
+                    if (u && u.photo_url) {
+                        document.getElementById('profAvatarInner').innerHTML = '<img src="' + u.photo_url + '" alt="Avatar" style="width:100%;height:100%;object-fit:cover">';
+                    } else {
+                        document.getElementById('profAvatarInner').innerHTML = '<div style="width:100%;height:100%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:32px;color:#fff;font-weight:800">' + displayName.charAt(0).toUpperCase() + '</div>';
                     }
 
-                    html += '<div style="flex:0 0 240px;scroll-snap-align:center;padding:16px;background:' + bg + ';border:' + border + ';border-radius:var(--radius-xl);opacity:' + opacity + ';position:relative;backdrop-filter:blur(8px)">';
-                    if (isLocked) html += '<div style="position:absolute;top:12px;right:12px;font-size:16px;opacity:0.5">🔒</div>';
+                    var r = await apiFetch('/api/profile?' + qs());
+                    var d = await safeJson(r);
+                    if (!d || !d.ok) return;
 
-                    html += '<div style="font-size:28px;margin-bottom:8px">' + t.icon + '</div>';
-                    html += '<div style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">' + t.name + '</div>';
-                    html += '<div style="font-size:11px;color:var(--dim)">' + t.cb + ' Cashback · ' + t.perks + '</div>';
-                    html += progressHtml;
-                    html += '</div>';
-                });
+                    if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
 
-                var cont = document.getElementById('vipCardsContainer');
-                if (cont) {
-                    cont.innerHTML = html;
-                    setTimeout(function () {
-                        var cardWidth = 240 + 12;
-                        cont.scrollTo({ left: currentIndex * cardWidth - 16, behavior: 'smooth' });
-                    }, 100);
+                    var tiers = [
+                        { name: 'Bronze', icon: '🥉', cb: '0%', perks: 'Basic access' },
+                        { name: 'Silver', icon: '🥈', cb: '3%', perks: 'Weekly tournaments' },
+                        { name: 'Gold', icon: '🥇', cb: '5%', perks: 'Priority support' },
+                        { name: 'Platinum', icon: '💎', cb: '8%', perks: 'Personal manager' },
+                        { name: 'Diamond', icon: '👑', cb: '10%', perks: 'Exclusive events' }
+                    ];
+                    var currentIndex = tiers.findIndex(function (t) { return t.name === d.vip.name });
+                    if (currentIndex === -1) currentIndex = 0;
+
+                    var html = '';
+                    tiers.forEach(function (t, i) {
+                        var isCurrent = i === currentIndex;
+                        var isLocked = i > currentIndex;
+                        var isPassed = i < currentIndex;
+
+                        var bg = isCurrent ? 'linear-gradient(135deg, rgba(227,30,36,.15), rgba(227,30,36,.05))' : 'rgba(255,255,255,.02)';
+                        var border = isCurrent ? '1px solid var(--red)' : '1px solid rgba(255,255,255,.05)';
+                        var opacity = isLocked ? '0.5' : '1';
+
+                        var progressHtml = '';
+                        if (isCurrent && d.vip.next_at) {
+                            var pct = Math.min(100, Math.round(d.vip.wagered / d.vip.next_at * 100));
+                            progressHtml = '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-bottom:4px"><span>Wagered</span><span>$' + d.vip.wagered + ' / $' + d.vip.next_at + '</span></div><div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--red);border-radius:2px"></div></div></div>';
+                        } else if (isPassed) {
+                            progressHtml = '<div style="margin-top:12px;font-size:10px;color:var(--green);font-weight:700">• Completed</div>';
+                        }
+
+                        html += '<div style="flex:0 0 240px;scroll-snap-align:center;padding:16px;background:' + bg + ';border:' + border + ';border-radius:var(--radius-xl);opacity:' + opacity + ';position:relative;backdrop-filter:blur(8px)">';
+                        if (isLocked) html += '<div style="position:absolute;top:12px;right:12px;font-size:16px;opacity:0.5">🔒</div>';
+
+                        html += '<div style="font-size:28px;margin-bottom:8px">' + t.icon + '</div>';
+                        html += '<div style="font-family:\'Montserrat\',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">' + t.name + '</div>';
+                        html += '<div style="font-size:11px;color:var(--dim)">' + t.cb + ' Cashback · ' + t.perks + '</div>';
+                        html += progressHtml;
+                        html += '</div>';
+                    });
+
+                    var cont = document.getElementById('vipCardsContainer');
+                    if (cont) {
+                        cont.innerHTML = html;
+                        setTimeout(function () {
+                            var cardWidth = 240 + 12;
+                            cont.scrollTo({ left: currentIndex * cardWidth - 16, behavior: 'smooth' });
+                        }, 100);
+                    }
+                    /* Stats: wins = bets with positive profit, losses = bets with zero/negative */
+                    var wins = 0, losses = 0;
+                    if (d.recent_bets) { d.recent_bets.forEach(function (b) { if (b.profit > 0) wins++; else losses++ }) }
+                    document.getElementById('stWins').textContent = d.stats.won > 0 ? wins : 0;
+                    document.getElementById('stLosses').textContent = losses;
+                    document.getElementById('stTotal').textContent = d.stats.spins;
+                } catch (e) {
+                    console.error('API /profile fetch failed:', e);
                 }
-                /* Stats: wins = bets with positive profit, losses = bets with zero/negative */
-                var wins = 0, losses = 0;
-                if (d.recent_bets) { d.recent_bets.forEach(function (b) { if (b.profit > 0) wins++; else losses++ }) }
-                document.getElementById('stWins').textContent = d.stats.won > 0 ? wins : 0;
-                document.getElementById('stLosses').textContent = losses;
-                document.getElementById('stTotal').textContent = d.stats.spins;
-            } catch (e) { }
+            });
         }
 
         /* === REFERRAL === */
@@ -9301,7 +9314,6 @@
                 if (amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
                 if (amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
 
-                var url = API + '/api/withdraw';
                 try {
                     showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
                     var r = await apiFetch('/api/withdraw', { method: 'POST', body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
@@ -9315,7 +9327,8 @@
                         showToast('❌', d.error || 'Withdrawal failed', 'OK', '', function () { closeToast() });
                     }
                 } catch (e) {
-                    closeToast(); showToast('❌', 'Network failure: ' + e.message, 'OK', '', function () { closeToast() });
+                    closeToast();
+                    showToast('❌', 'Network failure: ' + e.message, 'OK', '', function () { closeToast() });
                 }
             });
         }
@@ -9566,86 +9579,67 @@
         };
 
         async function buyStars(amount) {
-            /* Request invoice link from backend, then open via Telegram WebApp */
-            var url = API + '/api/create-stars-invoice';
-            console.log('[API CALL] POST', url);
-            try {
-                showToast('⭐', T.creatingInv, '⏳', '', null);
-                var r = await apiFetch('/api/create-stars-invoice', {
-                    method: 'POST',
-                    body: JSON.stringify(Object.assign({}, auth(), { stars: amount }))
-                });
-                console.log('[API RESPONSE] POST', url, 'Status:', r.status);
-                var text = await r.text();
-                console.log('[API RESPONSE BODY]', text);
-                closeToast();
-
-                if (!r.ok) {
-                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
-                    return;
-                }
-                var d = JSON.parse(text);
-                if (d.ok && d.invoice_link) {
-                    tg.openInvoice(d.invoice_link, function (status) {
-                        if (status === 'paid') {
-                            showToast('✅', T.paySuccess + amount + ' ⭐', 'OK', '', function () { closeToast() });
-                            loadBalance();
-                        } else if (status === 'cancelled') {
-                            /* User cancelled, do nothing */
-                        } else if (status === 'failed') {
-                            showToast('❌', T.payFail, 'OK', '', function () { closeToast() });
-                        }
+            return await withGuard('buy_stars', async () => {
+                try {
+                    showToast('⭐', T.creatingInv, '⏳', '', null);
+                    var r = await apiFetch('/api/create-stars-invoice', {
+                        method: 'POST',
+                        body: JSON.stringify(Object.assign({}, auth(), { stars: amount }))
                     });
-                } else {
-                    showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
+                    var d = await safeJson(r);
+                    closeToast();
+
+                    if (d.ok && d.invoice_link) {
+                        tg.openInvoice(d.invoice_link, function (status) {
+                            if (status === 'paid') {
+                                showToast('✅', T.paySuccess + amount + ' ⭐', 'OK', '', function () { closeToast() });
+                                loadBalance();
+                            } else if (status === 'cancelled') {
+                                /* User cancelled */
+                            } else if (status === 'failed') {
+                                showToast('❌', T.payFail, 'OK', '', function () { closeToast() });
+                            }
+                        });
+                    } else {
+                        showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
+                    }
+                } catch (e) {
+                    closeToast();
+                    showToast('❌', 'Network error: ' + e.message, 'OK', '', function () { closeToast() });
                 }
-            } catch (e) {
-                console.error('[API ERROR] POST', url, e);
-                closeToast();
-                showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
-            }
+            });
         }
 
         async function buyCrypto(coins, price) {
-            var urlCall = API + '/api/create-invoice';
-            console.log('[API CALL] POST', urlCall);
-            try {
-                showToast('💎', T.creatingCrypto, '⏳', '', null);
-                var r = await apiFetch('/api/create-invoice', {
-                    method: 'POST',
-                    body: JSON.stringify(Object.assign({}, auth(), {
-                        coins: coins ? parseInt(coins) : Math.floor(parseFloat(price) * 100),
-                        amount: parseFloat(price)
-                    }))
-                });
-                console.log('[API RESPONSE] POST', urlCall, 'Status:', r.status);
-                var text = await r.text();
-                console.log('[API RESPONSE BODY]', text);
-                closeToast();
+            return await withGuard('buy_crypto', async () => {
+                try {
+                    showToast('💎', T.creatingCrypto, '⏳', '', null);
+                    var r = await apiFetch('/api/create-invoice', {
+                        method: 'POST',
+                        body: JSON.stringify(Object.assign({}, auth(), {
+                            coins: coins ? parseInt(coins) : Math.floor(parseFloat(price) * 100),
+                            amount: parseFloat(price)
+                        }))
+                    });
+                    var d = await safeJson(r);
+                    closeToast();
 
-                if (!r.ok) {
-                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
-                    return;
-                }
-                var d = JSON.parse(text);
-                if (d.ok && d.pay_url) {
-                    /* CryptoBot mini_app_invoice_url is a t.me link — open inside Telegram */
-                    var url = d.pay_url;
-                    if (url.indexOf('t.me/') !== -1) {
-                        tg.openTelegramLink(url);
+                    if (d.ok && d.pay_url) {
+                        var url = d.pay_url;
+                        if (url.indexOf('t.me/') !== -1) {
+                            tg.openTelegramLink(url);
+                        } else {
+                            tg.openLink(url, { try_instant_view: true });
+                        }
+                        if (typeof pollPayment === 'function') pollPayment(d.invoice_id || null);
                     } else {
-                        /* fallback: open inside Telegram's webview */
-                        tg.openLink(url, { try_instant_view: true });
+                        showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
                     }
-                    if (typeof pollPayment === 'function') pollPayment(d.invoice_id || null);
-                } else {
-                    showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
+                } catch (e) {
+                    closeToast();
+                    showToast('❌', 'Network error: ' + e.message, 'OK', '', function () { closeToast() });
                 }
-            } catch (e) {
-                console.error('[API ERROR] POST', urlCall, e);
-                closeToast();
-                showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
-            }
+            });
         }
 
         async function buySolana(amountSol) {
