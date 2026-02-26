@@ -98,6 +98,13 @@ async def init_db():
             total_withdrawn_usd DECIMAL(20,8) DEFAULT 0,
             referrals_count INTEGER DEFAULT 0,
             referred_by BIGINT DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
+
+# ==================== SOLANA WEB3 CONFIG ====================
+SOLANA_TREASURY_PUBKEY = os.getenv("SOLANA_TREASURY_PUBKEY", "RubyBetyPSB1ExY6D2C9v9j9m9n9o9p9q9r9s9t9u")
+SOLANA_NONCES = {} # {nonce: {"uid": uid, "exp": timestamp}}
+
             language TEXT DEFAULT 'pl',
             last_wheel TEXT DEFAULT '',
             last_game TEXT DEFAULT '',
@@ -1010,6 +1017,36 @@ async def verify_solana_transaction(tx_hash, expected_receiver):
         logging.error(f"Solana Verify Error: {e}")
         return None
 
+async def api_solana_config(req):
+    """GET /api/solana-config - Returns public treasury and active network"""
+    return web.json_response({
+        "ok": True, 
+        "treasury": SOLANA_TREASURY_PUBKEY,
+        "network": "mainnet-beta"
+    }, headers=H)
+
+async def api_solana_nonce(req):
+    """POST /api/solana-nonce - Generates a 2-minute expiring single-use nonce for the user"""
+    if req.method == "OPTIONS": return web.Response(headers=H)
+    data = await req.json(); uid = get_uid(data)
+    if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
+    
+    # Generate unique 32-char hex nonce
+    nonce = hashlib.sha256(f"{uid}-{time.time()}-{random.random()}".encode()).hexdigest()[:32]
+    SOLANA_NONCES[nonce] = {
+        "uid": uid,
+        "exp": time.time() + 120 # 2 minute expiry
+    }
+    
+    # Prune expired nonces periodically
+    now = time.time()
+    for n in list(SOLANA_NONCES.keys()):
+        if SOLANA_NONCES[n]["exp"] < now:
+            del SOLANA_NONCES[n]
+            
+    logging.info(f"[SOLANA] Issued nonce {nonce} for UID {uid}")
+    return web.json_response({"ok": True, "nonce": nonce}, headers=H)
+
 async def api_solana_deposit(req):
     """
     Multi-Chain Architecture - Solana Adapter Layer.
@@ -1022,13 +1059,29 @@ async def api_solana_deposit(req):
     if not uid: return web.json_response({"ok": False, "error": "auth"}, headers=H)
     
     tx_hash = data.get("txHash")
+    nonce = data.get("nonce")
     if not tx_hash: return web.json_response({"ok": False, "error": "missing_hash"}, headers=H)
+    if not nonce: return web.json_response({"ok": False, "error": "missing_nonce"}, headers=H)
+    
+    # Nonce Validation (Strict single-use, 2 min expiry)
+    if nonce not in SOLANA_NONCES:
+        return web.json_response({"ok": False, "error": "invalid_nonce"}, headers=H)
+    
+    nonce_data = SOLANA_NONCES[nonce]
+    if nonce_data["uid"] != uid:
+        return web.json_response({"ok": False, "error": "nonce_mismatch"}, headers=H)
+    
+    if nonce_data["exp"] < time.time():
+        del SOLANA_NONCES[nonce]
+        return web.json_response({"ok": False, "error": "nonce_expired"}, headers=H)
+    
+    # Invalidate immediately after first use approach (Operational Safeguard)
+    del SOLANA_NONCES[nonce]
     
     # Wait ~2 seconds to allow the RPC to index the finalized block fully 
     await asyncio.sleep(2)
     
-    casino_sol_wallet = "RubyBetyP..." # Placeholder for actual casino hot wallet
-    lamports = await verify_solana_transaction(tx_hash, casino_sol_wallet)
+    lamports = await verify_solana_transaction(tx_hash, SOLANA_TREASURY_PUBKEY)
     
     if lamports is None:
         # For DEMO purposes, if we don't have a real hot wallet running:
@@ -1548,9 +1601,9 @@ async def api_notifications_read(req):
 
 async def start_api():
     app=web.Application(client_max_size=200*1024*1024)
-    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications)]:
+    for path,handler in [("/api/balance",api_balance),("/api/promos",api_promos),("/api/wheel-status",api_wheel_status),("/api/profile",api_profile),("/api/currencies",api_currencies),("/api/bonuses",api_bonuses),("/api/top-winnings",api_top_winnings),("/api/transactions",api_transactions),("/api/notifications",api_notifications),("/api/solana-config",api_solana_config)]:
         app.router.add_get(path,handler)
-    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read),("/api/solana-deposit",api_solana_deposit)]:
+    for path,handler in [("/api/spin",api_spin),("/api/bonus",api_bonus),("/api/wheel",api_wheel),("/api/crypto-webhook",api_webhook),("/api/set-currency",api_set_currency),("/api/set-language",api_set_language),("/api/create-deposit",api_create_deposit),("/api/stars-webhook",api_stars_webhook),("/api/create-stars-invoice",api_create_stars_invoice),("/api/create-invoice",api_create_crypto_invoice),("/api/create-card-payment",api_create_card_payment),("/api/claim-bonus",api_claim_bonus),("/api/activate-bonus",api_activate_bonus),("/api/withdraw",api_withdraw),("/api/notifications/read",api_notifications_read),("/api/solana-deposit",api_solana_deposit),("/api/solana-nonce",api_solana_nonce)]:
         app.router.add_post(path,handler)
     # Admin API routes (JWT protected)
     # Admin API (GET)
