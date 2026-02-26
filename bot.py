@@ -134,6 +134,12 @@ async def init_db():
             try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
             except: pass
 
+        # Fix existing column types if they were created as TEXT previously
+        for col in ["last_login", "last_bot_interaction"]:
+            try:
+                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
+            except: pass
+
         # === BALANCE_LEDGER — Strict record of all balance mutations ===
         await c.execute('''CREATE TABLE IF NOT EXISTS balance_ledger(
             id SERIAL PRIMARY KEY,
