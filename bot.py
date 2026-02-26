@@ -1,4 +1,5 @@
-import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections, datetime
+import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections
+from datetime import datetime, timezone
 import jwt as pyjwt
 import bcrypt
 from aiogram import Bot, Dispatcher, types, F
@@ -134,32 +135,46 @@ async def init_db():
             try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
             except: pass
 
-        # Fix existing column types if they were created as TEXT previously
-        # This is critical for asyncpg compatibility with datetime objects
+        # === A-LEVEL PRODUCTION MIGRATIONS ===
+        # Resilient conversion from TEXT back to TIMESTAMPTZ with data cleaning
+        
+        # 1. Cleaning empty strings and invalid values in users table
         for col in ["created_at", "last_login", "last_bot_interaction", "last_activity"]:
             try:
-                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
-                logging.info(f"✅ DB Migration: users.{col} is now TIMESTAMP")
+                # Set empty strings to NULL to avoid cast failures
+                await c.execute(f"UPDATE users SET {col} = NULL WHERE {col} = ''")
+                # Attempt conversion. USING clause is powerful but requires NULLIF as a safety net.
+                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMPTZ USING NULLIF({col}, '')::TIMESTAMPTZ")
+                logging.info(f"✅ DB Hardening: users.{col} migrated to TIMESTAMPTZ")
             except Exception as e:
-                if "already" not in str(e).lower() and "column" not in str(e).lower():
-                    logging.warning(f"⚠️ DB Migration warning users.{col}: {e}")
+                # If already TIMESTAMPTZ, ignore the error, otherwise fail loudly
+                if "already" not in str(e).lower():
+                    logging.error(f"❌ CRITICAL MIGRATION FAILURE [users.{col}]: {e}")
+                    raise 
 
-        # user_bonuses table
-        for col in ["claimed_at", "expires_at"]:
+        # 2. user_bonuses table cleanup
+        for col in ["claimed_at", "expires_at", "created_at"]:
             try:
-                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
-                logging.info(f"✅ DB Migration: user_bonuses.{col} is now TIMESTAMP")
+                await c.execute(f"UPDATE user_bonuses SET {col} = NULL WHERE {col} = ''")
+                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMPTZ USING NULLIF({col}, '')::TIMESTAMPTZ")
+                logging.info(f"✅ DB Hardening: user_bonuses.{col} migrated to TIMESTAMPTZ")
             except Exception as e:
                 if "already" not in str(e).lower() and "column" not in str(e).lower():
-                    logging.warning(f"⚠️ DB Migration warning user_bonuses.{col}: {e}")
+                    logging.error(f"❌ CRITICAL MIGRATION FAILURE [user_bonuses.{col}]: {e}")
+                    raise
 
-        # admin_users table
+        # 3. admin_users table cleanup
         try:
-            await c.execute(f"ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMP WITH TIME ZONE USING NULLIF(last_login, '')::timestamp with time zone")
-            logging.info(f"✅ DB Migration: admin_users.last_login is now TIMESTAMP")
+            await c.execute("UPDATE admin_users SET last_login = NULL WHERE last_login = ''")
+            await c.execute("ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMPTZ USING NULLIF(last_login, '')::TIMESTAMPTZ")
+            logging.info(f"✅ DB Hardening: admin_users.last_login migrated to TIMESTAMPTZ")
         except Exception as e:
-            if "already" not in str(e).lower() and "column" not in str(e).lower():
-                logging.warning(f"⚠️ DB Migration warning admin_users.last_login: {e}")
+            if "already" not in str(e).lower():
+                logging.error(f"❌ CRITICAL MIGRATION FAILURE [admin_users.last_login]: {e}")
+                raise
+
+        # === DB HEALTH CHECK ===
+        await db_health_check(c)
 
         # === BALANCE_LEDGER — Strict record of all balance mutations ===
         await c.execute('''CREATE TABLE IF NOT EXISTS balance_ledger(
@@ -355,6 +370,9 @@ class DB:
                 row = await conn.fetchrow(nq, *p)
                 return dict(row) if row else None
             else:
+                if logging.getLogger().isEnabledFor(logging.DEBUG):
+                    types = [f"{type(x).__name__}" for x in p]
+                    logging.debug(f"[SQL] {nq} | [TYPES] {types}")
                 await conn.execute(nq, *p)
                 return None
         else: # Acquire a connection from the pool
@@ -378,17 +396,47 @@ class DB:
             async with conn.transaction():
                 yield conn
 
+async def db_health_check(conn=None):
+    """
+    Performs a deep audit of the DB schema to ensure production readiness.
+    Verifies that all critical date columns are TIMESTAMPTZ.
+    """
+    logging.info("🩺 Running DB Health Check...")
+    try:
+        # Check users table
+        columns = await (conn or db.pool).fetch("""
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' 
+            AND column_name IN ('created_at', 'last_login', 'last_bot_interaction', 'last_activity')
+        """)
+        for col in columns:
+            if 'timestamp' not in col['data_type'].lower():
+                logging.error(f"❌ SCHEMA DATA INTEGRITY FAILURE: users.{col['column_name']} is {col['data_type']}, expected TIMESTAMPTZ")
+            else:
+                logging.info(f"✅ users.{col['column_name']} is {col['data_type']}")
+        
+        # Check connection
+        res = await (conn or db.pool).fetchval("SELECT 1")
+        if res == 1:
+            logging.info("✅ DB Connectivity: OK")
+        return True
+    except Exception as e:
+        logging.error(f"❌ DB Health Check failed: {e}")
+        return False
+
 db = DB() # Instantiate the DB class
 
 def _now():
-    return datetime.datetime.now(datetime.timezone.utc)
+    """Returns a timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=False):
     """Создаёт или обновляет пользователя. Сохраняет все TG данные."""
     e = await db("SELECT user_id FROM users WHERE user_id=$1", (int(uid),), one=True)
     if not e:
         await db(
-            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES($1,$2,$3,$4,$5,$6,$7::timestamp,$8::timestamp) ON CONFLICT (user_id) DO NOTHING",
+            "INSERT INTO users(user_id,username,first_name,last_name,tg_language_code,is_premium,created_at,last_bot_interaction) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (user_id) DO NOTHING",
             (int(uid), un, fn, ln, lang_code, 1 if is_prem else 0, _now(), _now())
         )
         # Auto-assign welcome bonuses for new user
@@ -402,6 +450,15 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
     # Sync localized menu button
     await set_user_menu_button(uid, lang_code or 'en')
     return False
+
+async def api_health(req):
+    """GET /api/health - Production health check endpoint."""
+    db_ok = await db_health_check()
+    return json_ok({
+        "status": "healthy" if db_ok else "degraded",
+        "db": "connected" if db_ok else "error",
+        "uptime": int(time.time() - START_TIME)
+    })
 
 async def set_user_menu_button(uid, lang_code):
     """Sets localized menu button for specific user."""
@@ -866,7 +923,7 @@ async def api_auth(req):
         if not u:
             # Auto-register if user doesn't exist but has valid initData
             try:
-                await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7::timestamp,$8::timestamp)",
+                await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
                         (uid, user_data.get("username"), user_data.get("first_name"), user_data.get("last_name"), 
                          bool(user_data.get("is_premium")), user_data.get("language_code"), _now(), _now()))
                 u = await get_user(uid)
@@ -1871,7 +1928,8 @@ async def start_api():
     ]:
         app.router.add_post(path, handler)
     app.router.add_options("/{tail:.*}",opts)
-    app.router.add_get("/health",lambda r:web.json_response({"ok":True}))
+    app.router.add_get("/api/health", api_health)
+    app.router.add_get("/health", api_health)
     runner=web.AppRunner(app); await runner.setup()
     await web.TCPSite(runner,"0.0.0.0",API_PORT).start()
     logging.info(f"🚀 API :{API_PORT}")
