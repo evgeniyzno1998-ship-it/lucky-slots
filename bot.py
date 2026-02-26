@@ -76,44 +76,51 @@ VIP_LEVELS = [
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.xlkjdtfnqzmrblaomfrp:pOy8CePzLBKgNMvB@aws-1-eu-central-1.pooler.supabase.com:5432/postgres")
 db_pool = None
 
+# ==================== SOLANA WEB3 CONFIG ====================
+SOLANA_TREASURY_PUBKEY = os.getenv("SOLANA_TREASURY_PUBKEY", "RubyBetyPSB1ExY6D2C9v9j9m9n9o9p9q9r9s9t9u")
+SOLANA_NONCES = {} # {nonce: {"uid": uid, "exp": timestamp}}
+
 async def init_db():
     global db_pool
     db_pool = await asyncpg.create_pool(DB_URL, min_size=1, max_size=20)
     async with db_pool.acquire() as c:
         # === USERS — основная таблица клиентов ===
-        await c.execute('''CREATE TABLE IF NOT EXISTS users(
-            user_id BIGINT PRIMARY KEY,
-            username TEXT,
-            first_name TEXT,
-            last_name TEXT,
-            tg_language_code TEXT,
-            is_premium INTEGER DEFAULT 0,
-            balance_cents BIGINT DEFAULT 0,
-            free_spins INTEGER DEFAULT 0,
-            total_wagered BIGINT DEFAULT 0,
-            total_won BIGINT DEFAULT 0,
-            total_spins INTEGER DEFAULT 0,
-            biggest_win BIGINT DEFAULT 0,
-            total_deposited_usd DECIMAL(20,8) DEFAULT 0,
-            total_withdrawn_usd DECIMAL(20,8) DEFAULT 0,
-            referrals_count INTEGER DEFAULT 0,
-            referred_by BIGINT DEFAULT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )''')
+        await c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    user_id BIGINT PRIMARY KEY,
 
-# ==================== SOLANA WEB3 CONFIG ====================
-SOLANA_TREASURY_PUBKEY = os.getenv("SOLANA_TREASURY_PUBKEY", "RubyBetyPSB1ExY6D2C9v9j9m9n9o9p9q9r9s9t9u")
-SOLANA_NONCES = {} # {nonce: {"uid": uid, "exp": timestamp}}
+    is_premium INTEGER DEFAULT 0,
+    is_blocked INTEGER DEFAULT 0,
 
-            language TEXT DEFAULT 'pl',
-            last_wheel TEXT DEFAULT '',
-            last_game TEXT DEFAULT '',
-            last_login TEXT DEFAULT '',
-            last_bot_interaction TEXT DEFAULT '',
-            admin_note TEXT DEFAULT '',
-            is_blocked INTEGER DEFAULT 0,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )''')
+    balance_cents BIGINT DEFAULT 0,
+    free_spins INTEGER DEFAULT 0,
+
+    total_wagered BIGINT DEFAULT 0,
+    total_won BIGINT DEFAULT 0,
+    total_spins INTEGER DEFAULT 0,
+    biggest_win BIGINT DEFAULT 0,
+
+    total_deposited_usd DECIMAL(20,8) DEFAULT 0,
+    total_withdrawn_usd DECIMAL(20,8) DEFAULT 0,
+
+    referrals_count INTEGER DEFAULT 0,
+    referred_by BIGINT DEFAULT NULL,
+
+    language TEXT DEFAULT 'pl',
+    last_wheel TEXT DEFAULT '',
+    last_game TEXT DEFAULT '',
+    last_login TEXT DEFAULT '',
+    last_bot_interaction TEXT DEFAULT '',
+    admin_note TEXT DEFAULT '',
+
+    username TEXT,
+    first_name TEXT,
+    last_name TEXT,
+    tg_language_code TEXT,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+""")
         # Migration: add new columns to existing DB
         new_cols = [
             ("free_spins","INTEGER DEFAULT 0"),("total_wagered","BIGINT DEFAULT 0"),
