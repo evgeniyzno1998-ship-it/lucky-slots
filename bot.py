@@ -332,7 +332,6 @@ class DB:
                     await conn.execute(nq, *p)
                     return None
 
-    @asyncio.coroutine
     @contextlib.asynccontextmanager
     async def transaction(self):
         if not self.pool:
