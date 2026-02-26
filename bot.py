@@ -1,4 +1,4 @@
-import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections
+import logging, asyncpg, asyncio, os, json, urllib.parse, hashlib, hmac, random, time, math, uuid, collections, sys, signal
 from datetime import datetime, timezone
 import jwt as pyjwt
 import bcrypt
@@ -931,40 +931,79 @@ def json_err(code: str, message: str = None, status: int = 400, req_id: str = No
 async def opts(r): return web.Response(headers=H)
 
 async def api_auth(req):
-    """POST /api/auth - Strictly validates initData and returns initial AppState."""
+    """
+    POST /api/auth - Strictly validates initData and returns initial AppState.
+    World-class defensive implementation to prevent 'id' KeyError and 500 errors.
+    """
     if req.method == "OPTIONS": return web.Response(headers=H)
+    
+    req_id = str(uuid.uuid4())[:8]
     try:
-        data = await req.json()
+        # 1. Parse JSON body safely
+        try:
+            data = await req.json()
+        except Exception:
+            return json_err("invalid_json", message="Malformed JSON payload", status=400, req_id=req_id)
+            
         init_data = data.get("init_data")
+        if not init_data:
+            return json_err("missing_init_data", message="Missing init_data field", status=400, req_id=req_id)
         
-        # 1. Strict HMAC Validation
+        # 2. Strict HMAC Validation
         params = validate_telegram_init_data(init_data)
         if not params:
-            return json_err("Unauthorized", status=401)
+            return json_err("unauthorized", message="Invalid or expired Telegram signature", status=401, req_id=req_id)
             
-        # 2. Extract User ID from validated params
-        user_json = params.get("user", "{}")
-        user_data = json.loads(user_json)
-        uid = int(user_data.get("id"))
+        # 3. Defensive User Extraction
+        user_json = params.get("user")
+        if not user_json:
+            return json_err("invalid_payload", message="Telegram payload missing 'user' object", status=400, req_id=req_id)
+            
+        try:
+            user_data = json.loads(user_json)
+        except Exception:
+            return json_err("invalid_user_json", message="Failed to parse nested 'user' JSON", status=400, req_id=req_id)
+            
+        # THE FIX: Safely retrieve 'id' and handle potential missing key or None
+        raw_uid = user_data.get("id")
+        if raw_uid is None:
+            logging.warning(f"[AUTH][{req_id}] Payload missing 'id': {user_data}")
+            return json_err("missing_user_id", message="Telegram user object missing 'id'", status=400, req_id=req_id)
+            
+        try:
+            uid = int(raw_uid)
+        except (ValueError, TypeError):
+            return json_err("invalid_user_id", message="User ID must be numeric", status=400, req_id=req_id)
         
+        # 4. Database Interaction (with defensive fallbacks)
         u = await get_user(uid)
         if not u:
             # Auto-register if user doesn't exist but has valid initData
             try:
+                # Use .get() for all user_data fields to prevent KeyErrors during registration
+                username = user_data.get("username", "")
+                first_name = user_data.get("first_name", "User")
+                last_name = user_data.get("last_name", "")
+                is_premium = bool(user_data.get("is_premium", False))
+                lang_code = user_data.get("language_code", "en")
+                
                 await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
-                        (uid, user_data.get("username"), user_data.get("first_name"), user_data.get("last_name"), 
-                         bool(user_data.get("is_premium")), user_data.get("language_code"), _now(), _now()))
+                        (uid, username, first_name, last_name, is_premium, lang_code, _now(), _now()))
                 u = await get_user(uid)
+                if not u: raise Exception("Failed to retrieve user after insert")
             except Exception as e:
-                logging.error(f"[AUTH] Auto-reg failed for {uid}: {e}")
-                return json_err("registration_failed", message="Registration failed")
+                logging.error(f"[AUTH][{req_id}] Auto-reg failed for {uid}: {e}")
+                return json_err("registration_failed", message="Internal registration error", status=500, req_id=req_id)
 
-        # 3. Issue JWT session token
-        token = _jwt_encode(uid, u['username'], role="user", permissions=[])
+        # 5. Session Issuance
+        # Defense: username might be None in DB record if not provided by TG
+        uname = u.get('username') or f"user_{uid}"
+        token = _jwt_encode(uid, uname, role="user", permissions=[])
         
-        # 4. Update last login
+        # 6. Metadata Updates
         await update_last_login(uid)
         
+        # 7. Construct and Return Response Safely
         v = vip_level(u.get('total_wagered', 0))
         cur = u.get('display_currency', 'USD')
         
@@ -972,14 +1011,14 @@ async def api_auth(req):
             "session_token": token,
             "user": {
                 "id": uid,
-                "username": u['username'],
-                "first_name": u['first_name'],
-                "last_name": u['last_name'],
-                "language": u['language'] or 'en',
-                "vip": {"name": v['name'], "icon": v['icon'], "level": v['id']}
+                "username": uname,
+                "first_name": u.get('first_name', ''),
+                "last_name": u.get('last_name', ''),
+                "language": u.get('language') or 'en',
+                "vip": {"name": v.get('name', 'Newbie'), "icon": v.get('icon', '🌱'), "level": v.get('id', 0)}
             },
             "wallet": {
-                "balance": u['balance_cents'],
+                "balance": int(u.get('balance_cents', 0)),
                 "bonus_balance": 0,
                 "currency": cur,
                 "symbol": CURRENCY_SYMBOLS.get(cur, '$'),
@@ -987,8 +1026,8 @@ async def api_auth(req):
             }
         })
     except Exception as e:
-        logging.error(f"[AUTH] Fatal Endpoint Error: {e}")
-        return json_err("server_error", status=500)
+        logging.error(f"[AUTH][{req_id}] Fatal Endpoint Error: {e}", exc_info=True)
+        return json_err("server_error", message="An unexpected authentication error occurred", status=500, req_id=req_id)
 
 async def api_balance(req):
     uid = req['uid']
@@ -2523,35 +2562,111 @@ async def admin_bonus_issue(req):
             
     return json_ok({"assigned_count": count, "notif_sent": notif_count})
 
-async def setup_bot_menu():
-    """Sets the permanent Menu Button next to the attachment clip."""
-    try:
-        # url = WEBAPP_URL
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(text="Play 🎰", web_app=WebAppInfo(url=WEBAPP_URL))
-        )
-        logging.info("✅ Bot Menu Button set globally")
-    except Exception as e:
-        logging.error(f"Failed to set menu button: {e}")
+# ==================== POLLING LOCK & LIFECYCLE ====================
+POLLING_LOCK_ID = 8542792670  # Static ID for bot polling lock
+
+class PostgresPollingLock:
+    """
+    Mutually exclusive distributed lock for bot polling using Postgres Advisory Locks.
+    Ensures zero-downtime rolling updates without TelegramConflictError.
+    """
+    def __init__(self, pool):
+        self.pool = pool
+        self.conn = None
+        self.active = False
+
+    async def acquire(self) -> bool:
+        if not self.pool: return False
+        try:
+            if not self.conn:
+                self.conn = await self.pool.acquire()
+            
+            # Use non-blocking try_advisory_lock
+            locked = await self.conn.fetchval("SELECT pg_try_advisory_lock($1)", POLLING_LOCK_ID)
+            self.active = bool(locked)
+            return self.active
+        except Exception as e:
+            logging.error(f"[LOCK] Failed to acquire lock: {e}")
+            return False
+
+    async def release(self):
+        if self.conn:
+            try:
+                if self.active:
+                    await self.conn.execute("SELECT pg_advisory_unlock($1)", POLLING_LOCK_ID)
+                await self.pool.release(self.conn)
+            except Exception:
+                pass
+            finally:
+                self.conn = None
+                self.active = False
 
 async def main():
     await init_db()
     await start_api()
-    
-    # Set the Menu Button on startup
     await setup_bot_menu()
     
     api_only = os.getenv("API_ONLY", "") == "1" or "--api-only" in sys.argv
     if api_only:
         logging.info("🖥️  Running in API-ONLY mode (no Telegram polling)")
-        while True:
-            await asyncio.sleep(3600)
-    else:
-        await dp.start_polling(bot)
+        while True: await asyncio.sleep(3600)
+    
+    # --- Polling Instance Logic with Distributed Safety ---
+    instance_id = str(uuid.uuid4())[:8]
+    lock = PostgresPollingLock(db_pool)
+    
+    logging.info(f"🚀 Instance [{instance_id}] starting up...")
+    
+    # Graceful Shutdown Handler
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
+    
+    def shutdown():
+        logging.info(f"🛑 Instance [{instance_id}] received shutdown signal.")
+        stop_event.set()
+        
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try: loop.add_signal_handler(sig, shutdown)
+        except NotImplementedError: pass # Windows support
+
+    while not stop_event.is_set():
+        if await lock.acquire():
+            logging.info(f"👑 Instance [{instance_id}] acquired Polling Lock. Starting polling...")
+            try:
+                # Use a task for polling so we can monitor it alongside the stop_event
+                polling_task = asyncio.create_task(dp.start_polling(bot))
+                
+                # Wait until either the polling crashes or a stop signal is received
+                done, pending = await asyncio.wait(
+                    [polling_task, asyncio.create_task(stop_event.wait())],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                
+                for task in pending: task.cancel()
+                if polling_task in done:
+                    # If polling stopped naturally or crashed, break and retry or exit
+                    exc = polling_task.exception()
+                    if exc: logging.error(f"⚠️ Polling crashed: {exc}")
+                    break
+            except Exception as e:
+                logging.error(f"❌ Polling Error: {e}")
+            finally:
+                await lock.release()
+                logging.info(f"🏳️ Instance [{instance_id}] released Polling Lock.")
+        else:
+            # Another instance is already polling (likely the old one during rolling update)
+            logging.info(f"⏳ Instance [{instance_id}] - Polling occupied. Retrying in 10s...")
+            # Wait for 10s or until shutdown
+            try: await asyncio.wait_for(stop_event.wait(), timeout=10.0)
+            except asyncio.TimeoutError: pass
+            
+    logging.info(f"👋 Instance [{instance_id}] terminated.")
 
 if __name__=='__main__':
-    import sys
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
 
