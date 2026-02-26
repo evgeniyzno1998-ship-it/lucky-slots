@@ -1,0 +1,41 @@
+# Environment & Secrets
+.env
+secret.json
+
+# Database
+users.db
+*.sqlite
+*.sql.gz
+*.backup
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# OS/System
+.DS_Store
+Thumbs.db
+
+# Redundant / Backups
+index (*).html
+index_BACKUP_*.html
+bot (*).py
+requirements (*).txt
+texts (*).py
+Procfile.txt
+railway (*).json
+debug.js
+full.js
+failed_script_block.js
+temp*
+*.tmp
+*.log
