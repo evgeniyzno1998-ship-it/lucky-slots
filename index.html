@@ -6542,6 +6542,9 @@
         };
 
         async function apiFetch(path, options = {}) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s Timeout
+
             const token = AppState.ui.sessionToken;
             const headers = {
                 'Content-Type': 'application/json',
@@ -6551,7 +6554,33 @@
 
             // Auto-append API prefix if NOT an absolute URL
             const url = path.startsWith('http') ? path : (API + path);
-            return fetch(url, { ...options, headers });
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                // Auto-clear session on Auth failure
+                if (response.status === 401 || response.status === 403) {
+                    console.warn('[API] Auth failed (401/403). Clearing stale session.');
+                    localStorage.removeItem('ruby_jwt');
+                    AppState.update({ ui: { sessionToken: null } });
+                    // Optional: trigger re-auth or reload if critical
+                }
+
+                return response;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                    console.error(`[API] Timeout reaching ${path}`);
+                } else {
+                    console.error(`[API] Fetch Error:`, err);
+                }
+                throw err;
+            }
         }
 
         /* ================================================================
@@ -8304,7 +8333,11 @@
                     if (btn) btn.style.display = 'block';
                     if (timerEl) timerEl.style.display = 'none';
                 }
-            } catch (e) { }
+                return d;
+            } catch (e) {
+                console.error('API /wheel-status fetch failed:', e);
+                throw e;
+            }
         }
 
         function startWheelCountdown(nextSpinTime) {
@@ -8649,13 +8682,17 @@
 
         async function fetchPromos() {
             try {
-                var res = await apiFetch('/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
+                var res = await apiFetch('/api/promos?' + qs());
                 var data = await res.json();
                 if (data.ok && data.promos) {
                     allPromos = data.promos;
                     renderPromos(activePromoCat);
+                    return data;
                 }
-            } catch (e) { console.error('Error fetching promos:', e) }
+            } catch (e) {
+                console.error('Error fetching promos:', e);
+                throw e;
+            }
         }
 
         function initBonuses() {
@@ -8768,8 +8805,12 @@
                     if (d.active && d.active.length > 0) userBonuses.active = d.active;
                     if (d.history && d.history.length > 0) userBonuses.history = d.history;
                 }
-            } catch (e) { }
-            renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
+                renderActiveBonuses(); renderBonusHistory(); updateBonusBadge();
+                return d;
+            } catch (e) {
+                console.error('API /bonuses fetch failed:', e);
+                throw e;
+            }
         }
 
         function switchBonusTab(tab) {
@@ -9028,28 +9069,18 @@
             try {
                 var r = await apiFetch('/api/balance?' + qs()); var d = await r.json();
                 if (d.ok) {
-                    loadBalanceRetries = 0; // reset retries on success
-                    balance = d.balance; // this is balance_cents coming directly from bot.py
+                    balance = d.balance;
                     freeSpins = d.free_spins || 0;
                     usdtBalance = parseFloat((balance / 100).toFixed(2));
                     AppState.loaded = true;
                     updateBalanceUI(); updateWallet();
                     if (d.vip) updateVIP(d.vip);
-                    return;
+                    return d;
                 }
             } catch (e) {
-                loadBalanceRetries++;
-                console.warn('API /balance fetch failed. Retrying... Attempt:', loadBalanceRetries);
-                /* 
-                 * DELIBERATE CHANGE: We no longer fallback to mock demo balances after 3 retries.
-                 * This was the bug causing users to "lose" their balance display when network flipped briefly.
-                 * The app will patiently keep attempting to load the true state.
-                 */
-                if (loadBalanceRetries > 20) {
-                    console.error('API disconnected for a long period.');
-                }
+                console.error('API /balance fetch failed:', e);
+                throw e;
             }
-            setTimeout(loadBalance, 3000);
         }
 
         /* === WALLET TAB SWITCH (legacy — now using cashier tabs) === */
@@ -9571,8 +9602,12 @@
                 if (d.ok && d.notifications) {
                     userNotifs = d.notifications;
                     updateNotifBadge();
+                    return d;
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.error('API /notifications fetch failed:', e);
+                throw e;
+            }
         }
         function updateNotifBadge() {
             var dot = document.getElementById('notifDot');
@@ -9997,13 +10032,14 @@
 
             /* === INITIAL LOAD === */
             async function initApp() {
-                await loadUserData(); // ensure user data is loaded before rendering
+                // Ensure critical user and game data is loaded
+                await loadUserData();
+
                 initLocale();
                 ALL_GAMES = typeof getGamesConfig === 'function' ? getGamesConfig(T) : [];
                 buildCategories();
                 buildProviders();
                 loadTopWinnings('day');
-                initBonuses();
                 updateLiveDrops();
                 if (typeof buildWalletPackages === 'function') buildWalletPackages();
                 buildGameGrid();
@@ -10012,11 +10048,24 @@
         }
 
         async function loadUserData() {
-            loadBalance();
-            loadNotifications();
-            checkWheel();
-            updateBonusBadge();
-            loadReferral();
+            console.log('[BOOT] Fetching user data in parallel...');
+            const results = await Promise.allSettled([
+                loadBalance(),
+                loadNotifications(),
+                checkWheel(),
+                loadBonuses(),
+                fetchPromos(),
+                // updateBonusBadge is called inside loadBonuses
+            ]);
+
+            // Log any failures for debugging but allow boot to proceed
+            results.forEach((res, i) => {
+                if (res.status === 'rejected') {
+                    console.error(`[BOOT] Task ${i} failed:`, res.reason);
+                }
+            });
+
+            loadReferral(); // synchronous/local
         }
 
         initCarousel();
