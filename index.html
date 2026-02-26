@@ -62,6 +62,20 @@
             --surface-hover: #1a1c22;
         }
 
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
+        }
+
         .hide-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -4401,6 +4415,21 @@
 </head>
 
 <body>
+    <!-- Auth Fallback Overlay -->
+    <div id="authFallback"
+        style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center">
+        <div
+            style="width:80px;height:80px;border-radius:50%;background:rgba(227,30,36,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:24px">
+            <span class="material-symbols-outlined" style="font-size:40px;color:var(--red)">cloud_off</span>
+        </div>
+        <h2 style="font-family:Montserrat,sans-serif;font-weight:900;font-size:24px;margin-bottom:12px">CONNECTION ERROR
+        </h2>
+        <p id="authErrorMsg" style="color:var(--dim);font-size:14px;line-height:1.5;margin-bottom:32px">We couldn't
+            verify your Telegram session. Please try restarting the app.</p>
+        <button onclick="window.location.reload()"
+            style="background:var(--red);color:white;border:none;padding:14px 32px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">RETRY
+            CONNECTION</button>
+    </div>
     <!-- Global SVG Gradients for Slots -->
     <svg class="svg-defs">
         <defs>
@@ -4447,7 +4476,8 @@
             <div class="logo-text">RUBY<span>BET</span></div>
         </div>
         <div class="header-right">
-            <div class="header-bal" onclick="openBalancePopup()" style="display:flex;align-items:center;gap:6px">
+            <div class="header-bal" onclick="AppState.update({ui:{walletOpen:true}})"
+                style="display:flex;align-items:center;gap:6px">
                 <div id="headerBalCrypto"
                     style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);cursor:pointer;transition:all .2s"
                     class="bal-active hover:bg-[rgba(255,255,255,0.1)]">
@@ -4459,6 +4489,35 @@
                     class="material-symbols-outlined">notifications</span>
                 <div class="dot" id="notifDot" style="display:none"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- New Wallet Modal (JetTon Style) -->
+    <div id="walletModal"
+        style="display:none;position:fixed;inset:0;z-index:200;background:#0F1014;flex-direction:column;overflow:hidden">
+        <!-- Modal Header -->
+        <div
+            style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid rgba(255,255,255,0.05)">
+            <button onclick="AppState.update({ui:{walletOpen:false}})"
+                style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,0.05);color:#9ca3af;border:none;cursor:pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <h2 style="font-family:Montserrat,sans-serif;font-weight:900;font-size:18px;letter-spacing:-0.5px;margin:0">
+                CASHIER</h2>
+            <div style="width:40px"></div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div style="display:flex;padding:4px;margin:16px;background:rgba(255,255,255,0.05);border-radius:16px">
+            <button onclick="AppState.update({ui:{activeTab:'deposit'}})" id="tabDeposit"
+                style="flex:1;padding:12px;border:none;border-radius:12px;font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;cursor:pointer;transition:all 0.2s;background:var(--red);color:white">DEPOSIT</button>
+            <button onclick="AppState.update({ui:{activeTab:'withdraw'}})" id="tabWithdraw"
+                style="flex:1;padding:12px;border:none;border-radius:12px;font-family:Montserrat,sans-serif;font-weight:800;font-size:13px;cursor:pointer;transition:all 0.2s;background:transparent;color:#6b7280">WITHDRAW</button>
+        </div>
+
+        <!-- Content Area -->
+        <div id="walletContent" style="flex:1;overflow-y:auto;padding:0 16px 40px">
+            <!-- Dynamic Content -->
         </div>
     </div>
 
@@ -6411,6 +6470,312 @@
 
     <script>
         /* ================================================================
+           AppState — Reactive State Management (JetTon Pattern)
+           ================================================================ */
+        const AppState = {
+            user: null,
+            wallet: {
+                balance: 0,
+                bonus_balance: 0,
+                currency: localStorage.getItem('ruby_currency') || 'USD',
+                symbol: '$',
+                rate: 1.0,
+                loading: true
+            },
+            ui: {
+                walletOpen: false,
+                activeTab: 'deposit',
+                selectedMethod: null,
+                paymentStatus: 'idle',
+                solanaStatus: 'loading'
+            },
+            balanceReloading: false,
+            _subs: {},
+
+            // Subscribe to state changes (e.g., 'wallet.balance')
+            subscribe(key, fn) {
+                if (!this._subs[key]) this._subs[key] = [];
+                this._subs[key].push(fn);
+                try {
+                    const val = key.split('.').reduce((o, i) => o[i], this);
+                    fn(val);
+                } catch (e) { }
+            },
+
+            // Selective Deep Update
+            update(updates) {
+                if (updates.wallet) this._deepMerge(this.wallet, updates.wallet);
+                if (updates.ui) this._deepMerge(this.ui, updates.ui);
+
+                Object.keys(updates).forEach(key => {
+                    if (key !== 'wallet' && key !== 'ui' && typeof this[key] !== 'function' && !key.startsWith('_')) {
+                        this[key] = updates[key];
+                    }
+                });
+                this.notifyAll();
+            },
+
+            notifyAll() {
+                Object.keys(this._subs).forEach(key => {
+                    try {
+                        const val = key.split('.').reduce((o, i) => o[i], this);
+                        this._subs[key].forEach(fn => fn(val));
+                    } catch (e) { }
+                });
+            },
+
+            _deepMerge(target, source) {
+                for (const key in source) {
+                    if (source[key] !== null && typeof source[key] === 'object' && key in target) {
+                        this._deepMerge(target[key], source[key]);
+                    } else {
+                        target[key] = source[key];
+                    }
+                }
+                return target;
+            }
+        };
+
+        /* ================================================================
+           AppState Utilities & Reactive Bindings
+           ================================================================ */
+        function formatCurrency(cents) {
+            const val = cents / 100;
+            const cur = AppState.wallet.currency;
+            const symbol = AppState.wallet.symbol;
+            const rate = AppState.wallet.rate;
+            return symbol + (val * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function showAuthFallback(err) {
+            const el = document.getElementById('authFallback');
+            const msg = document.getElementById('authErrorMsg');
+            if (el) el.style.display = 'flex';
+            if (msg && err) {
+                if (err === 'unauthorized') msg.textContent = 'Invalid Telegram session. Please open via official bot.';
+                if (err === 'network_error') msg.textContent = 'Network timeout. Check your connection and retry.';
+            }
+        }
+
+        // Reactive Header Binding
+        AppState.subscribe('wallet.balance', (val) => {
+            if (AppState.wallet.loading) return;
+            const hb = document.getElementById('headerBal');
+            if (hb) hb.textContent = formatCurrency(val);
+        });
+
+        AppState.subscribe('wallet.loading', (loading) => {
+            const hb = document.getElementById('headerBal');
+            if (hb && loading) {
+                hb.innerHTML = '<div style="width:48px;height:16px;background:rgba(255,255,255,0.1);border-radius:4px;animation:pulse 1.5s infinite"></div>';
+            }
+        });
+
+        AppState.subscribe('wallet.currency', (cur) => {
+            const hu = document.getElementById('headerUnit');
+            if (hu) hu.textContent = cur;
+        });
+
+        AppState.subscribe('ui.solanaStatus', (status) => {
+            if (AppState.ui.selectedMethod === 'solana') {
+                const container = document.getElementById('walletContent');
+                if (container) renderSolanaUI(container);
+            }
+        });
+
+        AppState.subscribe('ui.paymentStatus', (status) => {
+            if (AppState.ui.walletOpen) renderWalletContent();
+        });
+
+        AppState.subscribe('ui.walletOpen', (open) => {
+            const el = document.getElementById('walletModal');
+            if (el) el.style.display = open ? 'flex' : 'none';
+            if (open) renderWalletContent();
+        });
+
+        AppState.subscribe('ui.activeTab', (tab) => {
+            const btnDep = document.getElementById('tabDeposit');
+            const btnWd = document.getElementById('tabWithdraw');
+            if (btnDep && btnWd) {
+                if (tab === 'deposit') {
+                    btnDep.style.background = 'var(--red)'; btnDep.style.color = 'white';
+                    btnWd.style.background = 'transparent'; btnWd.style.color = '#6b7280';
+                } else {
+                    btnWd.style.background = 'var(--red)'; btnWd.style.color = 'white';
+                    btnDep.style.background = 'transparent'; btnDep.style.color = '#6b7280';
+                }
+            }
+            renderWalletContent();
+        });
+
+        function renderDepositMethods() {
+            const container = document.getElementById('walletContent');
+            if (!container) return;
+
+            container.innerHTML = `
+                <!-- Primary Method (Solana) -->
+                <div style="margin-bottom:24px">
+                    <div style="font-size:10px;font-weight:800;color:#6b7280;letter-spacing:1px;margin-bottom:12px;text-transform:uppercase">Primary Method</div>
+                    <div onclick="renderMethodUI('solana')" style="background:linear-gradient(135deg,rgba(153,69,255,0.1),rgba(20,241,149,0.1));border:1px solid rgba(20,241,149,0.2);padding:20px;border-radius:20px;display:flex;align-items:center;gap:16px;cursor:pointer">
+                        <div style="width:48px;height:48px;background:#14F195;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#000">
+                            <span class="material-symbols-outlined" style="font-size:28px">account_balance_wallet</span>
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:900;font-size:16px">SOLANA (PHANTOM)</div>
+                            <div style="font-size:11px;color:#14F195;font-weight:700">Instant Deposit • No Fees</div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:#4b5563">chevron_right</span>
+                    </div>
+                </div>
+
+                <!-- Alternative Methods -->
+                <div>
+                    <div style="font-size:10px;font-weight:800;color:#6b7280;letter-spacing:1px;margin-bottom:12px;text-transform:uppercase">Other Methods</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div onclick="renderMethodUI('crypto')" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);padding:16px;border-radius:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer">
+                            <div style="width:32px;height:32px;background:#f59e0b;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#000">
+                                <span class="material-symbols-outlined" style="font-size:18px">currency_bitcoin</span>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;font-size:13px">CRYPTO</div>
+                                <div style="font-size:10px;color:#6b7280">BTC, ETH, TON</div>
+                            </div>
+                        </div>
+                        <div onclick="renderMethodUI('stars')" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);padding:16px;border-radius:18px;display:flex;flex-direction:column;gap:12px;cursor:pointer">
+                            <div style="width:32px;height:32px;background:#0ea5e9;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white">
+                                <span class="material-symbols-outlined" style="font-size:18px">stars</span>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;font-size:13px">TG STARS</div>
+                                <div style="font-size:10px;color:#6b7280">Quick & Simple</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWithdrawUI() {
+            const container = document.getElementById('walletContent');
+            if (container) container.innerHTML = '<div style="padding:40px;text-align:center;color:#6b7280;font-size:13px">Withdrawals are coming soon.</div>';
+        }
+
+        function renderMethodUI(method) {
+            AppState.update({ ui: { selectedMethod: method } });
+            const container = document.getElementById('walletContent');
+            if (method === 'solana') renderSolanaUI(container);
+            // ... more methods later
+        }
+
+        function renderSolanaUI(container) {
+            const status = AppState.ui.solanaStatus;
+            const isBlocked = status === 'blocked';
+            const isConnecting = status === 'connecting';
+            const isConnected = status === 'connected';
+            const isVerifying = status === 'verifying';
+            const isSuccess = status === 'success';
+            const isFailed = status === 'failed';
+
+            let innerHtml = '';
+            if (isBlocked) {
+                innerHtml = `
+                    <div style="color:#ef4444;background:rgba(239,68,68,0.1);padding:16px;border-radius:12px;font-size:12px;font-weight:700">
+                        System temporarily unavailable. Please use alternative methods.
+                    </div>
+                `;
+            } else {
+                innerHtml = `
+                    <div style="width:64px;height:64px;background:#14F195;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#000;margin-bottom:8px">
+                        <span class="material-symbols-outlined" style="font-size:32px">${isSuccess ? 'check_circle' : 'account_balance_wallet'}</span>
+                    </div>
+                    <h3 style="font-weight:900;font-size:20px;margin:0">${isSuccess ? 'DEPOSIT SUCCESS' : 'SOLANA DEPOSIT'}</h3>
+                    <p style="color:#6b7280;font-size:13px;margin:0">
+                        ${isSuccess ? 'Your balance will update momentarily.' : 'Connect your Phantom wallet to deposit SOL instantly.'}
+                    </p>
+                    
+                    ${!isConnected && !isSuccess ? `
+                        <button onclick="SolanaModule.connect()" ${isConnecting ? 'disabled' : ''} style="width:100%;background:#14F195;color:#000;border:none;padding:16px;border-radius:14px;font-weight:900;font-size:15px;margin-top:12px;cursor:pointer;opacity:${isConnecting ? 0.6 : 1}">
+                            ${isConnecting ? 'CONNECTING...' : 'CONNECT PHANTOM'}
+                        </button>
+                    ` : ''}
+
+                    ${isConnected ? `
+                        <div style="width:100%;margin-top:16px;display:flex;flex-direction:column;gap:12px">
+                            <div style="background:rgba(255,255,255,0.03);padding:12px;border-radius:12px;display:flex;align-items:center;justify-content:space-between">
+                                <span style="font-size:11px;color:#6b7280;font-weight:700">WALLET</span>
+                                <span style="font-size:11px;font-weight:800;font-family:monospace">${SolanaModule.state.publicKey.substring(0, 4)}...${SolanaModule.state.publicKey.slice(-4)}</span>
+                            </div>
+                            <input type="number" id="solAmount" placeholder="Amount (SOL)" step="0.1" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:16px;border-radius:14px;color:white;font-weight:800;outline:none">
+                            <button onclick="SolanaModule.signTransaction(document.getElementById('solAmount').value)" style="width:100%;background:#14F195;color:#000;border:none;padding:16px;border-radius:14px;font-weight:900;font-size:15px;cursor:pointer">
+                                DEPOSIT NOW
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    ${isVerifying ? `
+                         <div style="margin-top:16px;font-weight:800;color:#14F195;animation:pulse 1.5s infinite">VERIFYING ON-CHAIN...</div>
+                    ` : ''}
+                `;
+            }
+
+            container.innerHTML = `
+                <div style="margin-bottom:20px">
+                    <button onclick="AppState.update({ui:{selectedMethod:null}})" style="background:none;border:none;color:#6b7280;display:flex;align-items:center;gap:4px;padding:0;cursor:pointer;font-weight:700;font-size:12px;margin-bottom:16px">
+                        <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span> BACK TO METHODS
+                    </button>
+                    <div style="background:rgba(20,241,149,0.05);border:1px solid rgba(20,241,149,0.1);padding:24px;border-radius:24px;text-align:center">
+                        <div id="solanaInner" style="display:flex;flex-direction:column;align-items:center;gap:16px">
+                            ${innerHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /* ================================================================
+           Boot Sequence (Hardened)
+           ================================================================ */
+        async function boot() {
+            const tg = window.Telegram?.WebApp;
+            const user = tg?.initDataUnsafe?.user;
+
+            if (!user && !P.get('debug')) {
+                showAuthFallback(); return;
+            }
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+                const r = await fetch(API + '/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        init_data: tg.initData,
+                        uid: user?.id,
+                        debug: P.get('debug')
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                const d = await r.json();
+                if (d.ok) {
+                    AppState.update({
+                        user: d.user,
+                        wallet: { ...d.wallet, loading: false }
+                    });
+                    initApp(); // Resume legacy app initialization
+                } else {
+                    showAuthFallback(d.error);
+                }
+            } catch (e) {
+                console.error('[BOOT] Error:', e);
+                showAuthFallback(e.name === 'AbortError' ? 'network_error' : null);
+            }
+        }
+
+        /* ================================================================
            RubyBet Mini App — Full JS (preserving all original game logic)
            ================================================================ */
         /* ================================================================
@@ -6466,6 +6831,7 @@
             updateStatus(s, err) {
                 this.state.status = s;
                 console.log('[SOLANA] Status Change ->', s, err || '');
+                AppState.update({ ui: { solanaStatus: s } });
                 if (window.updateSolanaUI) window.updateSolanaUI();
             },
 
@@ -6690,7 +7056,6 @@
             }
         };
 
-        const AppState = { loaded: false };
         function renderBanners() {
             var el = document.getElementById('heroTrack');
             if (!el) return;
@@ -9521,6 +9886,14 @@
         const oldUpdateBalanceUI = updateBalanceUI;
         updateBalanceUI = function () {
             oldUpdateBalanceUI();
+            // Sync with reactive AppState
+            if (typeof usdtBalance !== 'undefined' && usdtBalance !== null) {
+                AppState.update({ wallet: { balance: usdtBalance * 100 } });
+            }
+            if (typeof starsBalance !== 'undefined' && starsBalance !== null) {
+                AppState.update({ wallet: { bonus_balance: starsBalance } });
+            }
+
             let cb = document.getElementById('crashBal');
             if (cb) {
                 cb.textContent = activeWallet === 'stars' ? starsBalance + ' ⭐' : (usdtBalance !== null ? (usdtBalance * 100).toFixed(2) : '0');
@@ -9577,7 +9950,7 @@
                 if (typeof buildWalletPackages === 'function') buildWalletPackages();
                 buildGameGrid();
             }
-            initApp();
+            boot();
         }
 
         async function loadUserData() {
