@@ -90,6 +90,49 @@ VIP_LEVELS = [
 # ==================== DATABASE ====================
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.xlkjdtfnqzmrblaomfrp:pOy8CePzLBKgNMvB@aws-1-eu-central-1.pooler.supabase.com:5432/postgres")
 db_pool = None
+
+async def ensure_timestamp_column(conn, table: str, column: str):
+    """
+    World-class type-aware idempotent migration handler.
+    Detects column type and safely converts TEXT/VARCHAR to TIMESTAMPTZ.
+    """
+    logging.info(f"🔎 Auditing {table}.{column}...")
+    
+    # 1. Detect current type
+    row = await conn.fetchrow("""
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = $1 AND column_name = $2
+    """, table, column)
+    
+    if not row:
+        logging.debug(f"Column {table}.{column} not found, skipping audit.")
+        return
+
+    current_type = row['data_type'].lower()
+    
+    # 2. Branch Logic
+    if current_type == "timestamp with time zone":
+        logging.info(f"✅ {table}.{column} is already TIMESTAMPTZ.")
+        return
+
+    if current_type in ["text", "character varying"]:
+        logging.info(f"🛠 Migrating {table}.{column} from {current_type} to TIMESTAMPTZ...")
+        
+        # Step A: Clean empty strings safely without triggering casting errors
+        # trim() handles both pure empty strings and strings with spaces
+        await conn.execute(f"UPDATE {table} SET {column} = NULL WHERE {column} IS NOT NULL AND trim({column}) = ''")
+        
+        # Step B: Alter column type with explicit USING clause
+        await conn.execute(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE TIMESTAMPTZ USING NULLIF(trim({column}), '')::TIMESTAMPTZ")
+        
+        logging.info(f"✨ {table}.{column} successfully hardened to TIMESTAMPTZ.")
+    else:
+        # Fail loudly if an unexpected type (like INT) is found where a date should be
+        err = f"❌ CRITICAL: {table}.{column} has unexpected type {current_type}. Migration halted."
+        logging.critical(err)
+        raise RuntimeError(err)
+
 async def init_db():
     global db_pool
     if not db_pool:
@@ -135,43 +178,19 @@ async def init_db():
             try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
             except: pass
 
-        # === A-LEVEL PRODUCTION MIGRATIONS ===
-        # Resilient conversion from TEXT back to TIMESTAMPTZ with data cleaning
+        # === A-LEVEL PRODUCTION MIGRATIONS (TYPE-AWARE) ===
+        # These helpers detect existing types to prevent InvalidDatetimeFormatError loops
         
-        # 1. Cleaning empty strings and invalid values in users table
+        # 1. Users table
         for col in ["created_at", "last_login", "last_bot_interaction", "last_activity"]:
-            try:
-                # Set empty strings to NULL to avoid cast failures
-                await c.execute(f"UPDATE users SET {col} = NULL WHERE {col} = ''")
-                # Attempt conversion. USING clause is powerful but requires NULLIF as a safety net.
-                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMPTZ USING NULLIF({col}, '')::TIMESTAMPTZ")
-                logging.info(f"✅ DB Hardening: users.{col} migrated to TIMESTAMPTZ")
-            except Exception as e:
-                # If already TIMESTAMPTZ, ignore the error, otherwise fail loudly
-                if "already" not in str(e).lower():
-                    logging.error(f"❌ CRITICAL MIGRATION FAILURE [users.{col}]: {e}")
-                    raise 
+            await ensure_timestamp_column(c, "users", col)
 
-        # 2. user_bonuses table cleanup
+        # 2. user_bonuses table
         for col in ["claimed_at", "expires_at", "created_at"]:
-            try:
-                await c.execute(f"UPDATE user_bonuses SET {col} = NULL WHERE {col} = ''")
-                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMPTZ USING NULLIF({col}, '')::TIMESTAMPTZ")
-                logging.info(f"✅ DB Hardening: user_bonuses.{col} migrated to TIMESTAMPTZ")
-            except Exception as e:
-                if "already" not in str(e).lower() and "column" not in str(e).lower():
-                    logging.error(f"❌ CRITICAL MIGRATION FAILURE [user_bonuses.{col}]: {e}")
-                    raise
+            await ensure_timestamp_column(c, "user_bonuses", col)
 
-        # 3. admin_users table cleanup
-        try:
-            await c.execute("UPDATE admin_users SET last_login = NULL WHERE last_login = ''")
-            await c.execute("ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMPTZ USING NULLIF(last_login, '')::TIMESTAMPTZ")
-            logging.info(f"✅ DB Hardening: admin_users.last_login migrated to TIMESTAMPTZ")
-        except Exception as e:
-            if "already" not in str(e).lower():
-                logging.error(f"❌ CRITICAL MIGRATION FAILURE [admin_users.last_login]: {e}")
-                raise
+        # 3. admin_users table
+        await ensure_timestamp_column(c, "admin_users", "last_login")
 
         # === DB HEALTH CHECK ===
         await db_health_check(c)
