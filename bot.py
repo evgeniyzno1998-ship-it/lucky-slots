@@ -135,10 +135,31 @@ async def init_db():
             except: pass
 
         # Fix existing column types if they were created as TEXT previously
-        for col in ["last_login", "last_bot_interaction"]:
+        # Users table
+        for col in ["created_at", "last_login", "last_bot_interaction", "last_activity"]:
             try:
-                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING NULLIF({col}, '')::timestamp with time zone")
-            except: pass
+                await c.execute(f"ALTER TABLE users ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING {col}::timestamp with time zone")
+                logging.info(f"✅ DB Migration: users.{col} is now TIMESTAMP")
+            except Exception as e:
+                if "already" not in str(e).lower() and "column" not in str(e).lower():
+                    logging.warning(f"⚠️ DB Migration warning users.{col}: {e}")
+
+        # user_bonuses table
+        for col in ["claimed_at", "expires_at"]:
+            try:
+                await c.execute(f"ALTER TABLE user_bonuses ALTER COLUMN {col} TYPE TIMESTAMP WITH TIME ZONE USING {col}::timestamp with time zone")
+                logging.info(f"✅ DB Migration: user_bonuses.{col} is now TIMESTAMP")
+            except Exception as e:
+                if "already" not in str(e).lower() and "column" not in str(e).lower():
+                    logging.warning(f"⚠️ DB Migration warning user_bonuses.{col}: {e}")
+
+        # admin_users table
+        try:
+            await c.execute(f"ALTER TABLE admin_users ALTER COLUMN last_login TYPE TIMESTAMP WITH TIME ZONE USING last_login::timestamp with time zone")
+            logging.info(f"✅ DB Migration: admin_users.last_login is now TIMESTAMP")
+        except Exception as e:
+            if "already" not in str(e).lower() and "column" not in str(e).lower():
+                logging.warning(f"⚠️ DB Migration warning admin_users.last_login: {e}")
 
         # === BALANCE_LEDGER — Strict record of all balance mutations ===
         await c.execute('''CREATE TABLE IF NOT EXISTS balance_ledger(
@@ -226,10 +247,10 @@ async def init_db():
             progress DECIMAL(20,8) DEFAULT 0,
             max_progress DECIMAL(20,8) DEFAULT 0,
             vip_tag TEXT DEFAULT '',
-            expires_at TEXT DEFAULT '',
+            expires_at TIMESTAMP WITH TIME ZONE,
             status TEXT DEFAULT 'active',
             badge TEXT DEFAULT '',
-            claimed_at TEXT DEFAULT '',
+            claimed_at TIMESTAMP WITH TIME ZONE,
             related_tx_hash TEXT DEFAULT '',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -283,7 +304,7 @@ async def init_db():
             permissions TEXT DEFAULT '[]',
             is_active INTEGER DEFAULT 1,
             created_by INTEGER DEFAULT NULL,
-            last_login TEXT DEFAULT '',
+            last_login TIMESTAMP WITH TIME ZONE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )''')
         
