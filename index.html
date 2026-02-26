@@ -7,6 +7,8 @@
     <title>RubyBet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.87.0/lib/index.iife.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
     <script src="casino_math.js"></script>
     <script>
         tailwind.config = {
@@ -4447,16 +4449,10 @@
         <div class="header-right">
             <div class="header-bal" onclick="openBalancePopup()" style="display:flex;align-items:center;gap:6px">
                 <div id="headerBalCrypto"
-                    style="display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all .15s"
-                    class="bal-active">
-                    <span style="font-size:12px">💵</span>
-                    <span id="headerBal" style="font-weight:800;font-size:13px">...</span>
-                </div>
-                <div style="width:1px;height:16px;background:var(--border)"></div>
-                <div id="headerBalStars"
-                    style="display:flex;align-items:center;gap:3px;padding:4px 8px;border-radius:8px;cursor:pointer;transition:all .15s">
-                    <span style="font-size:12px">⭐</span>
-                    <span id="headerBalStarsVal" style="font-weight:800;font-size:13px">0</span>
+                    style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);cursor:pointer;transition:all .2s"
+                    class="bal-active hover:bg-[rgba(255,255,255,0.1)]">
+                    <span style="font-size:14px">💵</span>
+                    <span id="headerBal" style="font-weight:800;font-size:14px;letter-spacing:-0.5px"></span>
                 </div>
             </div>
             <div class="header-notif" onclick="openNotifPopup()"><span
@@ -5308,26 +5304,19 @@
             <!-- Wallet Content -->
             <div class="flex-1 overflow-y-auto px-5 pb-24 hide-scrollbar">
 
-                <!-- Dual Balance Switcher (Improved 디자인) -->
-                <div class="grid grid-cols-2 gap-3 mb-6 mt-4">
-                    <div onclick="switchActiveWallet('usdt')" id="cashierUsdtCard"
-                        class="relative overflow-hidden p-4 rounded-xl border border-gray-800 bg-[#15171b] transition-all cursor-pointer">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-lg">💵</span>
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">USDT</span>
+                <!-- Unified Balance Display -->
+                <div class="mb-6 mt-4">
+                    <div
+                        class="relative overflow-hidden p-5 rounded-2xl border border-gray-800 bg-gradient-to-br from-[#1a1c22] to-[#121418] flex items-center justify-between">
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">TOTAL
+                                BALANCE</div>
+                            <div class="text-2xl font-black text-white tracking-tight flex items-baseline gap-1"
+                                id="wBalAmount">
+                                0.00
+                            </div>
                         </div>
-                        <div class="text-xl font-bold text-white tracking-tight" id="wBalAmount">0.00</div>
-                        <div class="absolute -right-2 -bottom-2 opacity-5 text-4xl transform rotate-12">USDT</div>
-                    </div>
-
-                    <div onclick="switchActiveWallet('stars')" id="cashierStarsCard"
-                        class="relative overflow-hidden p-4 rounded-xl border border-yellow-900/30 bg-[#15171b] transition-all cursor-pointer">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-lg">⭐</span>
-                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">STARS</span>
-                        </div>
-                        <div class="text-xl font-bold text-yellow-500 tracking-tight" id="wStarsAmount">0</div>
-                        <div class="absolute -right-2 -bottom-2 opacity-5 text-4xl transform rotate-12">STARS</div>
+                        <div class="text-4xl opacity-10 transform rotate-12">💵</div>
                     </div>
                 </div>
 
@@ -5447,6 +5436,45 @@
                                 <span>Max</span>
                                 <span class="text-[8px] font-normal text-gray-500 mt-0.5">5000</span>
                             </button>
+                        </div>
+                        <div id="depositSolanaSection" class="hidden">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Solana Deposit
+                                </h3>
+                                <div id="solanaNetworkBadge"
+                                    class="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                                    Mainnet-Beta
+                                </div>
+                            </div>
+                            <div class="bg-[#1a1c22] border border-gray-800/50 rounded-2xl p-4 mb-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Wallet
+                                        Status</span>
+                                    <span id="solanaStatus"
+                                        class="text-[10px] font-black uppercase tracking-tighter text-gray-600">Disconnected</span>
+                                </div>
+                                <div id="solanaAddressBlock" class="hidden">
+                                    <div class="text-[9px] text-gray-600 uppercase font-bold mb-1" id="solanaAddrLabel">
+                                        Your Address</div>
+                                    <div id="solanaPubKey"
+                                        class="text-[11px] text-white font-mono break-all bg-black/20 p-2 rounded-lg border border-white/5">
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="position:relative;margin-bottom:8px">
+                                <input type="number" id="depAmtSolana" placeholder="0.00" oninput="updateMainDepBtn()"
+                                    style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
+                                    onfocus="this.style.borderColor='#14f195';this.style.boxShadow='0 0 15px rgba(20,241,149,0.2)'"
+                                    onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                                <div
+                                    style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:#14f195;background:rgba(20,241,149,0.05);padding:4px 8px;border-radius:8px;font-size:12px">
+                                    SOL</div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-400 mb-6 px-1">
+                                <span>Min limit: <span class="text-white font-bold">0.05 SOL</span></span>
+                                <span>Est. Fee: <span class="text-green-400 font-bold">~0.000005 SOL</span></span>
+                            </div>
                         </div>
                     </div>
 
@@ -6385,6 +6413,284 @@
         /* ================================================================
            RubyBet Mini App — Full JS (preserving all original game logic)
            ================================================================ */
+        /* ================================================================
+           Solana Module — Isolated Web3 Logic (Phase 3 Hardening)
+           ================================================================ */
+        const SolanaModule = {
+            TREASURY: 'RubyBetyPSB1ExY6D2C9v9j9m9n9o9p9q9r9s9t9u',
+            config: { treasury: null, network: 'mainnet-beta' },
+            state: {
+                status: 'disconnected', // disconnected, connecting, connected, sending, verifying, success, failed, blocked
+                publicKey: null,
+                nonce: null,
+                txHash: null,
+                lastBlockhash: null,
+                lastBlockhashTime: 0
+            },
+
+            async init() {
+                console.log('[SOLANA] Initializing Module...');
+                try {
+                    // 1. Treasury Integrity Sync (Operational Safeguard)
+                    var r = await fetch(API + '/api/solana-config');
+                    var d = await r.json();
+                    if (d.ok) {
+                        this.config.treasury = d.treasury;
+                        this.config.network = d.network;
+                        if (this.config.treasury !== this.TREASURY) {
+                            console.error('[SOLANA] TREASURY INTEGRITY MISMATCH!', this.config.treasury, 'vs', this.TREASURY);
+                            this.state.status = 'blocked';
+                            return;
+                        }
+                    }
+
+                    // 2. Resume Strategy (Operational Safeguard)
+                    var pending = JSON.parse(localStorage.getItem('solana_pending_tx') || 'null');
+                    if (pending && pending.txHash) {
+                        var age = (Date.now() - pending.timestamp) / 1000 / 60;
+                        if (age < 10) {
+                            console.log('[SOLANA] Resuming pending TX:', pending.txHash, 'Age:', Math.round(age), 'm');
+                            this.state.txHash = pending.txHash;
+                            this.state.nonce = pending.nonce;
+                            this.verifyWithBackend(pending.txHash, pending.nonce);
+                        } else {
+                            localStorage.removeItem('solana_pending_tx');
+                        }
+                    }
+
+                    // 3. App Boot Check for Deep Links
+                    this.onAppBootCheck();
+                } catch (e) { console.error('[SOLANA] Init Exception:', e); }
+            },
+
+            updateStatus(s, err) {
+                this.state.status = s;
+                console.log('[SOLANA] Status Change ->', s, err || '');
+                if (window.updateSolanaUI) window.updateSolanaUI();
+            },
+
+            getProvider() {
+                if ('phantom' in window && window.phantom.solana) return window.phantom.solana;
+                if ('solana' in window) return window.solana;
+                return null;
+            },
+
+            async connect() {
+                if (this.state.status === 'blocked') return;
+                this.updateStatus('connecting');
+
+                // Detect if mobile TG WebApp platform
+                const platform = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform) || 'web';
+                const isMobile = ['android', 'ios'].includes(platform);
+                const provider = this.getProvider();
+
+                if (provider && !isMobile) {
+                    try {
+                        const resp = await provider.connect();
+                        this.state.publicKey = resp.publicKey.toString();
+                        this.updateStatus('connected');
+                        if (window.showToast) showToast('👻', 'Phantom Connected!', 'OK');
+                    } catch (e) {
+                        this.updateStatus('failed', e.message);
+                        if (window.showToast) showToast('❌', 'Connection Failed: ' + e.message, 'OK');
+                    }
+                } else {
+                    // Force Deep Link strategy for Mobile or Missing Extension
+                    this.connectViaDeepLink();
+                }
+            },
+
+            async connectViaDeepLink() {
+                console.log('[SOLANA] Preparing Deep Link Connection...');
+                this.updateStatus('connecting');
+                const nonce = await this.getFreshNonce();
+                if (!nonce) return this.updateStatus('failed', 'Nonce request failed');
+
+                const ephemeral = nacl.box.keyPair();
+                // Store ephemeral keys for return decryption
+                localStorage.setItem('solana_ephemeral_secret', nacl.util.encodeBase64(ephemeral.secretKey));
+                localStorage.setItem('solana_ephemeral_nonce', nonce);
+
+                const params = new URLSearchParams({
+                    app_url: window.location.origin,
+                    dapp_encryption_public_key: nacl.util.encodeBase64(ephemeral.publicKey),
+                    redirect_link: `https://t.me/${BOT}?startapp=pconnect`,
+                    cluster: 'mainnet-beta'
+                });
+
+                const url = `https://phantom.app/ul/v1/connect?${params.toString()}`;
+                console.log('[SOLANA] Opening Phantom:', url);
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.openLink(url);
+                } else {
+                    window.open(url, '_blank');
+                }
+            },
+
+            async signTransaction(amountSol) {
+                if (this.state.status === 'blocked') return;
+                this.updateStatus('sending');
+
+                const nonce = await this.getFreshNonce();
+                if (!nonce) return this.updateStatus('failed', 'Nonce Error');
+
+                const provider = this.getProvider();
+                const platform = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.platform) || 'web';
+                const isMobile = ['android', 'ios'].includes(platform);
+
+                if (provider && !isMobile) {
+                    try {
+                        // Desktop/Extension Flow
+                        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+                        const transaction = new solanaWeb3.Transaction().add(
+                            solanaWeb3.SystemProgram.transfer({
+                                fromPubkey: new solanaWeb3.PublicKey(this.state.publicKey),
+                                toPubkey: new solanaWeb3.PublicKey(this.TREASURY),
+                                lamports: amountSol * 1e9,
+                            })
+                        );
+                        transaction.feePayer = new solanaWeb3.PublicKey(this.state.publicKey);
+                        transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+                        const signed = await provider.signAndSendTransaction(transaction);
+                        const txHash = signed.signature;
+
+                        console.log('[SOLANA] Extension TX Sent:', txHash);
+                        // Save for auto-resume
+                        localStorage.setItem('solana_pending_tx', JSON.stringify({
+                            txHash: txHash,
+                            nonce: nonce,
+                            timestamp: Date.now()
+                        }));
+
+                        this.verifyWithBackend(txHash, nonce);
+                    } catch (e) {
+                        this.updateStatus('failed', e.message);
+                    }
+                } else {
+                    // Mobile Deep Link Transaction
+                    const nonce = await this.getFreshNonce();
+                    if (!nonce) return this.updateStatus('failed', 'Nonce Error');
+
+                    const ephemeral = nacl.box.keyPair();
+                    localStorage.setItem('solana_ephemeral_secret', nacl.util.encodeBase64(ephemeral.secretKey));
+                    localStorage.setItem('solana_ephemeral_nonce', nonce);
+
+                    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+                    const transaction = new solanaWeb3.Transaction().add(
+                        solanaWeb3.SystemProgram.transfer({
+                            fromPubkey: new solanaWeb3.PublicKey(this.state.publicKey),
+                            toPubkey: new solanaWeb3.PublicKey(this.TREASURY),
+                            lamports: amountSol * 1e9,
+                        })
+                    );
+                    transaction.feePayer = new solanaWeb3.PublicKey(this.state.publicKey);
+                    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+                    const serializedTransaction = transaction.serialize({ verifySignatures: false });
+                    const payload = {
+                        transaction: solanaWeb3.utils.bs58.encode(serializedTransaction),
+                    };
+
+                    const phantomKey = solanaWeb3.utils.bs58.decode(this.state.session_phantom_key); // Need to store this during connect
+                    const sharedSecret = nacl.box.before(phantomKey, ephemeral.secretKey);
+                    const nonce_enc = nacl.randomBytes(24);
+                    const encryptedPayload = nacl.box.after(
+                        nacl.util.decodeUTF8(JSON.stringify(payload)),
+                        nonce_enc,
+                        sharedSecret
+                    );
+
+                    const params = new URLSearchParams({
+                        dapp_encryption_public_key: solanaWeb3.utils.bs58.encode(ephemeral.publicKey),
+                        nonce: solanaWeb3.utils.bs58.encode(nonce_enc),
+                        redirect_link: `https://t.me/${BOT}?startapp=ptx`,
+                        payload: solanaWeb3.utils.bs58.encode(encryptedPayload),
+                    });
+
+                    window.Telegram.WebApp.openLink(`https://phantom.app/ul/v1/signAndSendTransaction?${params.toString()}`);
+                }
+            },
+
+            async onAppBootCheck() {
+                const tg = window.Telegram.WebApp;
+                const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || "";
+                if (!startParam) return;
+
+                const secretKeyBase64 = localStorage.getItem('solana_ephemeral_secret');
+                if (!secretKeyBase64) return;
+                const secretKey = nacl.util.decodeBase64(secretKeyBase64);
+
+                // Phantom returns are usually appended to the redirect_link.
+                // If it came back via start_param, it's likely pconnect_... or ptx_...
+                try {
+                    if (startParam.startsWith('pconnect_')) {
+                        const parts = startParam.split('_');
+                        // Expecting pconnect_data_nonce_phantomkey
+                        const data = solanaWeb3.utils.bs58.decode(parts[1]);
+                        const nonce = solanaWeb3.utils.bs58.decode(parts[2]);
+                        const phantomKey = solanaWeb3.utils.bs58.decode(parts[3]);
+
+                        const decrypted = nacl.box.open(data, nonce, phantomKey, secretKey);
+                        if (decrypted) {
+                            const payload = JSON.parse(nacl.util.encodeUTF8(decrypted));
+                            this.state.publicKey = payload.public_key;
+                            this.updateStatus('connected');
+                            if (window.showToast) showToast('✅', 'Phantom Connected!', 'OK');
+                        }
+                    } else if (startParam.startsWith('ptx_')) {
+                        const parts = startParam.split('_');
+                        const data = solanaWeb3.utils.bs58.decode(parts[1]);
+                        const nonce = solanaWeb3.utils.bs58.decode(parts[2]);
+                        const phantomKey = solanaWeb3.utils.bs58.decode(parts[3]);
+
+                        const decrypted = nacl.box.open(data, nonce, phantomKey, secretKey);
+                        if (decrypted) {
+                            const payload = JSON.parse(nacl.util.encodeUTF8(decrypted));
+                            const txHash = payload.signature;
+                            const storedNonce = localStorage.getItem('solana_ephemeral_nonce');
+                            this.verifyWithBackend(txHash, storedNonce);
+                        }
+                    }
+                } catch (e) { console.error('[SOLANA] Decrypt Error:', e); }
+            },
+
+            async getFreshNonce() {
+                try {
+                    var r = await fetch(API + '/api/solana-nonce', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(auth())
+                    });
+                    var d = await r.json();
+                    if (d.ok) return d.nonce;
+                } catch (e) { console.error('[SOLANA] Nonce Fetch Error:', e); }
+                return null;
+            },
+
+            async verifyWithBackend(txHash, nonce) {
+                this.updateStatus('verifying');
+                try {
+                    var r = await fetch(API + '/api/solana-deposit', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(Object.assign({}, auth(), { txHash: txHash, nonce: nonce }))
+                    });
+                    var d = await r.json();
+                    if (d.ok) {
+                        this.updateStatus('success');
+                        localStorage.removeItem('solana_pending_tx');
+                        if (window.showToast) showToast('🎉', 'Solana Deposit Confirmed!', 'OK');
+                        if (window.loadBalance) loadBalance();
+                    } else {
+                        this.updateStatus('failed', d.error);
+                        if (window.showToast) showToast('❌', d.error || 'Verification Failed', 'OK');
+                    }
+                } catch (e) {
+                    this.updateStatus('failed', e.message);
+                }
+            }
+        };
+
+        const AppState = { loaded: false };
         function renderBanners() {
             var el = document.getElementById('heroTrack');
             if (!el) return;
@@ -7920,7 +8226,7 @@
 
         async function fetchPromos() {
             try {
-                var res = await fetch(API_BASE + '/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
+                var res = await fetch(API + '/api/promos?uid=' + UID + '&init_data=' + encodeURIComponent(Telegram.WebApp.initData));
                 var data = await res.json();
                 if (data.ok && data.promos) {
                     allPromos = data.promos;
@@ -8263,10 +8569,12 @@
             var hu = document.getElementById('headerUnit');
 
             if (hb) {
-                if (usdtBalance !== null && usdtBalance !== undefined) {
+                if (!AppState.loaded) {
+                    hb.innerHTML = '<div style="width:36px;height:14px;background:rgba(255,255,255,0.1);border-radius:4px;animation:pulse 1.5s infinite"></div>';
+                } else if (usdtBalance !== null && usdtBalance !== undefined) {
                     hb.textContent = displayCurrency === 'USDT' ? usdtBalance.toFixed(2) : formatCurrency(usdtBalance);
                 } else {
-                    hb.textContent = '...';
+                    hb.textContent = '0.00';
                 }
             }
             if (hu) hu.textContent = displayCurrency;
@@ -8301,6 +8609,7 @@
                     balance = d.balance; // this is balance_cents coming directly from bot.py
                     freeSpins = d.free_spins || 0;
                     usdtBalance = parseFloat((balance / 100).toFixed(2));
+                    AppState.loaded = true;
                     updateBalanceUI(); updateWallet();
                     if (d.vip) updateVIP(d.vip);
                     return;
@@ -8355,6 +8664,9 @@
             if (tab === 'history') loadTransactionHistory();
             if (tab === 'withdraw') updateWithdrawInfo();
         }
+
+        // Initialize Solana Module after basic definitions
+        setTimeout(() => SolanaModule.init(), 100);
 
         function switchActiveWallet(w) {
             // Deprecated: UI no longer toggles between distinct Star/USDT internal wallets, 
@@ -8415,17 +8727,31 @@
             if (amt < 5) { showToast('❌', 'Minimum withdrawal: $5.00', 'OK', '', function () { closeToast() }); return; }
             if (amt > usdtBalance) { showToast('❌', 'Insufficient balance', 'OK', '', function () { closeToast() }); return; }
 
+            var url = API + '/api/withdraw';
+            console.log('[API CALL] POST', url);
             try {
                 showToast('⏳', 'Processing withdrawal...', '⏳', '', null);
-                var r = await fetch(API + '/api/withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
-                var d = await r.json(); closeToast();
+                var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({}, auth(), { amount: amt, method: withdrawMethod })) });
+                console.log('[API RESPONSE] POST', url, 'Status:', r.status);
+                var text = await r.text();
+                console.log('[API RESPONSE BODY]', text);
+                closeToast();
+
+                if (!r.ok) {
+                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
+                    return;
+                }
+                var d = JSON.parse(text);
                 if (d.ok) {
                     showToast('✅', 'Withdrawal request submitted! ' + (withdrawMethod === 'crypto' ? '$' + amt.toFixed(2) : amt + ' ⭐'), 'OK', '', function () { closeToast() });
                     loadBalance();
                 } else {
                     showToast('❌', d.error || 'Withdrawal failed', 'OK', '', function () { closeToast() });
                 }
-            } catch (e) { closeToast(); showToast('❌', 'Network error', 'OK', '', function () { closeToast() }); }
+            } catch (e) {
+                console.error('[API ERROR] POST', url, e);
+                closeToast(); showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
+            }
         }
 
         /* === TRANSACTION HISTORY === */
@@ -8567,23 +8893,66 @@
             else buyCrypto(null, amt);
         };
 
+        window.updateSolanaUI = function () {
+            var st = document.getElementById('solanaStatus');
+            var addrBlock = document.getElementById('solanaAddressBlock');
+            var pubKeyEl = document.getElementById('solanaPubKey');
+            if (!st) return;
+
+            const s = SolanaModule.state.status;
+            st.textContent = s.toUpperCase();
+
+            if (s === 'connected') st.className = 'text-[10px] font-black uppercase tracking-tighter text-green-400';
+            else if (s === 'blocked' || s === 'failed') st.className = 'text-[10px] font-black uppercase tracking-tighter text-red-500';
+            else st.className = 'text-[10px] font-black uppercase tracking-tighter text-gray-600';
+
+            if (SolanaModule.state.publicKey) {
+                if (addrBlock) addrBlock.classList.remove('hidden');
+                if (pubKeyEl) pubKeyEl.textContent = SolanaModule.state.publicKey;
+            } else {
+                if (addrBlock) addrBlock.classList.add('hidden');
+            }
+
+            if (payMethod === 'solana') updateMainDepBtn();
+        };
+
         window.updateMainDepBtn = function () {
             var isStars = payMethod === 'stars';
-            var inputId = isStars ? 'depAmtStars' : 'depAmtCrypto';
-            var min = isStars ? 50 : 1.00;
-            var max = isStars ? 50000 : 10000;
-            var val = parseFloat(document.getElementById(inputId).value) || 0;
+            var isSolana = payMethod === 'solana';
+            var inputId = isStars ? 'depAmtStars' : (isSolana ? 'depAmtSolana' : 'depAmtCrypto');
+            var min = isStars ? 50 : (isSolana ? 0.05 : 1.00);
+            var max = isStars ? 50000 : (isSolana ? 100 : 10000);
+            var valInput = document.getElementById(inputId);
+            var val = valInput ? (parseFloat(valInput.value) || 0) : 0;
             var btn = document.getElementById('mainDepositBtn');
+
             if (btn) {
+                if (isSolana) {
+                    const s = SolanaModule.state.status;
+                    if (s === 'disconnected' || s === 'failed') {
+                        btn.className = 'w-full bg-[#14f195] hover:bg-green-400 text-black font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8';
+                        btn.textContent = 'Connect Phantom';
+                        btn.disabled = false;
+                        return;
+                    }
+                    if (s === 'connecting' || s === 'sending' || s === 'verifying') {
+                        btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed';
+                        btn.textContent = s.toUpperCase() + '...';
+                        btn.disabled = true;
+                        return;
+                    }
+                }
+
                 var isValid = val >= min && val <= max;
                 if (isValid) {
-                    btn.classList.remove('bg-[#1a1c22]', 'text-gray-500', 'cursor-not-allowed');
-                    btn.classList.add('bg-[#e62e3d]', 'hover:bg-red-700', 'text-white', 'shadow-lg', 'shadow-red-900/30');
+                    const btnColor = isSolana ? 'bg-[#14f195]' : 'bg-[#e62e3d]';
+                    const hoverColor = isSolana ? 'hover:bg-green-400' : 'hover:bg-red-700';
+                    const textColor = isSolana ? 'text-black' : 'text-white';
+                    btn.className = `w-full ${btnColor} ${hoverColor} ${textColor} font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 shadow-lg`;
                     btn.textContent = 'Confirm Deposit';
                     btn.disabled = false;
                 } else {
-                    btn.classList.add('bg-[#1a1c22]', 'text-gray-500', 'cursor-not-allowed');
-                    btn.classList.remove('bg-[#e62e3d]', 'hover:bg-red-700', 'text-white', 'shadow-lg', 'shadow-red-900/30');
+                    btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed';
                     btn.textContent = 'Enter Valid Amount';
                     if (val === 0) btn.textContent = 'Enter Amount';
                     else if (val < min) btn.textContent = 'Amount too low';
@@ -8594,6 +8963,22 @@
         };
 
         window.confirmDepositDirect = async function () {
+            if (payMethod === 'solana') {
+                const s = SolanaModule.state.status;
+                if (s === 'disconnected' || s === 'failed') {
+                    SolanaModule.connect();
+                    return;
+                }
+                const input = document.getElementById('depAmtSolana');
+                const amt = parseFloat(input ? input.value : 0);
+                if (!amt || amt < 0.05) {
+                    showToast('❌', 'Min deposit 0.05 SOL', 'OK');
+                    return;
+                }
+                SolanaModule.signTransaction(amt);
+                return;
+            }
+
             var isStars = payMethod === 'stars';
             var inputId = isStars ? 'depAmtStars' : 'depAmtCrypto';
             var min = isStars ? 50 : 1.00;
@@ -8614,14 +8999,24 @@
 
         async function buyStars(amount) {
             /* Request invoice link from backend, then open via Telegram WebApp */
+            var url = API + '/api/create-stars-invoice';
+            console.log('[API CALL] POST', url);
             try {
                 showToast('⭐', T.creatingInv, '⏳', '', null);
-                var r = await fetch(API + '/api/create-stars-invoice', {
+                var r = await fetch(url, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), { stars: amount }))
                 });
-                var d = await r.json();
+                console.log('[API RESPONSE] POST', url, 'Status:', r.status);
+                var text = await r.text();
+                console.log('[API RESPONSE BODY]', text);
                 closeToast();
+
+                if (!r.ok) {
+                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
+                    return;
+                }
+                var d = JSON.parse(text);
                 if (d.ok && d.invoice_link) {
                     tg.openInvoice(d.invoice_link, function (status) {
                         if (status === 'paid') {
@@ -8637,23 +9032,34 @@
                     showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
                 }
             } catch (e) {
+                console.error('[API ERROR] POST', url, e);
                 closeToast();
-                showToast('❌', 'Network error', 'OK', '', function () { closeToast() });
+                showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
             }
         }
 
         async function buyCrypto(coins, price) {
+            var urlCall = API + '/api/create-invoice';
+            console.log('[API CALL] POST', urlCall);
             try {
                 showToast('💎', T.creatingCrypto, '⏳', '', null);
-                var r = await fetch(API + '/api/create-invoice', {
+                var r = await fetch(urlCall, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), {
                         coins: coins ? parseInt(coins) : Math.floor(parseFloat(price) * 100),
                         amount: parseFloat(price)
                     }))
                 });
-                var d = await r.json();
+                console.log('[API RESPONSE] POST', urlCall, 'Status:', r.status);
+                var text = await r.text();
+                console.log('[API RESPONSE BODY]', text);
                 closeToast();
+
+                if (!r.ok) {
+                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
+                    return;
+                }
+                var d = JSON.parse(text);
                 if (d.ok && d.pay_url) {
                     /* CryptoBot mini_app_invoice_url is a t.me link — open inside Telegram */
                     var url = d.pay_url;
@@ -8668,95 +9074,40 @@
                     showToast('❌', d.error || 'Error creating invoice', 'OK', '', function () { closeToast() });
                 }
             } catch (e) {
+                console.error('[API ERROR] POST', urlCall, e);
                 closeToast();
-                showToast('❌', 'Network error', 'OK', '', function () { closeToast() });
+                showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
             }
         }
 
         async function buySolana(amountSol) {
-            try {
-                const getProvider = () => {
-                    if ('phantom' in window && window.phantom.solana) {
-                        return window.phantom.solana;
-                    }
-                    if ('solana' in window) {
-                        return window.solana;
-                    }
-                    return null;
-                };
-
-                showToast('👻', 'Connecting to Phantom...', '⏳', '', null);
-
-                // If on mobile inside TG WebApp, we might not have the injected provider easily accessible
-                // In a perfect production model we'd deep-link `https://phantom.app/ul/v1/connect...`
-                // Here we attempt standard Web3 Provider model first.
-                var provider = getProvider();
-                if (!provider) {
-                    closeToast();
-                    showToast('⚠️', 'Phantom Wallet not detected! Open in Phantom Browser.', 'OK');
-                    return;
-                }
-
-                const resp = await provider.connect();
-                var senderObj = resp.publicKey; // Phantom Web3 API returns PublicKey
-                if (!senderObj) {
-                    closeToast();
-                    showToast('❌', 'Wallet Connection Failed.', 'OK');
-                    return;
-                }
-
-                showToast('👻', 'Wallet Connected. Please Approve Transaction (Simulated for Demo)...', '⏳');
-
-                // --- MOCK TRANSACTION FOR DEMONSTRATION ---
-                // Since this environment may lack @solana/web3.js payload constructors,
-                // we mock the signed Hash here. In actual prod, we build `new Transaction().add(SystemProgram.transfer(...))`
-                // and call `provider.signAndSendTransaction(tx)`.
-
-                setTimeout(async () => {
-                    var mockPhantomTxHash = '3V2Rkwx' + Math.floor(Math.random() * 9999999999) + 'PhantomDemoHash';
-
-                    // Send to our backend adapter:
-                    var r = await fetch(API + '/api/solana-deposit', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(Object.assign({}, auth(), {
-                            txHash: mockPhantomTxHash,
-                            amountSol: amountSol
-                        }))
-                    });
-
-                    var d = await r.json();
-                    closeToast();
-
-                    if (d.ok) {
-                        // Gamified celebratory micro-interaction
-                        showToast('🎉', 'Deposit Verified! +$' + parseFloat(d.amount_usd).toFixed(2), 'OK', '', function () { closeToast() });
-
-                        // Fire confetti if available
-                        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-                            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                        }
-
-                        loadBalance();
-                    } else {
-                        showToast('❌', d.error || 'Verification Failed', 'OK', '', function () { closeToast() });
-                    }
-                }, 1500); // Simulate network signing delay
-
-            } catch (e) {
-                closeToast();
-                showToast('❌', 'Transaction Cancelled or Failed', 'OK');
+            const s = SolanaModule.state.status;
+            if (s === 'disconnected' || s === 'failed') {
+                SolanaModule.connect();
+                return;
             }
+            SolanaModule.signTransaction(amountSol);
         }
 
         async function buyCard(coins, price) {
+            var url = API + '/api/create-card-payment';
+            console.log('[API CALL] POST', url);
             try {
                 showToast('💳', T.creatingPay, '⏳', '', null);
-                var r = await fetch(API + '/api/create-card-payment', {
+                var r = await fetch(url, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.assign({}, auth(), { coins: parseInt(coins), amount: parseFloat(price) }))
                 });
-                var d = await r.json();
+                console.log('[API RESPONSE] POST', url, 'Status:', r.status);
+                var text = await r.text();
+                console.log('[API RESPONSE BODY]', text);
                 closeToast();
+
+                if (!r.ok) {
+                    showToast('❌', 'HTTP ' + r.status + ' Error', 'OK', '', function () { closeToast() });
+                    return;
+                }
+                var d = JSON.parse(text);
                 if (d.ok && d.pay_url) {
                     /* Open card payment inside Telegram webview */
                     tg.openLink(d.pay_url, { try_instant_view: true });
@@ -8766,8 +9117,9 @@
                     showToast('💳', msg, 'OK', '', function () { closeToast() });
                 }
             } catch (e) {
+                console.error('[API ERROR] POST', url, e);
                 closeToast();
-                showToast('❌', 'Network error', 'OK', '', function () { closeToast() });
+                showToast('❌', 'Critical Catch Error: ' + e.message, 'OK', '', function () { closeToast() });
             }
         }
 
