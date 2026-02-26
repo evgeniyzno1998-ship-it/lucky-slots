@@ -382,38 +382,44 @@ class DB:
     def __init__(self):
         self.pool = None
 
-    async def __call__(self, q, p=(), fetch=False, one=False, conn=None):
+    async def __call__(self, q, p=(), fetch=False, one=False, conn=None, req_id=None):
         if not self.pool and not conn:
-            logging.error("DB pool not initialized and no connection provided!")
+            logging.error(f"[DB_ERR] REQ_ID={req_id or 'N/A'} DB pool not initialized!")
             return None
 
         nq = q
-        # Removed legacy '?' auto-replacement. Now strictly using native '$n' placeholders for PostgreSQL/asyncpg.
-
-        if conn: # Use provided connection (e.g., from a transaction)
-            if fetch:
-                rows = await conn.fetch(nq, *p)
-                return [dict(r) for r in rows] if rows else []
-            elif one:
-                row = await conn.fetchrow(nq, *p)
-                return dict(row) if row else None
-            else:
-                if logging.getLogger().isEnabledFor(logging.DEBUG):
-                    types = [f"{type(x).__name__}" for x in p]
-                    logging.debug(f"[SQL] {nq} | [TYPES] {types}")
-                await conn.execute(nq, *p)
-                return None
-        else: # Acquire a connection from the pool
-            async with self.pool.acquire() as conn:
+        start = time.time()
+        try:
+            if conn: # Use provided connection (e.g., from a transaction)
                 if fetch:
                     rows = await conn.fetch(nq, *p)
-                    return [dict(r) for r in rows] if rows else []
+                    res = [dict(r) for r in rows] if rows else []
                 elif one:
                     row = await conn.fetchrow(nq, *p)
-                    return dict(row) if row else None
+                    res = dict(row) if row else None
                 else:
                     await conn.execute(nq, *p)
-                    return None
+                    res = None
+            else: # Acquire a connection from the pool
+                async with self.pool.acquire() as conn:
+                    if fetch:
+                        rows = await conn.fetch(nq, *p)
+                        res = [dict(r) for r in rows] if rows else []
+                    elif one:
+                        row = await conn.fetchrow(nq, *p)
+                        res = dict(row) if row else None
+                    else:
+                        await conn.execute(nq, *p)
+                        res = None
+            
+            latency = (time.time() - start) * 1000
+            if latency > 500: # Slow query threshold
+                logging.warning(f"🐢 [SLOW_SQL] REQ_ID={req_id or 'N/A'} {latency:.2f}ms | {nq} | ARGS={len(p)}")
+            
+            return res
+        except Exception as e:
+            logging.error(f"❌ [DB_EXCEPTION] REQ_ID={req_id or 'N/A'} ERROR: {e} | SQL: {nq}")
+            raise e
 
     @contextlib.asynccontextmanager
     async def transaction(self):
@@ -481,12 +487,21 @@ async def ensure_user(uid, un=None, fn=None, ln=None, lang_code=None, is_prem=Fa
 
 async def api_health(req):
     """GET /api/health - Production health check endpoint."""
+    req_id = req.get('req_id')
     db_ok = await db_health_check()
+    
+    uptime_sec = time.time() - START_TIME
+    days, rem = divmod(uptime_sec, 86400)
+    hours, rem = divmod(rem, 3600)
+    mins, secs = divmod(rem, 60)
+    
     return json_ok({
         "status": "healthy" if db_ok else "degraded",
         "db": "connected" if db_ok else "error",
-        "uptime": int(time.time() - START_TIME)
-    })
+        "requests_total": TOTAL_REQUESTS,
+        "uptime": f"{int(days)}d {int(hours)}h {int(mins)}m {int(secs)}s",
+        "oracle": ORACLE_STATE.get("source", "unknown")
+    }, req_id=req_id)
 
 async def set_user_menu_button(uid, lang_code):
     """Sets localized menu button for specific user."""
@@ -528,16 +543,27 @@ async def rate_limit_middleware(req, handler):
     if not req.path.startswith('/api/'):
         return await handler(req)
     
-    # Get IP address (handle proxy headers if needed, but req.remote is basic)
     ip = req.remote
     now = time.time()
+    req_id = req.get('req_id', 'N/A')
+    
+    # 1. Standardize Limits
+    LIMITS = {
+        '/api/auth': 10,
+        '/api/withdraw': 5,
+        '/api/create-stars-invoice': 10,
+        '/api/create-invoice': 10
+    }
+    limit = LIMITS.get(req.path, 120)  # Default: 120 req/min
     
     # Clean up old records (> 60 seconds)
     rate_limit_records[ip] = [t for t in rate_limit_records[ip] if now - t < 60]
     
-    # Check limit: 120 requests per minute
-    if len(rate_limit_records[ip]) >= 120:
-        return json_err("too_many_requests", message="Rate limit exceeded. Try again in a minute.", status=429)
+    # Filter by current path if needed, but per-IP global is usually safer.
+    # We'll use per-IP global for simplicity but check the count.
+    if len(rate_limit_records[ip]) >= limit:
+        logging.warning(f"🚨 [RATE_LIMIT] REQ_ID={req_id} IP={ip} PATH={req.path}")
+        return json_err("too_many_requests", message="Rate limit exceeded. Try again in a minute.", status=429, req_id=req_id)
     
     rate_limit_records[ip].append(now)
     return await handler(req)
@@ -569,19 +595,19 @@ async def global_middleware(req, handler):
         logging.error(f"!!! SERVER ERROR !!! REQ_ID={req_id} PATH={req.path} METHOD={req.method} UID={uid} LATENCY={latency:.2f}ms | ERROR: {e}", exc_info=True)
         return json_err("server_error", message=str(e), status=500, req_id=req_id)
 
-async def update_last_login(uid):
+async def update_last_login(uid, req_id=None):
     """Обновляет last_login при каждом входе в миниапп."""
-    await db("UPDATE users SET last_login=$1 WHERE user_id=$2", (_now(), int(uid)))
+    await db("UPDATE users SET last_login=$1 WHERE user_id=$2", (_now(), int(uid)), req_id=req_id)
 
-async def update_last_game(uid, game_name):
+async def update_last_game(uid, game_name, req_id=None):
     """Обновляет последнюю игру в которую играл."""
-    await db("UPDATE users SET last_game=$1 WHERE user_id=$2", (game_name, int(uid)))
+    await db("UPDATE users SET last_game=$1 WHERE user_id=$2", (game_name, int(uid)), req_id=req_id)
 
-async def get_user(uid):
-    return await db("SELECT * FROM users WHERE user_id=$1", (int(uid),), one=True)
+async def get_user(uid, req_id=None):
+    return await db("SELECT * FROM users WHERE user_id=$1", (int(uid),), one=True, req_id=req_id)
 
 # Centralized Atomic Balance Controller
-async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id: str = "") -> dict:
+async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id: str = "", req_id: str = None) -> dict:
     """
     High-load fintech-grade atomic balance update.
     Returns: {"ok": True/False, "balance_after": int, "error": str}
@@ -590,7 +616,7 @@ async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id
     
     # Fast exit for zero delta unless explicitly intended
     if delta_cents == 0:
-        u = await db("SELECT balance_cents FROM users WHERE user_id=$1", (int(uid),), one=True)
+        u = await db("SELECT balance_cents FROM users WHERE user_id=$1", (int(uid),), one=True, req_id=req_id)
         return {"ok": True, "balance_after": u['balance_cents'] if u else 0}
 
     async with db_pool.acquire() as conn:
@@ -605,7 +631,7 @@ async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id
             
             # Prevent negative balance
             if bal_after < 0:
-                logging.warning(f"Failed atomic balance update: {uid} insufficient funds. Has {bal_before}, tried delta {delta_cents}")
+                logging.warning(f"🚨 [BALANCE_LIMIT] REQ_ID={req_id or 'N/A'} uid={uid} insufficient funds. Has {bal_before}, tried delta {delta_cents}")
                 return {"ok": False, "error": "insufficient_funds"}
             
             # 2. Atomic Balance Modification
@@ -617,6 +643,8 @@ async def add_balance(uid: int, delta_cents: int, source_type: str, reference_id
                 "VALUES($1, $2, $3, $4, $5, $6, $7)",
                 int(uid), source_type, delta_cents, bal_before, bal_after, str(reference_id), _now()
             )
+            
+            logging.info(f"💰 [BALANCE_OK] REQ_ID={req_id or 'N/A'} uid={uid} delta={delta_cents} after={bal_after}")
             return {"ok": True, "balance_after": bal_after}
 
 
@@ -902,16 +930,20 @@ async def process_successful_payment(msg: Message):
 
 # ==================== API ====================
 # ==================== RESPONSE HELPERS ====================
-def json_ok(data: dict = None, message: str = None):
-    """Standardized success response: {ok: true, data: {}, message: ''}"""
+def json_ok(data: dict = None, message: str = None, req_id: str = None):
+    """Standardized success response: {ok: true, data: {}, req_id: ''}"""
     payload = {"ok": True, "data": data or {}, "error": None}
     if message: payload["message"] = message
-    return web.json_response(payload, headers=H)
+    if req_id: payload["req_id"] = req_id
+    
+    res = web.json_response(payload, headers=H)
+    if req_id: res.headers['X-Request-Id'] = req_id
+    return res
 
 def json_err(code: str, message: str = None, status: int = 400, req_id: str = None):
-    """Standardized error response: {ok: false, data: {}, error: {code: '', message: '', req_id: ''}}"""
+    """Standardized error response: {ok: false, error: {code: '', message: '', req_id: ''}}"""
     # Always log the error internally
-    logging.warning(f"[API_ERR] REQ_ID={req_id or 'N/A'} {code}: {message or ''}")
+    logging.warning(f"⚠️ [API_ERR] REQ_ID={req_id or 'N/A'} {code}: {message or ''}")
     body = {
         "ok": False,
         "data": {},
@@ -937,7 +969,7 @@ async def api_auth(req):
     """
     if req.method == "OPTIONS": return web.Response(headers=H)
     
-    req_id = str(uuid.uuid4())[:8]
+    req_id = req.get('req_id')
     try:
         # 1. Parse JSON body safely
         try:
@@ -988,11 +1020,11 @@ async def api_auth(req):
                 lang_code = user_data.get("language_code", "en")
                 
                 await db("INSERT INTO users(user_id,username,first_name,last_name,is_premium,tg_language_code,created_at,last_login) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
-                        (uid, username, first_name, last_name, is_premium, lang_code, _now(), _now()))
+                        (uid, username, first_name, last_name, is_premium, lang_code, _now(), _now()), req_id=req_id)
                 u = await get_user(uid)
                 if not u: raise Exception("Failed to retrieve user after insert")
             except Exception as e:
-                logging.error(f"[AUTH][{req_id}] Auto-reg failed for {uid}: {e}")
+                logging.error(f"❌ [AUTH] REQ_ID={req_id} Auto-reg failed for {uid}: {e}")
                 return json_err("registration_failed", message="Internal registration error", status=500, req_id=req_id)
 
         # 5. Session Issuance
@@ -1030,10 +1062,10 @@ async def api_auth(req):
         return json_err("server_error", message="An unexpected authentication error occurred", status=500, req_id=req_id)
 
 async def api_balance(req):
-    uid = req['uid']
+    uid, req_id = req['uid'], req['req_id']
     await update_last_login(uid)
     u=await get_user(uid)
-    if not u: return json_err("user_not_found", status=404)
+    if not u: return json_err("user_not_found", status=404, req_id=req_id)
     v=vip_level(u.get('total_wagered', 0))
     cur = u.get('display_currency', 'USD')
     return json_ok({
@@ -1045,33 +1077,33 @@ async def api_balance(req):
         "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],"biggest":u['biggest_win']},
         "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered']},
         "refs":int(u['referrals_count'])
-    })
+    }, req_id=req_id)
 
 
 async def api_spin(req):
-    uid = req['uid']
+    uid, req_id = req['uid'], req['req_id']
     data = await req.json()
     bet=int(data.get("bet",0))
     dc=data.get("double_chance",False)
     actual_bet=int(bet*1.25) if dc else bet
-    if bet not in(5,10,25,50): return json_err("bad_bet")
+    if bet not in(5,10,25,50): return json_err("bad_bet", req_id=req_id)
     free=data.get("use_free_spin",False); u=await get_user(uid)
     is_free = False
     if free and u['free_spins']>0:
-        await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=$1",(int(uid),))
+        await db("UPDATE users SET free_spins=free_spins-1 WHERE user_id=$1",(int(uid),), req_id=req_id)
         is_free = True
     else:
-        if u['balance_cents']<actual_bet: return json_err("funds", message=str(u['balance_cents']))
-        await add_balance(uid, -actual_bet, 'bet_slots', 'slots_spin')
+        if u['balance_cents']<actual_bet: return json_err("funds", message=str(u['balance_cents']), req_id=req_id)
+        await add_balance(uid, -actual_bet, 'bet_slots', 'slots_spin', req_id=req_id)
     r=base_spin(bet, double_chance=dc)
-    if r["winnings"]>0: await add_balance(uid, r["winnings"], 'win_slots', 'slots_spin_win')
+    if r["winnings"]>0: await add_balance(uid, r["winnings"], 'win_slots', 'slots_spin_win', req_id=req_id)
     u2=await get_user(uid)
     # Record bet in history
     mult = r["winnings"]/bet if bet>0 else 0
     details = f"scatters={r['scatter_count']},bonus={'yes' if r['triggered_bonus'] else 'no'}"
-    await record_bet(uid, "lucky_bonanza", "base_spin", bet, r["winnings"], u2['balance_cents'], mult, is_free=is_free, details=details)
+    await record_bet(uid, "lucky_bonanza", "base_spin", bet, r["winnings"], u2['balance_cents'], mult, is_free=is_free, details=details, req_id=req_id)
     await update_last_game(uid, "lucky_bonanza")
-    return json_ok({**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']})
+    return json_ok({**r,"balance":u2['balance_cents'],"free_spins":u2['free_spins']}, req_id=req_id)
 
 async def api_bonus(req):
     uid = req['uid']
@@ -1095,22 +1127,21 @@ async def api_bonus(req):
     return json_ok({**b,"balance":u2['balance_cents']})
 
 async def api_wheel(req):
-    uid = req['uid']
-    data = await req.json()
+    uid, req_id = req['uid'], req['req_id']
     u=await get_user(uid)
-    if not u: return json_err("user_not_found", status=404)
+    if not u: return json_err("user_not_found", status=404, req_id=req_id)
     last_spin = int(float(u.get('last_wheel', 0))) if u.get('last_wheel') else 0
-    if time.time() - last_spin < 86400: return json_err("done")
+    if time.time() - last_spin < 86400: return json_err("done", req_id=req_id)
     prize=spin_wheel()
-    await db("UPDATE users SET last_wheel=$1 WHERE user_id=$2",(str(int(time.time())),int(uid)))
+    await db("UPDATE users SET last_wheel=$1 WHERE user_id=$2",(str(int(time.time())),int(uid)), req_id=req_id)
     if prize['type']=='coins':
-        await add_balance(uid, prize['value'], 'daily_wheel', 'free_prize')
+        await add_balance(uid, prize['value'], 'daily_wheel', 'free_prize', req_id=req_id)
     else:
-        await db("UPDATE users SET free_spins=free_spins+$1 WHERE user_id=$2",(prize['value'],int(uid)))
+        await db("UPDATE users SET free_spins=free_spins+$1 WHERE user_id=$2",(prize['value'],int(uid)), req_id=req_id)
     u2=await get_user(uid)
     # Record wheel spin in bet_history (free, no wager)
-    await record_bet(uid, "daily_wheel", "wheel_spin", 0, prize['value'] if prize['type']=='coins' else 0, u2['balance_cents'], 0, details=f"prize={prize['type']}:{prize['value']}")
-    return json_ok({"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']})
+    await record_bet(uid, "daily_wheel", "wheel_spin", 0, prize['value'] if prize['type']=='coins' else 0, u2['balance_cents'], 0, details=f"prize={prize['type']}:{prize['value']}", req_id=req_id)
+    return json_ok({"prize":prize,"balance":u2['balance_cents'],"free_spins":u2['free_spins']}, req_id=req_id)
 
 async def api_wheel_status(req):
     uid = req['uid']
