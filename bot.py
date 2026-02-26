@@ -77,6 +77,16 @@ VIP_LEVELS = [
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.xlkjdtfnqzmrblaomfrp:pOy8CePzLBKgNMvB@aws-1-eu-central-1.pooler.supabase.com:5432/postgres")
 db_pool = None
 async def init_db():
+    global db_pool
+    if not db_pool:
+        logging.info("Initializing PostgreSQL pool...")
+        db_pool = await asyncpg.create_pool(
+            DB_URL, 
+            min_size=20, 
+            max_size=100,
+            command_timeout=60.0
+        )
+    db.pool = db_pool
     async with db_pool.acquire() as c:
         # === USERS — main table for all players ===
         await c.execute('''
