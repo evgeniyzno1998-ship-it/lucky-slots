@@ -181,6 +181,7 @@ async def init_db():
             ("balance_cents","BIGINT DEFAULT 0"),  # Unified active balance
             ("admin_note","TEXT DEFAULT ''"),
             ("is_blocked","INTEGER DEFAULT 0"),
+            ("display_currency","TEXT DEFAULT 'USD'"),
         ]
         for col, d in new_cols:
             try: await c.execute(f"ALTER TABLE users ADD COLUMN {col} {d}")
@@ -820,7 +821,7 @@ async def handle_btn(msg: Message):
     u=await get_user(uid); lang=u['language'] if u else 'pl'; bi=await bot.get_me()
     if any(txt==BOT_TEXTS[l]['buy'] for l in BOT_TEXTS): await msg.answer(BOT_TEXTS[lang]['buy_m'], reply_markup=pkgs_kb(lang))
     elif any(txt==BOT_TEXTS[l]['bal'] for l in BOT_TEXTS): 
-        cur = u['display_currency'] if u else 'USD'
+        cur = u.get('display_currency', 'USD') if u else 'USD'
         display_bal = usdt_cents_to_display(u['balance_cents'], cur) if u else 0
         sym = CURRENCY_SYMBOLS.get(cur, '$')
         await msg.answer(f"💰 Balance: {sym}{display_bal:.2f}")
@@ -964,8 +965,8 @@ async def api_auth(req):
         # 4. Update last login
         await update_last_login(uid)
         
-        v = vip_level(u['total_wagered'])
-        cur = u['display_currency'] or 'USD'
+        v = vip_level(u.get('total_wagered', 0))
+        cur = u.get('display_currency', 'USD')
         
         return json_ok({
             "session_token": token,
@@ -992,8 +993,10 @@ async def api_auth(req):
 async def api_balance(req):
     uid = req['uid']
     await update_last_login(uid)
-    u=await get_user(uid); v=vip_level(u['total_wagered'])
-    cur = u['display_currency'] or 'USD'
+    u=await get_user(uid)
+    if not u: return json_err("user_not_found", status=404)
+    v=vip_level(u.get('total_wagered', 0))
+    cur = u.get('display_currency', 'USD')
     return json_ok({
         "balance":int(u['balance_cents']),  
         "display_currency":cur,
@@ -1056,7 +1059,8 @@ async def api_wheel(req):
     uid = req['uid']
     data = await req.json()
     u=await get_user(uid)
-    last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
+    if not u: return json_err("user_not_found", status=404)
+    last_spin = int(float(u.get('last_wheel', 0))) if u.get('last_wheel') else 0
     if time.time() - last_spin < 86400: return json_err("done")
     prize=spin_wheel()
     await db("UPDATE users SET last_wheel=$1 WHERE user_id=$2",(str(int(time.time())),int(uid)))
@@ -1072,15 +1076,18 @@ async def api_wheel(req):
 async def api_wheel_status(req):
     uid = req['uid']
     u=await get_user(uid)
-    last_spin = int(float(u['last_wheel'])) if u.get('last_wheel') else 0
+    if not u: return json_err("user_not_found", status=404)
+    last_spin = int(float(u.get('last_wheel', 0))) if u.get('last_wheel') else 0
     return json_ok({"available":(time.time() - last_spin >= 86400)})
 
 async def api_profile(req):
     uid = req['uid']
-    u=await get_user(uid); v=vip_level(u['total_wagered'])
+    u=await get_user(uid)
+    if not u: return json_err("user_not_found", status=404)
+    v=vip_level(u.get('total_wagered', 0))
     nxt=None
     for l in VIP_LEVELS:
-        if l['min']>u['total_wagered']: nxt=l; break
+        if l['min'] > u.get('total_wagered', 0): nxt=l; break
     # Get recent bets (last 20)
     recent_bets = await db("SELECT game,bet_type,bet_amount,win_amount,profit,multiplier,is_bonus,created_at FROM bet_history WHERE user_id=$1 ORDER BY id DESC LIMIT 20", (int(uid),), fetch=True)
     bets_list = [dict(b) for b in recent_bets] if recent_bets else []
@@ -1098,11 +1105,11 @@ async def api_profile(req):
         "last_login":u['last_login'] or '',"last_game":u['last_game'] or '',
         "registered_at":u['created_at'] or '',
         "language":u['language'] or 'en',
-        "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u['total_wagered'],
+        "vip":{"name":v['name'],"icon":v['icon'],"cb":v['cb'],"wagered":u.get('total_wagered', 0),
                "next":nxt['name'] if nxt else None,"next_at":nxt['min'] if nxt else None},
-        "stats":{"spins":u['total_spins'],"wagered":u['total_wagered'],"won":u['total_won'],
-                 "biggest":u['biggest_win'],"profit":u['total_won']-u['total_wagered'],
-                 "deposited_usd":u['total_deposited_usd'],"withdrawn_usd":u['total_withdrawn_usd']},
+        "stats":{"spins":u.get('total_spins', 0),"wagered":u.get('total_wagered', 0),"won":u.get('total_won', 0),
+                 "biggest":u.get('biggest_win', 0),"profit":u.get('total_won', 0)-u.get('total_wagered', 0),
+                 "deposited_usd":u.get('total_deposited_usd', 0),"withdrawn_usd":u.get('total_withdrawn_usd', 0)},
         "refs":u['referrals_count'],
         "recent_bets":bets_list,
         "recent_payments":pay_list
