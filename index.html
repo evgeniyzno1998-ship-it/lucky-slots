@@ -58,6 +58,7 @@
             --radius-xl: 20px;
             --nav-h: 68px;
             --header-h: 56px;
+            --tg-safe-top: 0px;
             /* Phase 3 Redesign Colors */
             --ruby-red: #e62e3d;
             --bg-darker: #0d0f12;
@@ -481,6 +482,7 @@
             background: var(--bg);
             border-bottom: 1px solid rgba(255, 255, 255, .05);
             padding: 10px 16px;
+            padding-top: calc(var(--tg-safe-top) + 10px);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -7315,6 +7317,17 @@
             ];
         }
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        try { tg.requestFullscreen(); } catch (e) {}
+        function _applyTgInsets() {
+            var top = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top)
+                   || (tg.safeAreaInset && tg.safeAreaInset.top)
+                   || 0;
+            document.documentElement.style.setProperty('--tg-safe-top', top + 'px');
+            document.documentElement.style.setProperty('--header-h', (56 + top) + 'px');
+        }
+        _applyTgInsets();
+        try { tg.onEvent('safeAreaChanged', _applyTgInsets); } catch (e) {}
+        try { tg.onEvent('contentSafeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.setHeaderColor('#121212'); tg.setBackgroundColor('#121212') } catch (e) { }
         const P = new URLSearchParams(location.search);
         const API = P.get('api') || "https://lucky-slots-production.up.railway.app";
