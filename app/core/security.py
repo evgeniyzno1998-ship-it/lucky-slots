@@ -19,7 +19,7 @@ def generate_jwt(payload: dict) -> str:
 def decode_jwt(token: str) -> dict:
     return pyjwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
 
-def validate_telegram_data(init_data: str) -> bool:
+def validate_telegram_data(init_data: str):
     if not settings.BOT_TOKEN:
         return False
     
@@ -38,7 +38,9 @@ def validate_telegram_data(init_data: str) -> bool:
         secret_key = hmac.new("WebAppData".encode(), settings.BOT_TOKEN.encode(), hashlib.sha256).digest()
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
         
-        return hmac.compare_digest(calculated_hash, hash_val)
+        if hmac.compare_digest(calculated_hash, hash_val):
+            return parsed
+        return None
     except Exception as e:
         logging.error(f"Telegram validation error: {e}")
-        return False
+        return None
