@@ -89,3 +89,10 @@ async def process_pre_checkout(pre_checkout_query: types.PreCheckoutQuery):
 async def process_successful_payment(msg: Message):
     # Stars logic here
     pass
+
+def setup_handlers(dp):
+    dp.message.register(cmd_start, Command("start"))
+    dp.message.register(handle_message)
+    dp.callback_query.register(handle_callback)
+    dp.pre_checkout_query.register(process_pre_checkout)
+    dp.message.register(process_successful_payment, F.successful_payment)
