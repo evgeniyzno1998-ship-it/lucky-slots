@@ -72,23 +72,21 @@ async def api_auth(req: web.Request):
         
         return web.json_response({
             "ok": True,
-            "data": {
-                "session_token": token,
-                "user": {
-                    "id": uid,
-                    "username": uname,
-                    "first_name": u['first_name'],
-                    "last_name": u['last_name'],
-                    "language": u['language'] or 'en',
-                    "vip": {"name": v['name'], "icon": v['icon'], "level": 0} # Simplified level per original
-                },
-                "wallet": {
-                    "balance": int(u['balance_cents']),
-                    "bonus_balance": 0,
-                    "currency": cur,
-                    "symbol": config.CURRENCY_SYMBOLS.get(cur, '$'),
-                    "rate": config.CURRENCY_RATES.get(cur, 1.0)
-                }
+            "session_token": token,
+            "user": {
+                "id": uid,
+                "username": uname,
+                "first_name": u['first_name'],
+                "last_name": u['last_name'],
+                "language": u['language'] or 'en',
+                "vip": {"name": v['name'], "icon": v['icon'], "level": 0}
+            },
+            "wallet": {
+                "balance": int(u['balance_cents']),
+                "bonus_balance": 0,
+                "currency": cur,
+                "symbol": config.CURRENCY_SYMBOLS.get(cur, '$'),
+                "rate": config.CURRENCY_RATES.get(cur, 1.0)
             }
         })
     except Exception as e:

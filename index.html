@@ -6900,7 +6900,8 @@
 
             const overlay = document.getElementById('authFallback');
             const msg = document.getElementById('authErrorMsg');
-            if (overlay) {
+            const hasCachedSession = !!localStorage.getItem('ruby_jwt');
+            if (overlay && !hasCachedSession) {
                 overlay.style.display = 'flex';
                 if (msg) msg.textContent = 'RUBYBET: INITIALIZING...';
             }
