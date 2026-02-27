@@ -1,3 +1,4 @@
+from aiohttp import web
 from . import middleware, routes
 
 async def create_app(db_pool):
