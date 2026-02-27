@@ -8567,6 +8567,8 @@
 
         /* === BUILD DYNAMIC CONTENT === */
         function buildCategories() {
+            var catRowEl = document.getElementById('catRow');
+            if (!catRowEl) return;
             var cats = [
                 { icon: 'casino', label: T.slots, screen: 'game' },
                 { icon: 'stream', label: T.live, screen: null },
@@ -8574,7 +8576,7 @@
                 { icon: 'playing_cards', label: T.table, screen: null },
                 { icon: 'favorite', label: '❤️ ' + T.favs, screen: null, filterFav: true }
             ];
-            document.getElementById('catRow').innerHTML = cats.map(function (c, index) {
+            catRowEl.innerHTML = cats.map(function (c, index) {
                 var isActive = index === 0 ? ' active' : '';
                 var onclick = c.filterFav ? 'filterFavorites()' : (c.screen ? 'nav(\'' + c.screen + '\')' : '');
                 return '<div class="cat-item' + isActive + '" onclick="' + onclick + '">'

@@ -4,9 +4,13 @@ import json
 from app.core import security
 
 def json_ok(data: dict = None, message: str = None, req_id: str = None):
-    payload = {"ok": True, "data": data or {}, "error": None}
-    if message: payload["message"] = message
-    if req_id: payload["req_id"] = req_id
+    payload = {"ok": True}
+    if data:
+        payload.update(data)
+    if message:
+        payload["message"] = message
+    if req_id:
+        payload["req_id"] = req_id
     return web.json_response(payload)
 
 def json_err(code: str, message: str = None, status: int = 400, req_id: str = None):
