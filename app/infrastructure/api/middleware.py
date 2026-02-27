@@ -5,14 +5,25 @@ from aiohttp import web
 from app.core import security
 from app.core.responses import json_err
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '3600',
+}
+
 @web.middleware
 async def global_middleware(req, handler):
     req_id = str(uuid.uuid4())
     req['req_id'] = req_id
     start = time.time()
-    
+
+    if req.method == 'OPTIONS':
+        return web.Response(status=200, headers=CORS_HEADERS)
+
     try:
         res = await handler(req)
+        res.headers.update(CORS_HEADERS)
         latency = (time.time() - start) * 1000
         logging.info(f"🌐 [API] {req.method} {req.path} | {res.status} | {latency:.2f}ms | REQ_ID={req_id}")
         return res
