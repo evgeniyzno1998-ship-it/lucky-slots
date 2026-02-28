@@ -482,11 +482,11 @@
             background: var(--bg);
             border-bottom: 1px solid rgba(255, 255, 255, .05);
             padding: 10px 16px;
-            padding-top: calc(var(--tg-safe-top) + 10px);
+            padding-top: calc(env(safe-area-inset-top) + var(--tg-safe-top, 0px) + 10px);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: var(--header-h);
+            min-height: var(--header-h);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
@@ -4481,7 +4481,7 @@
             <div class="logo-text">RUBY<span>BET</span></div>
         </div>
         <div class="header-right">
-            <div class="header-bal" onclick="AppState.update({ui:{walletOpen:true}})"
+            <div class="header-bal" onclick="openBalancePopup()"
                 style="display:flex;align-items:center;gap:6px">
                 <div id="headerBalCrypto"
                     style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);cursor:pointer;transition:all .2s"
@@ -7319,28 +7319,27 @@
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
         try { tg.requestFullscreen(); } catch (e) {}
         function _applyTgInsets() {
-            var top = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top)
-                   || (tg.safeAreaInset && tg.safeAreaInset.top)
-                   || 0;
-            if (top > 0) {
-                document.documentElement.style.setProperty('--tg-safe-top', top + 'px');
-                document.documentElement.style.setProperty('--header-h', (56 + top) + 'px');
+            // Try Telegram JS API (Bot API 8.0+)
+            var jsTop = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top)
+                     || (tg.safeAreaInset && tg.safeAreaInset.top)
+                     || 0;
+            if (jsTop > 0) {
+                document.documentElement.style.setProperty('--tg-safe-top', jsTop + 'px');
+            }
+            // Always sync --header-h to actual rendered header height
+            // (CSS env(safe-area-inset-top) handles device notch automatically)
+            var hdr = document.getElementById('mainHeader');
+            if (hdr && hdr.offsetHeight > 0) {
+                document.documentElement.style.setProperty('--header-h', hdr.offsetHeight + 'px');
             }
         }
         _applyTgInsets();
         try { tg.onEvent('safeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.onEvent('contentSafeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.onEvent('fullscreenChanged', _applyTgInsets); } catch (e) {}
-        // Fallback polling: requestFullscreen() is async, insets may not be ready immediately
-        (function() {
-            var attempts = 0;
-            var poll = setInterval(function() {
-                attempts++;
-                _applyTgInsets();
-                var cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tg-safe-top')) || 0;
-                if (cur > 0 || attempts >= 20) clearInterval(poll);
-            }, 150);
-        })();
+        // Re-sync after layout settles (fullscreen transition may delay env() updates)
+        setTimeout(_applyTgInsets, 200);
+        setTimeout(_applyTgInsets, 800);
         try { tg.setHeaderColor('#121212'); tg.setBackgroundColor('#121212') } catch (e) { }
         const P = new URLSearchParams(location.search);
         const API = P.get('api') || "https://lucky-slots-production.up.railway.app";
