@@ -642,6 +642,66 @@
             box-shadow: 0 0 6px var(--red)
         }
 
+        /* === PROVIDERS BOTTOM SHEET === */
+        .providers-sheet-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(0,0,0,.6);
+            backdrop-filter: blur(4px);
+            align-items: flex-end;
+        }
+        .providers-sheet-overlay.open { display: flex; }
+        .providers-sheet {
+            width: 100%;
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            padding: 0 0 calc(var(--nav-h) + 16px);
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+        .providers-sheet-handle {
+            width: 36px; height: 4px;
+            background: rgba(255,255,255,.2);
+            border-radius: 2px;
+            margin: 12px auto 16px;
+        }
+        .providers-sheet-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 15px;
+            padding: 0 16px 12px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+        .providers-sheet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 0 16px;
+        }
+        .ps-pill {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 8px;
+            border-radius: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dim2);
+            cursor: pointer;
+            text-align: center;
+            transition: all .15s;
+        }
+        .ps-pill.active {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+        }
+
         /* === JETTON-STYLE SEARCH+CATEGORIES ROW === */
         .jt-filter-row {
             display: flex;
@@ -1210,7 +1270,10 @@
         /* === SEARCH OVERLAY === */
         .search-overlay {
             position: fixed;
-            inset: 0;
+            top: var(--header-h);
+            bottom: 0;
+            left: 0;
+            right: 0;
             z-index: 250;
             background: var(--bg);
             display: none;
@@ -4568,7 +4631,7 @@
                     <span id="headerBal" style="font-weight:800;font-size:14px;letter-spacing:-0.5px"></span>
                 </div>
             </div>
-            <button class="header-plus-btn" onclick="AppState.update({ui:{walletOpen:true}})" title="Deposit">+</button>
+            <button class="header-plus-btn" onclick="nav('wallet')" title="Deposit">+</button>
             <div class="header-notif" onclick="openNotifPopup()"><span
                     class="material-symbols-outlined">notifications</span>
                 <div class="dot" id="notifDot" style="display:none"></div>
@@ -4694,6 +4757,15 @@
         </div>
     </div>
 
+    <!-- PROVIDERS BOTTOM SHEET -->
+    <div class="providers-sheet-overlay" id="providersSheetOverlay" onclick="closeProvidersSheet(event)">
+        <div class="providers-sheet" onclick="event.stopPropagation()">
+            <div class="providers-sheet-handle"></div>
+            <div class="providers-sheet-title">PROVIDERS</div>
+            <div class="providers-sheet-grid" id="providersSheetGrid"></div>
+        </div>
+    </div>
+
     <!-- ===== SEARCH OVERLAY ===== -->
     <div class="search-overlay" id="searchOverlay">
         <div class="search-header">
@@ -4777,6 +4849,9 @@
             <div class="jt-cat-pill" data-cat="table" onclick="jtSelectCat('table',this)">
                 <span class="material-symbols-outlined">table_restaurant</span> Table
             </div>
+            <div class="jt-cat-pill" onclick="openProvidersSheet()">
+                <span class="material-symbols-outlined">sports_esports</span> Providers
+            </div>
         </div>
 
         <!-- TOP WINNINGS LEADERBOARD -->
@@ -4800,15 +4875,8 @@
         <!-- Hidden catRow for JS compatibility (buildCategories still populates it) -->
         <div style="display:none"><div class="cat-row" id="catRow"></div></div>
 
-        <!-- GAME PROVIDERS -->
-        <div class="section">
-            <div class="section-head">
-                <div class="section-title"><span class="material-symbols-outlined"
-                        style="color:var(--red);font-size:16px;margin-right:4px">sports_esports</span><span
-                        id="secProviders">PROVIDERS</span></div>
-            </div>
-            <div class="providers-row" id="providersRow"></div>
-        </div>
+        <!-- GAME PROVIDERS (hidden inline, shown via popup) -->
+        <div style="display:none"><div class="providers-row" id="providersRow"></div></div>
 
         <div class="section" style="margin-bottom:0">
             <div class="section-head">
@@ -7373,6 +7441,8 @@
                 }).join('');
             }
             goSlide(0);
+            // Restart auto-play timer every time banners are rebuilt
+            if (typeof initCarousel === 'function') initCarousel();
         }
         function getBanners() {
             return [
@@ -8202,6 +8272,16 @@
         var wheelSpinning = false;
         var wheelLastPrize = null;
         var wheelCooldownEnd = null; /* Date when next spin is available */
+        // Restore cooldown from localStorage on page load
+        (function() {
+            try {
+                var saved = localStorage.getItem('rb_wheelCooldown');
+                if (saved) {
+                    var d = new Date(saved);
+                    if (d > new Date()) wheelCooldownEnd = d;
+                }
+            } catch(e) {}
+        })();
 
         function openWheel() {
             var ol = document.getElementById('wheelOL');
@@ -8339,6 +8419,8 @@
                 document.getElementById('wheelWinState').style.display = 'flex';
                 wheelCooldownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000);
             }
+            // Persist cooldown so app reload doesn't reset it
+            try { if (wheelCooldownEnd) localStorage.setItem('rb_wheelCooldown', wheelCooldownEnd.toISOString()); } catch(e) {}
             wheelSpinning = false;
             btn.disabled = false;
             btn.style.opacity = '1';
@@ -8756,6 +8838,33 @@
                 var prov = t.getAttribute('data-provider') || '';
                 t.style.display = prov === id ? '' : 'none';
             });
+        }
+        function openProvidersSheet() {
+            var grid = document.getElementById('providersSheetGrid');
+            if (grid) {
+                var all = [{ id: 'all', name: '⭐ All' }].concat(PROVIDERS);
+                grid.innerHTML = all.map(function(p) {
+                    return '<div class="ps-pill' + (p.id === 'all' ? ' active' : '') + '" onclick="sheetSelectProvider(\'' + p.id + '\',this)">' + p.name + '</div>';
+                }).join('');
+            }
+            var overlay = document.getElementById('providersSheetOverlay');
+            if (overlay) overlay.classList.add('open');
+        }
+        function closeProvidersSheet(e) {
+            var overlay = document.getElementById('providersSheetOverlay');
+            if (overlay) overlay.classList.remove('open');
+        }
+        function sheetSelectProvider(id, el) {
+            document.querySelectorAll('.ps-pill').forEach(function(p){ p.classList.remove('active'); });
+            if (el) el.classList.add('active');
+            /* Filter lobby game grid */
+            var tiles = document.querySelectorAll('#gameGrid > div');
+            tiles.forEach(function(t) {
+                if (id === 'all') { t.style.display = ''; return; }
+                var prov = t.getAttribute('data-provider') || '';
+                t.style.display = prov === id ? '' : 'none';
+            });
+            setTimeout(closeProvidersSheet, 200);
         }
 
         /* === TOP WINNINGS LEADERBOARD === */
