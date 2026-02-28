@@ -642,6 +642,84 @@
             box-shadow: 0 0 6px var(--red)
         }
 
+        /* === JETTON-STYLE SEARCH+CATEGORIES ROW === */
+        .jt-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 16px 12px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .jt-filter-row::-webkit-scrollbar { display: none; }
+        .jt-search-btn {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .jt-search-btn .material-symbols-outlined {
+            font-size: 20px;
+            color: var(--dim);
+        }
+        .jt-cat-pill {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 14px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--dim2);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all .2s;
+        }
+        .jt-cat-pill.active {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+        }
+        .jt-cat-pill .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        /* === HEADER PLUS BUTTON === */
+        .header-plus-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--red);
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 0 0 rgba(227,30,36,.7);
+            animation: pulse-red 1.6s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse-red {
+            0%   { box-shadow: 0 0 0 0 rgba(227,30,36,.7); }
+            60%  { box-shadow: 0 0 0 8px rgba(227,30,36,0); }
+            100% { box-shadow: 0 0 0 0 rgba(227,30,36,0); }
+        }
+
         /* === BOTTOM NAV === */
         .bottom-nav {
             position: fixed;
@@ -4484,12 +4562,13 @@
             <div class="header-bal" onclick="openBalancePopup()"
                 style="display:flex;align-items:center;gap:6px">
                 <div id="headerBalCrypto"
-                    style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.05);cursor:pointer;transition:all .2s"
-                    class="bal-active hover:bg-[rgba(255,255,255,0.1)]">
+                    style="display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:10px;cursor:pointer;transition:all .2s"
+                    class="bal-active">
                     <span style="font-size:14px">💵</span>
                     <span id="headerBal" style="font-weight:800;font-size:14px;letter-spacing:-0.5px"></span>
                 </div>
             </div>
+            <button class="header-plus-btn" onclick="AppState.update({ui:{walletOpen:true}})" title="Deposit">+</button>
             <div class="header-notif" onclick="openNotifPopup()"><span
                     class="material-symbols-outlined">notifications</span>
                 <div class="dot" id="notifDot" style="display:none"></div>
@@ -4635,8 +4714,6 @@
 
     <!-- ===== SCREEN: LOBBY ===== -->
     <div class="screen active" id="scrLobby">
-        <div class="lobby-search" onclick="openSearch()"><span class="material-symbols-outlined">search</span><span
-                id="searchPlaceholder">Search games...</span></div>
 
         <!-- HERO CAROUSEL -->
         <div class="hero-carousel"
@@ -4679,6 +4756,29 @@
             <!-- Rendered by JS -->
         </div>
 
+        <!-- JETTON-STYLE: Search button + Category pills row -->
+        <div class="jt-filter-row" id="jtFilterRow">
+            <div class="jt-search-btn" onclick="openSearch()">
+                <span class="material-symbols-outlined">search</span>
+            </div>
+            <!-- Pills rendered by buildCategories() into #catRow (hidden), mirrored here via JS -->
+            <div class="jt-cat-pill active" data-cat="all" onclick="jtSelectCat('all',this)">
+                <span class="material-symbols-outlined">apps</span> All Games
+            </div>
+            <div class="jt-cat-pill" data-cat="slots" onclick="jtSelectCat('slots',this)">
+                <span class="material-symbols-outlined">casino</span> Slots
+            </div>
+            <div class="jt-cat-pill" data-cat="live" onclick="jtSelectCat('live',this)">
+                <span class="material-symbols-outlined">live_tv</span> Live
+            </div>
+            <div class="jt-cat-pill" data-cat="crash" onclick="jtSelectCat('crash',this)">
+                <span class="material-symbols-outlined">rocket_launch</span> Crash
+            </div>
+            <div class="jt-cat-pill" data-cat="table" onclick="jtSelectCat('table',this)">
+                <span class="material-symbols-outlined">table_restaurant</span> Table
+            </div>
+        </div>
+
         <!-- TOP WINNINGS LEADERBOARD -->
         <div class="section">
             <div class="section-head">
@@ -4697,13 +4797,8 @@
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-head">
-                <div class="section-title" id="secCat">CATEGORIES</div>
-                <div class="section-more" id="secCatMore">VIEW ALL</div>
-            </div>
-            <div class="cat-row" id="catRow"></div>
-        </div>
+        <!-- Hidden catRow for JS compatibility (buildCategories still populates it) -->
+        <div style="display:none"><div class="cat-row" id="catRow"></div></div>
 
         <!-- GAME PROVIDERS -->
         <div class="section">
@@ -7258,7 +7353,7 @@
                 var btnBg = b.btnStyle || 'background:var(--red)';
                 return `
                 <div class="hero-slide" style="flex:1;padding:24px;background:${bg};display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden">
-                    <div style="position:absolute;top:10px;left:10px;padding:4px 8px;background:${b.tagBg || 'rgba(0,0,0,0.3)'};border-radius:4px;display:flex;align-items:center;gap:4px;z-index:3">
+                    <div style="position:absolute;top:10px;right:10px;padding:4px 8px;background:${b.tagBg || 'rgba(0,0,0,0.3)'};border-radius:4px;display:flex;align-items:center;gap:4px;z-index:3">
                         <span class="material-symbols-outlined" style="font-size:12px;color:${b.tagColor || 'white'}">${b.tagIcon}</span>
                         <span style="font-size:10px;font-weight:800;color:${b.tagColor || 'white'}">${b.tagText}</span>
                     </div>
@@ -10294,6 +10389,21 @@
             }
             buildGameGrid('gamesGrid');
         }
+        // JetTon-style lobby category filter
+        var lobbyCat = 'all';
+        function jtSelectCat(cat, el) {
+            lobbyCat = cat;
+            document.querySelectorAll('.jt-cat-pill').forEach(function(p){ p.classList.remove('active'); });
+            if (el) el.classList.add('active');
+            buildGameGrid(null, cat === 'all' ? null : function(g) {
+                if (cat === 'slots') return g.category === 'slots' || ['ruby_slots','sweet_bonanza','gates_olympus','big_bass','starlight','wanted'].indexOf(g.id) > -1;
+                if (cat === 'crash') return g.category === 'crash' || g.screen === 'crash';
+                if (cat === 'live') return g.category === 'live';
+                if (cat === 'table') return g.category === 'table';
+                return true;
+            });
+        }
+
         function filterGamesCat(cat, el) {
             gamesCat = cat;
             if (el) {
