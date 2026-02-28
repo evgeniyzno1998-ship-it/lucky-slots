@@ -5545,27 +5545,10 @@
     <!-- ===== SCREEN: WALLET (CASHIER) - PHASE 3 REDESIGN ===== -->
     <div class="screen" id="scrWallet" style="padding-bottom: 0;">
         <div class="flex flex-col h-full bg-[#0d0f12] overflow-hidden">
-            <!-- Redesigned Wallet Header (Unified with design-84c234ff) -->
-            <div
-                class="px-5 py-4 flex items-center justify-between sticky top-0 bg-[#0d0f12] z-20 border-b border-gray-800/50">
-                <button class="text-gray-400 hover:text-white transition" onclick="nav('lobby')">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18">
-                        </path>
-                    </svg>
-                </button>
-                <h1 class="text-lg font-bold tracking-wide uppercase">CASHIER</h1>
-                <div class="relative cursor-pointer" onclick="openSearch()">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
-                        class="w-6 h-6 text-gray-300 hover:text-white transition">
-                        <path fill-rule="evenodd"
-                            d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                    <span
-                        class="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-[#0d0f12]"></span>
-                </div>
+            <!-- Wallet section label -->
+            <div style="padding:12px 20px 0;display:flex;align-items:center;gap:8px">
+                <span class="material-symbols-outlined" style="color:var(--red);font-size:18px">account_balance_wallet</span>
+                <span style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:.5px">WALLET</span>
             </div>
 
             <!-- Wallet Content -->
@@ -5609,6 +5592,21 @@
                                 +7%</div>
                         </div>
 
+                        <!-- Solana / Phantom -->
+                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#14f195] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
+                            onclick="selectPayMethod('solana')" id="pmSolana">
+                            <div class="flex items-center gap-4 z-10">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,rgba(153,69,255,0.15),rgba(20,241,149,0.15));border:1px solid rgba(20,241,149,0.2)">
+                                    <span class="text-xl">◎</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white text-sm tracking-wide">SOLANA</h3>
+                                    <p class="text-gray-500 text-[10px]">Phantom Wallet · Instant</p>
+                                </div>
+                            </div>
+                            <div class="text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest" style="background:rgba(20,241,149,0.1);color:#14f195;border:1px solid rgba(20,241,149,0.2)">SOL</div>
+                        </div>
+
                         <!-- Telegram Stars -->
                         <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-yellow-600 relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
                             onclick="selectPayMethod('stars')" id="pmStars">
@@ -5636,9 +5634,11 @@
                         </div>
                         <div style="position:relative;margin-bottom:8px">
                             <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
-                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
-                                onfocus="this.style.borderColor='rgba(227,30,36,0.5)';this.style.boxShadow='0 0 15px rgba(227,30,36,0.2)'"
-                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;padding-right:72px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
+                                onfocus="this.style.borderColor='rgba(227,30,36,0.5)';this.style.boxShadow='0 0 15px rgba(227,30,36,0.2)';document.getElementById('depDoneBtn').style.display='flex'"
+                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none';setTimeout(function(){document.getElementById('depDoneBtn').style.display='none'},200)">
+                            <button id="depDoneBtn" onclick="document.getElementById('depAmtCrypto').blur()"
+                                style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;align-items:center">DONE</button>
                             <div
                                 style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:12px">
                                 USDT</div>
@@ -7673,7 +7673,19 @@
             if (s === 'wallet') { updateWallet(); switchWalletTab(activeWallet) }
             if (s === 'bonuses') buildBonusPills();
             window.scrollTo(0, 0);
+            // Telegram BackButton: show on non-lobby screens
+            try {
+                if (s === 'lobby') {
+                    tg.BackButton.hide();
+                } else {
+                    tg.BackButton.show();
+                }
+            } catch(e) {}
         }
+        // Handle Telegram back button tap → go to lobby
+        try {
+            tg.BackButton.onClick(function() { nav('lobby'); });
+        } catch(e) {}
 
         /* === DATA === */
 
