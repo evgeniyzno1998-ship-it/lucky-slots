@@ -781,6 +781,27 @@
             100% { box-shadow: 0 0 0 0 rgba(227,30,36,0); }
         }
 
+        /* === WALLET ACCORDION === */
+        .acc-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1);
+            background: rgba(13,15,18,0.98);
+        }
+        .acc-body.open {
+            max-height: 700px;
+        }
+        .acc-chevron {
+            transition: transform 0.3s ease;
+            font-size: 20px !important;
+        }
+        .acc-item.open .acc-chevron {
+            transform: rotate(180deg);
+        }
+        .acc-item.open .acc-hd {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
         /* === BOTTOM NAV === */
         .bottom-nav {
             position: fixed;
@@ -5571,195 +5592,186 @@
                 </div>
 
                 <div id="cashDeposit">
-                    <!-- Payment Methods Section -->
+                    <!-- Payment Methods (Accordion) -->
                     <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Payment Methods</h3>
                     <div class="space-y-3 mb-6">
-                        <!-- CryptoBot -->
-                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#e62e3d] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
-                            onclick="selectPayMethod('crypto')" id="pmCrypto">
-                            <div class="flex items-center gap-4 z-10">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-red-900/10 flex items-center justify-center border border-red-500/10">
-                                    <span class="text-xl">💎</span>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm tracking-wide">CRYPTOBOT</h3>
-                                    <p class="text-gray-500 text-[10px]">USDT, BTC, TON · Min $1.00</p>
-                                </div>
-                            </div>
-                            <div
-                                class="bg-[#e62e3d]/10 text-[#e62e3d] text-[9px] font-bold px-2 py-1 rounded border border-[#e62e3d]/20 uppercase tracking-widest">
-                                +7%</div>
-                        </div>
 
-                        <!-- Solana / Phantom -->
-                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-[#14f195] relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
-                            onclick="selectPayMethod('solana')" id="pmSolana">
-                            <div class="flex items-center gap-4 z-10">
-                                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,rgba(153,69,255,0.15),rgba(20,241,149,0.15));border:1px solid rgba(20,241,149,0.2)">
-                                    <span class="text-xl">◎</span>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm tracking-wide">SOLANA</h3>
-                                    <p class="text-gray-500 text-[10px]">Phantom Wallet · Instant</p>
-                                </div>
-                            </div>
-                            <div class="text-[9px] font-bold px-2 py-1 rounded uppercase tracking-widest" style="background:rgba(20,241,149,0.1);color:#14f195;border:1px solid rgba(20,241,149,0.2)">SOL</div>
-                        </div>
-
-                        <!-- Telegram Stars -->
-                        <div class="flex items-center justify-between bg-[#15171b] p-4 rounded-xl border-l-[3px] border-yellow-600 relative overflow-hidden group hover:bg-[#1a1c22] transition-colors cursor-pointer"
-                            onclick="selectPayMethod('stars')" id="pmStars">
-                            <div class="flex items-center gap-4 z-10">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-yellow-900/10 flex items-center justify-center border border-yellow-500/10">
-                                    <span class="text-xl">⭐</span>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-white text-sm tracking-wide uppercase">Telegram Stars</h3>
-                                    <p class="text-gray-500 text-[10px]">Instant · In-app payment</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Deposit Amount Input Sections -->
-                    <div id="depositCryptoSection">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Enter Amount</h3>
-                            <div
-                                class="bg-green-500/10 border border-green-500/20 text-green-500 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
-                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Network: TRC20
-                            </div>
-                        </div>
-                        <div style="position:relative;margin-bottom:8px">
-                            <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
-                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;padding-right:72px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
-                                onfocus="this.style.borderColor='rgba(227,30,36,0.5)';this.style.boxShadow='0 0 15px rgba(227,30,36,0.2)';document.getElementById('depDoneBtn').style.display='flex'"
-                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none';setTimeout(function(){document.getElementById('depDoneBtn').style.display='none'},200)">
-                            <button id="depDoneBtn" onclick="document.getElementById('depAmtCrypto').blur()"
-                                style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;align-items:center">DONE</button>
-                            <div
-                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:12px">
-                                USDT</div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-gray-400 mb-4 px-1">
-                            <span>Min limit: <span class="text-white font-bold">1.00 USDT</span></span>
-                            <span>Est. Fee: <span class="text-green-400 font-bold">Free</span></span>
-                        </div>
-                        <div class="grid grid-cols-4 gap-2 mb-6">
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtCrypto').value='10';updateMainDepBtn()">$10</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtCrypto').value='50';updateMainDepBtn()">$50</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtCrypto').value='100';updateMainDepBtn()">$100</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-red-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all text-[#e62e3d] flex flex-col items-center justify-center leading-none"
-                                onclick="document.getElementById('depAmtCrypto').value='500';updateMainDepBtn()">
-                                <span>Max</span>
-                                <span class="text-[8px] font-normal text-gray-500 mt-0.5">$500</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="depositStarsSection" class="hidden">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Enter Amount</h3>
-                            <div
-                                class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
-                                <span class="material-symbols-outlined text-[10px]">bolt</span> Instant
-                            </div>
-                        </div>
-                        <div style="position:relative;margin-bottom:8px">
-                            <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
-                                style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
-                                onfocus="this.style.borderColor='rgba(59,130,246,0.5)';this.style.boxShadow='0 0 15px rgba(59,130,246,0.2)'"
-                                onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
-                            <div
-                                style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:12px flex items-center gap-1">
-                                ⭐ STARS</div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-gray-400 mb-4 px-1">
-                            <span>Min limit: <span class="text-white font-bold">50 Stars</span></span>
-                            <span>Est. Fee: <span class="text-green-400 font-bold">Free</span></span>
-                        </div>
-                        <div class="grid grid-cols-4 gap-2 mb-6">
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtStars').value='150';updateMainDepBtn()">150</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtStars').value='500';updateMainDepBtn()">500</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all"
-                                onclick="document.getElementById('depAmtStars').value='1000';updateMainDepBtn()">1000</button>
-                            <button
-                                class="bg-[#15171b] hover:bg-[#1a1c22] border border-gray-800/50 hover:border-blue-500/30 text-white font-bold py-2.5 rounded-xl text-sm transition-all text-blue-400 flex flex-col items-center justify-center leading-none"
-                                onclick="document.getElementById('depAmtStars').value='5000';updateMainDepBtn()">
-                                <span>Max</span>
-                                <span class="text-[8px] font-normal text-gray-500 mt-0.5">5000</span>
-                            </button>
-                        </div>
-                        <div id="depositSolanaSection" class="hidden">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Solana Deposit
-                                </h3>
-                                <div id="solanaNetworkBadge"
-                                    class="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-widest">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
-                                    Mainnet-Beta
-                                </div>
-                            </div>
-                            <div class="bg-[#1a1c22] border border-gray-800/50 rounded-2xl p-4 mb-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Wallet
-                                        Status</span>
-                                    <span id="solanaStatus"
-                                        class="text-[10px] font-black uppercase tracking-tighter text-gray-600">Disconnected</span>
-                                </div>
-                                <div id="solanaAddressBlock" class="hidden">
-                                    <div class="text-[9px] text-gray-600 uppercase font-bold mb-1" id="solanaAddrLabel">
-                                        Your Address</div>
-                                    <div id="solanaPubKey"
-                                        class="text-[11px] text-white font-mono break-all bg-black/20 p-2 rounded-lg border border-white/5">
+                        <!-- === CRYPTOBOT === -->
+                        <div class="acc-item rounded-xl overflow-hidden" style="border:1px solid rgba(255,255,255,0.06)" id="accCrypto">
+                            <div class="acc-hd flex items-center justify-between bg-[#15171b] p-4 cursor-pointer hover:bg-[#1a1c22] transition-colors" style="border-left:3px solid #e62e3d" onclick="selectPayMethod('crypto')">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-red-900/10 flex items-center justify-center" style="border:1px solid rgba(227,30,36,0.15)">
+                                        <span class="text-xl">💎</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white text-sm tracking-wide">CRYPTOBOT</div>
+                                        <div class="text-gray-500" style="font-size:10px">USDT, BTC, TON · Min $1.00</div>
                                     </div>
                                 </div>
+                                <div class="flex items-center gap-2">
+                                    <div style="background:rgba(227,30,36,0.1);color:#e62e3d;font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid rgba(227,30,36,0.2);text-transform:uppercase;letter-spacing:1px">+7%</div>
+                                    <span class="material-symbols-outlined acc-chevron" style="color:#666">expand_more</span>
+                                </div>
                             </div>
-                            <div style="position:relative;margin-bottom:8px">
-                                <input type="number" id="depAmtSolana" placeholder="0.00" oninput="updateMainDepBtn()"
-                                    style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:16px;color:#fff;font-size:24px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s"
-                                    onfocus="this.style.borderColor='#14f195';this.style.boxShadow='0 0 15px rgba(20,241,149,0.2)'"
-                                    onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
-                                <div
-                                    style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:#14f195;background:rgba(20,241,149,0.05);padding:4px 8px;border-radius:8px;font-size:12px">
-                                    SOL</div>
-                            </div>
-                            <div class="flex justify-between text-[10px] text-gray-400 mb-6 px-1">
-                                <span>Min limit: <span class="text-white font-bold">0.05 SOL</span></span>
-                                <span>Est. Fee: <span class="text-green-400 font-bold">~0.000005 SOL</span></span>
+                            <div class="acc-body" id="accBodyCrypto">
+                                <div style="padding:16px 16px 20px">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span style="font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:2px">Enter Amount</span>
+                                        <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);color:#22c55e;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:1px">
+                                            <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 1.5s ease-in-out infinite"></span> USDT · TRC20
+                                        </div>
+                                    </div>
+                                    <div style="position:relative;margin-bottom:8px">
+                                        <input type="number" id="depAmtCrypto" placeholder="0.00" oninput="updateMainDepBtn()"
+                                            style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;padding-right:76px;color:#fff;font-size:22px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s;box-sizing:border-box"
+                                            onfocus="this.style.borderColor='rgba(227,30,36,0.5)';this.style.boxShadow='0 0 15px rgba(227,30,36,0.15)';document.getElementById('depDoneBtnCrypto').style.display='flex'"
+                                            onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none';setTimeout(function(){document.getElementById('depDoneBtnCrypto').style.display='none'},200)">
+                                        <button id="depDoneBtnCrypto" onclick="document.getElementById('depAmtCrypto').blur()"
+                                            style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--red);color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;align-items:center">DONE</button>
+                                        <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:11px">USDT</div>
+                                    </div>
+                                    <div class="flex justify-between px-1 mb-3" style="font-size:10px;color:#666">
+                                        <span>Min: <span style="color:#fff;font-weight:700">1.00 USDT</span></span>
+                                        <span>Fee: <span style="color:#22c55e;font-weight:700">Free</span></span>
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-2 mb-4">
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-red-500/40"
+                                            onclick="document.getElementById('depAmtCrypto').value='10';updateMainDepBtn()">$10</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-red-500/40"
+                                            onclick="document.getElementById('depAmtCrypto').value='50';updateMainDepBtn()">$50</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-red-500/40"
+                                            onclick="document.getElementById('depAmtCrypto').value='100';updateMainDepBtn()">$100</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-red-500/40 flex flex-col items-center justify-center leading-none" style="color:#e62e3d"
+                                            onclick="document.getElementById('depAmtCrypto').value='500';updateMainDepBtn()">
+                                            <span>Max</span>
+                                            <span style="font-size:8px;color:#666;font-weight:400;margin-top:2px">$500</span>
+                                        </button>
+                                    </div>
+                                    <button id="depBtnCrypto" onclick="confirmDepositDirect()"
+                                        class="w-full bg-[#1a1c22] text-gray-500 font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest cursor-not-allowed transition-all">
+                                        Enter Amount
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- === SOLANA === -->
+                        <div class="acc-item rounded-xl overflow-hidden" style="border:1px solid rgba(255,255,255,0.06)" id="accSolana">
+                            <div class="acc-hd flex items-center justify-between bg-[#15171b] p-4 cursor-pointer hover:bg-[#1a1c22] transition-colors" style="border-left:3px solid #14f195" onclick="selectPayMethod('solana')">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,rgba(153,69,255,0.15),rgba(20,241,149,0.15));border:1px solid rgba(20,241,149,0.2)">
+                                        <span class="text-xl">◎</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white text-sm tracking-wide">SOLANA</div>
+                                        <div class="text-gray-500" style="font-size:10px">Phantom Wallet · Instant</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div style="background:rgba(20,241,149,0.1);color:#14f195;font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;border:1px solid rgba(20,241,149,0.2);text-transform:uppercase;letter-spacing:1px">SOL</div>
+                                    <span class="material-symbols-outlined acc-chevron" style="color:#666">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="acc-body" id="accBodySolana">
+                                <div style="padding:16px 16px 20px">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span style="font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:2px">Solana Deposit</span>
+                                        <div id="solanaNetworkBadge" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.2);color:#a855f7;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:1px">
+                                            <span style="width:6px;height:6px;border-radius:50%;background:#a855f7;display:inline-block;animation:pulse 1.5s ease-in-out infinite"></span> Mainnet-Beta
+                                        </div>
+                                    </div>
+                                    <div style="background:#1a1c22;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;margin-bottom:12px">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <span style="font-size:10px;color:#666;text-transform:uppercase;font-weight:700;letter-spacing:1px">Wallet Status</span>
+                                            <span id="solanaStatus" style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;color:#444">Disconnected</span>
+                                        </div>
+                                        <div id="solanaAddressBlock" class="hidden">
+                                            <div id="solanaAddrLabel" style="font-size:9px;color:#555;text-transform:uppercase;font-weight:700;margin-bottom:4px">Your Address</div>
+                                            <div id="solanaPubKey" style="font-size:11px;color:#fff;font-family:monospace;word-break:break-all;background:rgba(0,0,0,0.2);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.05)"></div>
+                                        </div>
+                                    </div>
+                                    <div style="position:relative;margin-bottom:8px">
+                                        <input type="number" id="depAmtSolana" placeholder="0.00" oninput="updateMainDepBtn()"
+                                            style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;color:#fff;font-size:22px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s;box-sizing:border-box"
+                                            onfocus="this.style.borderColor='#14f195';this.style.boxShadow='0 0 15px rgba(20,241,149,0.15)'"
+                                            onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                                        <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:#14f195;background:rgba(20,241,149,0.05);padding:4px 8px;border-radius:8px;font-size:11px">SOL</div>
+                                    </div>
+                                    <div class="flex justify-between px-1 mb-4" style="font-size:10px;color:#666">
+                                        <span>Min: <span style="color:#fff;font-weight:700">0.05 SOL</span></span>
+                                        <span>Fee: <span style="color:#22c55e;font-weight:700">~0.000005 SOL</span></span>
+                                    </div>
+                                    <button id="depBtnSolana" onclick="confirmDepositDirect()"
+                                        class="w-full font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest transition-all"
+                                        style="background:#14f195;color:#000">
+                                        Connect Phantom
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- === TELEGRAM STARS === -->
+                        <div class="acc-item rounded-xl overflow-hidden" style="border:1px solid rgba(255,255,255,0.06)" id="accStars">
+                            <div class="acc-hd flex items-center justify-between bg-[#15171b] p-4 cursor-pointer hover:bg-[#1a1c22] transition-colors" style="border-left:3px solid #ca8a04" onclick="selectPayMethod('stars')">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(202,138,4,0.1);border:1px solid rgba(202,138,4,0.2)">
+                                        <span class="text-xl">⭐</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-white text-sm tracking-wide uppercase">Telegram Stars</div>
+                                        <div class="text-gray-500" style="font-size:10px">Instant · In-app payment</div>
+                                    </div>
+                                </div>
+                                <span class="material-symbols-outlined acc-chevron" style="color:#666">expand_more</span>
+                            </div>
+                            <div class="acc-body" id="accBodyStars">
+                                <div style="padding:16px 16px 20px">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <span style="font-size:9px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:2px">Enter Amount</span>
+                                        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);color:#60a5fa;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;text-transform:uppercase;letter-spacing:1px">
+                                            <span class="material-symbols-outlined" style="font-size:10px">bolt</span> Instant
+                                        </div>
+                                    </div>
+                                    <div style="position:relative;margin-bottom:8px">
+                                        <input type="number" id="depAmtStars" placeholder="0" oninput="updateMainDepBtn()"
+                                            style="width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px;color:#fff;font-size:22px;font-weight:900;text-align:center;font-family:monospace;transition:all 0.3s;box-sizing:border-box"
+                                            onfocus="this.style.borderColor='rgba(59,130,246,0.5)';this.style.boxShadow='0 0 15px rgba(59,130,246,0.15)'"
+                                            onblur="this.style.borderColor='rgba(255,255,255,0.08)';this.style.boxShadow='none'">
+                                        <div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-weight:800;color:var(--dim2);background:rgba(255,255,255,0.05);padding:4px 8px;border-radius:8px;font-size:11px">⭐</div>
+                                    </div>
+                                    <div class="flex justify-between px-1 mb-3" style="font-size:10px;color:#666">
+                                        <span>Min: <span style="color:#fff;font-weight:700">50 Stars</span></span>
+                                        <span>Fee: <span style="color:#22c55e;font-weight:700">Free</span></span>
+                                    </div>
+                                    <div class="grid grid-cols-4 gap-2 mb-4">
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-blue-500/30"
+                                            onclick="document.getElementById('depAmtStars').value='150';updateMainDepBtn()">150</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-blue-500/30"
+                                            onclick="document.getElementById('depAmtStars').value='500';updateMainDepBtn()">500</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-blue-500/30"
+                                            onclick="document.getElementById('depAmtStars').value='1000';updateMainDepBtn()">1000</button>
+                                        <button class="bg-[#1a1c22] border border-gray-700/50 text-white font-bold py-2.5 rounded-xl text-sm transition-all hover:border-blue-500/30 flex flex-col items-center justify-center leading-none" style="color:#60a5fa"
+                                            onclick="document.getElementById('depAmtStars').value='5000';updateMainDepBtn()">
+                                            <span>Max</span>
+                                            <span style="font-size:8px;color:#666;font-weight:400;margin-top:2px">5000</span>
+                                        </button>
+                                    </div>
+                                    <button id="depBtnStars" onclick="confirmDepositDirect()"
+                                        class="w-full bg-[#1a1c22] text-gray-500 font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest cursor-not-allowed transition-all">
+                                        Enter Amount
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
-                    <!-- Deposit Action Button -->
-                    <button id="mainDepositBtn"
-                        class="w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed"
-                        onclick="confirmDepositDirect()">
-                        Enter Amount
-                    </button>
-
                     <!-- Transaction History Link -->
-                    <button
-                        class="w-full flex items-center justify-between p-4 bg-[#15171b] border border-gray-800/50 rounded-xl hover:bg-[#1a1c22] transition mb-4"
+                    <button class="w-full flex items-center justify-between p-4 bg-[#15171b] rounded-xl hover:bg-[#1a1c22] transition mb-4" style="border:1px solid rgba(255,255,255,0.06)"
                         onclick="switchCashierTab('history')">
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-gray-400">history</span>
-                            <span class="text-xs font-bold text-white uppercase tracking-wider">Transaction
-                                History</span>
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">Transaction History</span>
                         </div>
                         <span class="material-symbols-outlined text-gray-600">chevron_right</span>
                     </button>
@@ -9556,31 +9568,16 @@
 
         /* === CASHIER TAB SYSTEM === */
         function switchCashierTab(tab) {
-            ['deposit', 'withdraw', 'history'].forEach(function (t) {
-                var el = document.getElementById('cash' + t.charAt(0).toUpperCase() + t.slice(1));
+            var cashDeposit = document.getElementById('cashDeposit');
+            var cashHistory = document.getElementById('cashHistory');
+            var cashWithdraw = document.getElementById('cashWithdraw');
+            if (cashDeposit) cashDeposit.style.display = tab === 'deposit' ? 'block' : 'none';
+            if (cashHistory) cashHistory.style.display = tab === 'history' ? 'block' : 'none';
+            if (cashWithdraw) cashWithdraw.style.display = tab === 'withdraw' ? 'block' : 'none';
+            ['deposit', 'withdraw', 'history'].forEach(function(t) {
                 var tb = document.getElementById('cashTab' + t.charAt(0).toUpperCase() + t.slice(1));
-                if (el) el.style.display = t === tab ? 'block' : 'none';
                 if (tb) tb.classList.toggle('active', t === tab);
             });
-            /* Ensure the content is visible by hiding other sections in the new layout if applicable */
-            var histListWrapper = document.getElementById('txHistoryList');
-            if (histListWrapper && histListWrapper.parentElement) {
-                var histContainer = histListWrapper.parentElement;
-                if (!histContainer.id.startsWith('cash')) {
-                    /* If the new design doesn't use cashHistory, toggle visibility manually */
-                    histContainer.style.display = tab === 'history' ? 'block' : 'none';
-                    if (tab === 'deposit') {
-                        // Display the standard deposit menu
-                        var dc = document.getElementById('depositCryptoSection');
-                        if (dc) dc.style.display = 'block';
-                    } else {
-                        var cDepo = document.getElementById('depositCryptoSection');
-                        if (cDepo) cDepo.style.display = 'none';
-                        var sDepo = document.getElementById('depositStarsSection');
-                        if (sDepo) sDepo.style.display = 'none';
-                    }
-                }
-            }
             if (tab === 'history') loadTransactionHistory();
             if (tab === 'withdraw') updateWithdrawInfo();
         }
@@ -9594,28 +9591,36 @@
             console.log('Wallet toggled, but system uses unified USD balance now.');
         }
 
-        /* === PAYMENT METHOD === */
+        /* === PAYMENT METHOD (ACCORDION) === */
         function selectPayMethod(method) {
+            /* Toggle: if same method clicked again — collapse it */
+            if (payMethod === method) {
+                var curBody = document.getElementById('accBody' + method.charAt(0).toUpperCase() + method.slice(1));
+                var curItem = document.getElementById('acc' + method.charAt(0).toUpperCase() + method.slice(1));
+                if (curBody && curBody.classList.contains('open')) {
+                    curBody.classList.remove('open');
+                    if (curItem) curItem.classList.remove('open');
+                    payMethod = null;
+                    return;
+                }
+            }
             payMethod = method;
-            /* Crypto */
-            var pmc = document.getElementById('pmCrypto');
-            if (pmc) pmc.style.borderColor = method === 'crypto' ? 'var(--red)' : 'var(--border)';
 
-            /* Stars */
-            var pmStars = document.getElementById('pmStars');
-            if (pmStars) pmStars.style.borderColor = method === 'stars' ? '#FFD700' : 'var(--border)';
+            /* Close all accordion panels */
+            ['crypto', 'solana', 'stars'].forEach(function(m) {
+                var key = m.charAt(0).toUpperCase() + m.slice(1);
+                var body = document.getElementById('accBody' + key);
+                var item = document.getElementById('acc' + key);
+                if (body) body.classList.remove('open');
+                if (item) item.classList.remove('open');
+            });
 
-            /* Solana */
-            var pmSolana = document.getElementById('pmSolana');
-            if (pmSolana) pmSolana.style.borderColor = method === 'solana' ? '#14f195' : 'var(--border)';
-
-            /* Show/hide sections */
-            var cs = document.getElementById('depositCryptoSection');
-            var ss = document.getElementById('depositStarsSection');
-            var sol = document.getElementById('depositSolanaSection');
-            if (cs) cs.style.display = (method === 'crypto' || method === 'card') ? 'block' : 'none';
-            if (ss) ss.style.display = method === 'stars' ? 'block' : 'none';
-            if (sol) sol.style.display = method === 'solana' ? 'block' : 'none';
+            /* Open selected panel */
+            var selKey = method.charAt(0).toUpperCase() + method.slice(1);
+            var selBody = document.getElementById('accBody' + selKey);
+            var selItem = document.getElementById('acc' + selKey);
+            if (selBody) selBody.classList.add('open');
+            if (selItem) selItem.classList.add('open');
 
             if (typeof updateMainDepBtn === 'function') updateMainDepBtn();
         }
@@ -9832,26 +9837,32 @@
         };
 
         window.updateMainDepBtn = function () {
+            if (!payMethod) return;
             var isStars = payMethod === 'stars';
             var isSolana = payMethod === 'solana';
             var inputId = isStars ? 'depAmtStars' : (isSolana ? 'depAmtSolana' : 'depAmtCrypto');
+            var btnId = isStars ? 'depBtnStars' : (isSolana ? 'depBtnSolana' : 'depBtnCrypto');
             var min = isStars ? 50 : (isSolana ? 0.05 : 1.00);
             var max = isStars ? 50000 : (isSolana ? 100 : 10000);
             var valInput = document.getElementById(inputId);
             var val = valInput ? (parseFloat(valInput.value) || 0) : 0;
-            var btn = document.getElementById('mainDepositBtn');
+            var btn = document.getElementById(btnId);
 
             if (btn) {
                 if (isSolana) {
-                    const s = SolanaModule.state.status;
+                    var s = SolanaModule.state.status;
                     if (s === 'disconnected' || s === 'failed') {
-                        btn.className = 'w-full bg-[#14f195] hover:bg-green-400 text-black font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8';
+                        btn.style.background = '#14f195';
+                        btn.style.color = '#000';
+                        btn.className = 'w-full font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest transition-all';
                         btn.textContent = 'Connect Phantom';
                         btn.disabled = false;
                         return;
                     }
                     if (s === 'connecting' || s === 'sending' || s === 'verifying') {
-                        btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed';
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest cursor-not-allowed transition-all';
                         btn.textContent = s.toUpperCase() + '...';
                         btn.disabled = true;
                         return;
@@ -9860,18 +9871,26 @@
 
                 var isValid = val >= min && val <= max;
                 if (isValid) {
-                    const btnColor = isSolana ? 'bg-[#14f195]' : 'bg-[#e62e3d]';
-                    const hoverColor = isSolana ? 'hover:bg-green-400' : 'hover:bg-red-700';
-                    const textColor = isSolana ? 'text-black' : 'text-white';
-                    btn.className = `w-full ${btnColor} ${hoverColor} ${textColor} font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 shadow-lg`;
-                    btn.textContent = 'Confirm Deposit';
                     btn.disabled = false;
+                    btn.textContent = 'Confirm Deposit';
+                    if (isSolana) {
+                        btn.style.background = '#14f195';
+                        btn.style.color = '#000';
+                        btn.className = 'w-full font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg';
+                    } else if (isStars) {
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.className = 'w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg';
+                    } else {
+                        btn.style.background = '';
+                        btn.style.color = '';
+                        btn.className = 'w-full bg-[#e62e3d] hover:bg-red-700 text-white font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest transition-all shadow-lg';
+                    }
                 } else {
-                    btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-4 rounded-xl text-sm transition-all uppercase tracking-widest mb-8 cursor-not-allowed';
-                    btn.textContent = 'Enter Valid Amount';
-                    if (val === 0) btn.textContent = 'Enter Amount';
-                    else if (val < min) btn.textContent = 'Amount too low';
-                    else if (val > max) btn.textContent = 'Amount too high';
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.className = 'w-full bg-[#1a1c22] text-gray-500 font-bold py-3.5 rounded-xl text-sm uppercase tracking-widest cursor-not-allowed transition-all';
+                    btn.textContent = val === 0 ? 'Enter Amount' : (val < min ? 'Amount too low' : 'Amount too high');
                     btn.disabled = true;
                 }
             }
