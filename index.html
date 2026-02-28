@@ -5792,85 +5792,118 @@
     </div>
 
     <!-- ===== SCREEN: REFERRAL ===== -->
-    <div class="screen" id="scrReferral">
-        <div class="ref-hero">
-            <div class="ref-hero-icon"><img
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpCm-In3qaads4-907wOGoyxZRtNhNrOWD-U1kAC57uAA0oO3DnPwchxZ4EraGR6QuJgvoSYkYmuPig3Bi5g-ROCe5cnWc_zg4Jis0UHe8n3saeShVPK2gJ4DXrXcOK-M2IjhFYujSo3fc2HFsdKyGllktDw2yiUFcLx0VlGohAFPIZdJjzEn-_bw47k35CYqzdnl6tKITBGL_Jdj7BNOqIkQ5uK71RWcXAWNxEJtmUIMLeNmbVOuLBo45VWiYk9VAWFqJvWBhpeY"
-                    alt="Coins"
-                    style="width:100px;height:100px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(227,30,36,.3))">
-            </div>
-            <h1 id="refHeroTitle">Invite & <span>Earn</span></h1>
-            <p id="refHeroDesc">Share your link and earn <b>10 coins</b> for every friend who plays.</p>
-        </div>
+    <div class="screen" id="scrReferral" style="overflow-y:auto;padding-bottom:100px">
 
-        <div class="ref-link-card">
-            <div class="ref-link-inner">
-                <div class="ref-link-label" id="refLinkLabel">TAP COPY TO SHARE</div>
-                <div class="ref-link-box">
-                    <div class="ref-url" id="refUrl">https://t.me/bot?start=ref...</div>
-                    <button class="ref-copy" onclick="copyRefLink()"><span
-                            class="material-symbols-outlined">content_copy</span><span
-                            id="refCopyText">Copy</span></button>
+        <!-- Hero Banner -->
+        <div style="position:relative;padding:28px 20px 20px;text-align:center;overflow:hidden">
+            <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(227,30,36,0.18) 0%,transparent 65%);pointer-events:none"></div>
+            <div style="position:relative;z-index:1">
+                <div style="font-size:48px;margin-bottom:10px;filter:drop-shadow(0 4px 16px rgba(227,30,36,0.4))">🎁</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:6px">
+                    Invite & <span style="color:var(--red)">Earn</span>
+                </div>
+                <div style="font-size:13px;color:#666;font-weight:500;line-height:1.5">
+                    Earn <span style="color:#fff;font-weight:800">10 USDT</span> for every active friend you bring
                 </div>
             </div>
         </div>
 
-        <div class="ref-stats">
-            <div class="ref-stat-card">
-                <div class="ref-stat-top">
-                    <div class="ref-stat-icon people"><span class="material-symbols-outlined">group_add</span></div>
-                    <div class="ref-stat-badge" id="refNewBadge"></div>
+        <!-- Referral Link Card -->
+        <div style="margin:0 16px 16px;padding:2px;border-radius:18px;background:linear-gradient(135deg,rgba(227,30,36,0.5),var(--red),rgba(227,30,36,0.3));box-shadow:0 0 28px rgba(227,30,36,0.18)">
+            <div style="background:#13151a;border-radius:16px;padding:18px">
+                <div style="text-align:center;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#555;margin-bottom:14px">
+                    🔗 TAP TO COPY & SHARE
                 </div>
-                <div class="ref-stat-label" id="refTotalLabel">Total Referrals</div>
-                <div class="ref-stat-val" id="refTotalVal">0</div>
-            </div>
-            <div class="ref-stat-card">
-                <div class="ref-stat-top">
-                    <div class="ref-stat-icon money"><span
-                            class="material-symbols-outlined">account_balance_wallet</span></div>
-                </div>
-                <div class="ref-stat-label" id="refEarnedLabel">Earned Coins</div>
-                <div class="ref-stat-val" id="refEarnedVal">0</div>
-            </div>
-        </div>
-
-        <div class="ref-how">
-            <div class="ref-how-title" id="refHowTitle">How it Works</div>
-            <div class="ref-steps">
-                <div class="ref-step">
-                    <div class="ref-step-line">
-                        <div class="ref-step-num">1</div>
-                        <div class="ref-step-connector"></div>
-                    </div>
-                    <div class="ref-step-content">
-                        <h3 id="refStep1T">Share with friends</h3>
-                        <p id="refStep1D">Send your unique link via Telegram or social media.</p>
-                    </div>
-                </div>
-                <div class="ref-step">
-                    <div class="ref-step-line">
-                        <div class="ref-step-num">2</div>
-                        <div class="ref-step-connector"></div>
-                    </div>
-                    <div class="ref-step-content">
-                        <h3 id="refStep2T">Friends start playing</h3>
-                        <p id="refStep2D">When they register, you both get bonus coins.</p>
-                    </div>
-                </div>
-                <div class="ref-step">
-                    <div class="ref-step-line">
-                        <div class="ref-step-num">3</div>
-                    </div>
-                    <div class="ref-step-content">
-                        <h3 id="refStep3T">Earn Rewards</h3>
-                        <p id="refStep3D">Get 10 coins for every friend who joins.</p>
-                    </div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:5px 5px 5px 14px">
+                    <div id="refUrl" style="flex:1;font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace">https://t.me/bot?start=ref...</div>
+                    <button class="ref-copy" onclick="copyRefLink()" style="height:40px;padding:0 18px;border-radius:9px;border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;letter-spacing:0.5px;transition:all .15s">
+                        <span class="material-symbols-outlined" style="font-size:16px">content_copy</span>
+                        <span id="refCopyText">Copy</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <button class="ref-share-btn" onclick="shareRef()"><span class="material-symbols-outlined">ios_share</span><span
-                id="refShareBtn">Share Link Now</span></button>
+        <!-- Stats Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 20px">
+            <!-- Total Referrals -->
+            <div style="background:#13151a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px;position:relative;overflow:hidden">
+                <div style="position:absolute;top:-24px;right:-24px;width:90px;height:90px;background:radial-gradient(circle,rgba(227,30,36,0.14),transparent 70%);border-radius:50%;pointer-events:none"></div>
+                <div style="width:38px;height:38px;border-radius:11px;background:rgba(227,30,36,0.12);border:1px solid rgba(227,30,36,0.22);display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+                    <span class="material-symbols-outlined" style="color:var(--red);font-size:20px">group_add</span>
+                </div>
+                <div id="refNewBadge"></div>
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:6px" id="refTotalLabel">Total Referrals</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:30px;font-weight:900;color:#fff;line-height:1" id="refTotalVal">0</div>
+            </div>
+            <!-- Earned -->
+            <div style="background:#13151a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px;position:relative;overflow:hidden">
+                <div style="position:absolute;top:-24px;right:-24px;width:90px;height:90px;background:radial-gradient(circle,rgba(255,196,0,0.12),transparent 70%);border-radius:50%;pointer-events:none"></div>
+                <div style="width:38px;height:38px;border-radius:11px;background:rgba(255,196,0,0.1);border:1px solid rgba(255,196,0,0.22);display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:20px">💰</div>
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:6px" id="refEarnedLabel">Earned</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#ffc400;line-height:1" id="refEarnedVal">0 USDT</div>
+            </div>
+        </div>
+
+        <!-- How it Works -->
+        <div style="margin:0 16px 24px">
+            <div style="font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:#fff;letter-spacing:-0.3px;margin-bottom:16px" id="refHowTitle">How it Works</div>
+
+            <!-- Step 1 -->
+            <div style="display:flex;gap:14px;margin-bottom:4px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:44px">
+                    <div style="width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,rgba(33,158,217,0.2),rgba(33,158,217,0.05));border:1px solid rgba(33,158,217,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">✉️</div>
+                    <div style="width:1px;height:28px;background:linear-gradient(to bottom,rgba(227,30,36,0.25),transparent);margin-top:6px"></div>
+                </div>
+                <div style="padding-top:8px;padding-bottom:20px">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                        <div style="width:17px;height:17px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:#fff;flex-shrink:0">1</div>
+                        <div style="font-weight:800;font-size:14px;color:#fff" id="refStep1T">Invite Friends</div>
+                    </div>
+                    <div style="font-size:12px;color:#666;line-height:1.55" id="refStep1D">Send your unique link via Telegram or social media.</div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="display:flex;gap:14px;margin-bottom:4px">
+                <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:44px">
+                    <div style="width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,rgba(227,30,36,0.2),rgba(227,30,36,0.05));border:1px solid rgba(227,30,36,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎮</div>
+                    <div style="width:1px;height:28px;background:linear-gradient(to bottom,rgba(227,30,36,0.25),transparent);margin-top:6px"></div>
+                </div>
+                <div style="padding-top:8px;padding-bottom:20px">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                        <div style="width:17px;height:17px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:#fff;flex-shrink:0">2</div>
+                        <div style="font-weight:800;font-size:14px;color:#fff" id="refStep2T">Friends Play</div>
+                    </div>
+                    <div style="font-size:12px;color:#666;line-height:1.55" id="refStep2D">When they register & play, you both get bonus coins.</div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div style="display:flex;gap:14px">
+                <div style="width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,rgba(255,196,0,0.2),rgba(255,196,0,0.05));border:1px solid rgba(255,196,0,0.3);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">💰</div>
+                <div style="padding-top:8px">
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                        <div style="width:17px;height:17px;border-radius:50%;background:#ffc400;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:900;color:#000;flex-shrink:0">3</div>
+                        <div style="font-weight:800;font-size:14px;color:#fff" id="refStep3T">Earn Rewards</div>
+                    </div>
+                    <div style="font-size:12px;color:#666;line-height:1.55" id="refStep3D">Get 10 USDT for every active friend who joins!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div style="margin:0 16px;display:flex;flex-direction:column;gap:10px">
+            <button onclick="shareRef()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,#229ED9,#1a7fad);color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;letter-spacing:0.3px;box-shadow:0 8px 24px rgba(34,158,217,0.25)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                <span id="refShareBtn">Invite via Telegram</span>
+            </button>
+            <button onclick="copyRefLink()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);color:#ccc;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:all .15s">
+                <span class="material-symbols-outlined" style="font-size:18px">link</span>
+                Copy Referral Link
+            </button>
+        </div>
+
     </div>
 
     <!-- ===== SCREEN: PROFILE ===== -->
