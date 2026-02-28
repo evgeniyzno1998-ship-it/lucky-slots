@@ -792,7 +792,43 @@
             display: flex;
             z-index: 100;
             padding-bottom: env(safe-area-inset-bottom);
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, .4)
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, .4);
+            overflow: visible;
+        }
+        /* Center Wheel nav button (JetTon style) */
+        .nav-wheel-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+        }
+        .nav-wheel-circle {
+            position: absolute;
+            top: -22px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #C0142A, #FF0033);
+            border: 3px solid var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(227,30,36,.6), 0 4px 12px rgba(0,0,0,.5);
+            animation: pulse-red 1.8s ease-in-out infinite;
+            font-size: 26px;
+            line-height: 1;
+        }
+        .nav-wheel-label {
+            margin-top: 16px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            font-family: 'Montserrat', sans-serif;
+            color: var(--red);
         }
 
         .nav-item {
@@ -4800,7 +4836,7 @@
         </div>
 
         <div class="wheel-banner" id="wheelBanner" onclick="openWheel()"
-            style="display:flex;align-items:center;justify-content:space-between">
+            style="display:none;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:12px">
                 <div class="wheel-icon">🎡</div>
                 <div class="wheel-info">
@@ -5838,10 +5874,37 @@
             </div>
         </div>
 
-        <!-- VIP Tier Cards -->
+        <!-- VIP Tier Cards (static instant render, updated by loadProfile) -->
         <div id="vipCardsContainer"
             style="margin:20px 0;padding:0 16px;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none">
-            <!-- Rendered by JS -->
+            <!-- Bronze (default active until API loads) -->
+            <div style="flex-shrink:0;width:240px;scroll-snap-align:center;border-radius:16px;padding:20px;background:linear-gradient(135deg,#3d1f00,#1a0d00);border:2px solid #cd7f32;position:relative;overflow:hidden">
+                <div style="font-size:28px;margin-bottom:8px">🥉</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">Bronze</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.5)">0% Cashback · Basic access</div>
+                <div style="margin-top:12px;background:rgba(255,255,255,.1);border-radius:4px;height:4px"><div id="vipBar0" style="height:100%;border-radius:4px;background:#cd7f32;width:0%"></div></div>
+                <div id="vipPct0" style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px">0%</div>
+            </div>
+            <div style="flex-shrink:0;width:240px;scroll-snap-align:center;border-radius:16px;padding:20px;background:linear-gradient(135deg,#1a1a1a,#111);border:1px solid rgba(255,255,255,.05);opacity:.6">
+                <div style="font-size:28px;margin-bottom:8px">🥈</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">Silver</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4)">3% Cashback · Weekly tournaments</div>
+            </div>
+            <div style="flex-shrink:0;width:240px;scroll-snap-align:center;border-radius:16px;padding:20px;background:linear-gradient(135deg,#1a1a1a,#111);border:1px solid rgba(255,255,255,.05);opacity:.6">
+                <div style="font-size:28px;margin-bottom:8px">🥇</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">Gold</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4)">5% Cashback · Priority support</div>
+            </div>
+            <div style="flex-shrink:0;width:240px;scroll-snap-align:center;border-radius:16px;padding:20px;background:linear-gradient(135deg,#1a1a1a,#111);border:1px solid rgba(255,255,255,.05);opacity:.6">
+                <div style="font-size:28px;margin-bottom:8px">💎</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">Platinum</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4)">8% Cashback · Personal manager</div>
+            </div>
+            <div style="flex-shrink:0;width:240px;scroll-snap-align:center;border-radius:16px;padding:20px;background:linear-gradient(135deg,#1a1a1a,#111);border:1px solid rgba(255,255,255,.05);opacity:.6">
+                <div style="font-size:28px;margin-bottom:8px">👑</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:900;color:#fff;margin-bottom:2px">Diamond</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.4)">10% Cashback · Exclusive events</div>
+            </div>
         </div>
 
         <div class="prof-stats">
@@ -5859,7 +5922,32 @@
             </div>
         </div>
 
-        <div <div class="prof-referral-btn" onclick="nav('referral')">
+        <!-- BONUSES & PROMOTIONS compact block -->
+        <div style="margin:0 16px 12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.5px">🎁 Bonuses & Promo</div>
+                <div style="font-size:11px;color:var(--red);font-weight:700;cursor:pointer" onclick="nav('bonuses')">See All →</div>
+            </div>
+            <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px">
+                <div style="flex-shrink:0;width:140px;background:linear-gradient(135deg,#1a0a0a,#2a0a0a);border:1px solid rgba(227,30,36,.3);border-radius:12px;padding:12px;cursor:pointer" onclick="nav('wallet')">
+                    <div style="font-size:20px;margin-bottom:6px">💰</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#fff;line-height:1.2">100% DEPOSIT<br>BONUS</div>
+                    <div style="font-size:10px;color:var(--red);font-weight:700;margin-top:4px">Up to $500</div>
+                </div>
+                <div style="flex-shrink:0;width:140px;background:linear-gradient(135deg,#0a0a1a,#0a1a0a);border:1px solid rgba(56,239,125,.2);border-radius:12px;padding:12px;cursor:pointer" onclick="nav('bonuses')">
+                    <div style="font-size:20px;margin-bottom:6px">🎰</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#fff;line-height:1.2">50 FREE<br>SPINS</div>
+                    <div style="font-size:10px;color:#38ef7d;font-weight:700;margin-top:4px">No deposit</div>
+                </div>
+                <div style="flex-shrink:0;width:140px;background:linear-gradient(135deg,#0a0a1a,#1a0a1a);border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:12px;cursor:pointer" onclick="nav('bonuses')">
+                    <div style="font-size:20px;margin-bottom:6px">🔄</div>
+                    <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:800;color:#fff;line-height:1.2">WEEKLY<br>CASHBACK</div>
+                    <div style="font-size:10px;color:#a855f7;font-weight:700;margin-top:4px">Up to 20%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="prof-referral-btn" onclick="nav('referral')">
             <div class="prof-ref-left">
                 <div class="prof-ref-icon"><span class="material-symbols-outlined">diversity_3</span></div>
                 <div class="prof-ref-text">
@@ -6396,12 +6484,10 @@
             <div class="nav-label" id="navGame">Games</div>
             <div class="nav-indicator"></div>
         </div>
-        <div class="nav-item group" data-screen="bonuses" style="position:relative"
-            onclick="nav('bonuses'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('light')}">
-            <span class="material-symbols-outlined">redeem</span>
-            <div class="nav-badge" id="bonusBadge" style="display:none">0</div>
-            <div class="nav-label" id="navBonuses">Bonuses</div>
-            <div class="nav-indicator"></div>
+        <div class="nav-wheel-btn" onclick="openWheel(); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('medium')}">
+            <div class="nav-wheel-circle" id="navWheelCircle">🎡</div>
+            <div class="nav-badge" id="bonusBadge" style="display:none;position:absolute;top:-16px;right:calc(50% - 32px)">0</div>
+            <div class="nav-wheel-label">Wheel</div>
         </div>
         <div class="nav-item group" data-screen="wallet"
             onclick="nav('wallet'); if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback){window.Telegram.WebApp.HapticFeedback.impactOccurred('light')}">
@@ -6452,7 +6538,7 @@
     </div>
 
     <!-- ===== FORTUNE WHEEL OVERLAY ===== -->
-    <div id="wheelOL" style="display:none;position:fixed;inset:0;z-index:200;background:#121212;overflow-y:auto">
+    <div id="wheelOL" style="display:none;position:fixed;inset:0;z-index:200;background:#121212;overflow-y:auto;padding-top:var(--header-h)">
         <!-- Sparkle decorations -->
         <div
             style="position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle at 20% 30%,rgba(227,28,35,.12) 0%,transparent 25%),radial-gradient(circle at 80% 70%,rgba(255,215,0,.03) 0%,transparent 25%)">
