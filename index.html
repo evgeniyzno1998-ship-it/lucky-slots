@@ -5803,7 +5803,7 @@
                     Invite & <span style="color:var(--red)">Earn</span>
                 </div>
                 <div style="font-size:13px;color:#666;font-weight:500;line-height:1.5">
-                    Earn <span style="color:#fff;font-weight:800">10 USDT</span> for every active friend you bring
+                    Earn <span id="refRewardHero" style="color:#fff;font-weight:800">10 USDT</span> for every active friend you bring
                 </div>
             </div>
         </div>
@@ -7643,6 +7643,92 @@
             en: { home: "Home", games: "Games", bonuses: "Bonuses", wallet: "Wallet", profile: "Profile", spin: "SPIN", deposit: "DEPOSIT", searchPlaceholder: "Search games...", categories: "CATEGORIES", viewAll: "VIEW ALL", trending: "TRENDING NOW", playNow: "PLAY NOW", hot: "HOT", heroTitle: "RUBY JACKPOT", heroSub: "5,000 coins prize pool", wheel: "Daily Wheel", wheelSub: "Spin for free coins!", wheelSpin: "SPIN!", collect: "COLLECT", bonusRound: "🎰 BONUS ROUND 🎰", spinL: "SPIN", winL: "WIN", buyBonus: "Buy Bonus", slotName: "Ruby Slots", slotTag: "POPULAR", crashName: "Crash", diceName: "Dice", mineName: "Mines", coinName: "Coin Flip", rouletteName: "Roulette", blackjackName: "Blackjack", comingTag: "SOON", freeSpins: "Free spins", noMoney: "Not enough coins!", noMoneyDesc: "Top up your balance to keep playing", depositBtn: "Deposit", cancelBtn: "Cancel", lose: "No win", win: "WIN", totalBalance: "TOTAL BALANCE", withdraw: "WITHDRAW", transHistory: "View Transaction History", selectPkg: "SELECT PACKAGE", bonusTitle: "Bonuses", exclusive: "EXCLUSIVE", bfTitle: "100% Deposit Match", bfDesc: "Get up to 1 BTC on your first deposit. Double your playing money instantly.", bfTimer: "Expires in 24h", wager: "WAGER", activate: "Activate", freeSpinsTitle: "50 Free Spins", freeSpinsDesc: "Valid for Ruby Slots. No deposit required for new players.", claimNow: "Claim Now", cashbackTitle: "Weekly Cashback", cashbackDesc: "Get 10% back on all losses every Monday. VIP tiers get up to 20%.", joinClub: "Join Club", vipTitle: "Diamond VIP Status", vipDesc: "Unlock exclusive tournaments.", inviteEarn: "Invite & Earn", inviteDesc: "Share your link and earn <b>10 coins</b> for every friend who plays.", tapCopy: "TAP COPY TO SHARE", copy: "Copy", totalRefs: "Total Referrals", earnedCoins: "Earned Coins", howItWorks: "How it Works", step1T: "Share with friends", step1D: "Send your unique link via Telegram or social media.", step2T: "Friends start playing", step2D: "When they register, you both get bonus coins.", step3T: "Earn Rewards", step3D: "Get 10 coins for every friend who joins.", shareNow: "Share Link Now", wins: "WINS", losses: "LOSSES", total: "TOTAL", referralProgram: "Referral Program", inviteFriends: "Invite friends & earn rewards", settings: "Settings", security: "Security", support: "Support", signOut: "Sign Out", currentXp: "Current XP", level: "Level", slots: "Slots", live: "Live", crash: "Crash", table: "Table", jackpotLabel: "GRAND JACKPOT", grandJackpot: "GRAND JACKPOT", coins: "coins", betAmountLabel: "BET AMOUNT", wMethodLabel: "PAYMENT METHOD", pmCardTitle: "Bank Card", favs: "Favorites", noFavs: "No favorites yet", searchPrompt: "Type to search games", noResults: "No results found", filterAll: "All", filterDep: "Deposit", filterFS: "Free Spins", filterVIP: "VIP", filterCB: "Cashback", creatingInv: "Creating invoice...", paySuccess: "Payment successful! +", payFail: "Payment failed", creatingCrypto: "Creating CryptoBot invoice...", creatingPay: "Creating payment...", cardSoon: "Card payment coming soon", langLabel: "Language" }
         };
         const T = LC[LANG] || LC.en;
+
+        /* ============================================================
+         *  CASINO_CONFIG — весь редактируемый контент казино
+         *  Меняйте только этот блок. В перспективе → подключить CMS.
+         * ============================================================ */
+        var CASINO_CONFIG = {
+
+            /* ── БАННЕРЫ КАРУСЕЛИ ────────────────────────────────────
+             *  bg: CSS background (градиент или url("...") center/cover no-repeat)
+             *  tag: ленточка сверху (icon = название из Material Symbols)
+             *  title: HTML заголовок (<span> для цветного слова)
+             *  subtitle: подзаголовок под заголовком
+             *  btn: { text — текст кнопки, action — JS действие, style — доп. CSS }
+             * ─────────────────────────────────────────────────────── */
+            banners: [
+                {
+                    bg: 'linear-gradient(135deg,#1a0a0f 0%,#0f0f12 50%,#1a0505 100%)',
+                    tag:      { icon: 'local_offer', text: 'SPECIAL', color: '#e62e3d', bg: 'rgba(230,46,61,.15)' },
+                    title:    '100% MATCH<br><span>UP TO $500</span>',
+                    subtitle: 'Offer of the day · 100% Bonus',
+                    btn:      { text: 'CLAIM NOW', action: "nav('bonuses')", style: 'background:linear-gradient(135deg,#e62e3d,#b91c1c)' }
+                },
+                {
+                    bg: 'linear-gradient(135deg,#1a1a1a 0%,#121212 100%)',
+                    tag:      { icon: 'local_fire_department', text: 'HOT', color: '#ff416c', bg: 'rgba(255,65,108,0.1)' },
+                    title:    'RUBY<br><span>JACKPOT</span>',
+                    subtitle: '5,000 TON PRIZE POOL',
+                    btn:      { text: 'PLAY NOW', action: "nav('game')" }
+                },
+                {
+                    bg: 'linear-gradient(135deg,#1a0a0f 0%,#0a0a1a 50%,#1a0505 100%)',
+                    tag:      { icon: 'rocket_launch', text: 'NEW', color: '#e42127', bg: 'rgba(228,33,39,.15)' },
+                    title:    'GALACTIC<br><span>PLINKO</span>',
+                    subtitle: 'Drop Stars, Win Big!',
+                    btn:      { text: 'DROP NOW', action: "nav('plinko')", style: 'background:linear-gradient(135deg,#e42127,#b91c1c)' }
+                },
+                {
+                    bg: 'linear-gradient(135deg,#0a1a0f 0%,#0a0a1a 50%,#051a0a 100%)',
+                    tag:      { icon: 'payments', text: 'BONUS', color: '#22c55e', bg: 'rgba(34,197,94,.15)' },
+                    title:    '<span style="font-size:22px">+7%</span><br><span>CRYPTO BONUS</span>',
+                    subtitle: 'CryptoBot deposit · x3 wager',
+                    btn:      { text: 'DEPOSIT', action: "nav('wallet')", style: 'background:linear-gradient(135deg,#22c55e,#16a34a)' }
+                }
+            ],
+
+            /* ── ПРОВАЙДЕРЫ ──────────────────────────────────────── */
+            providers: [
+                { id: 'rubybet',   name: 'RubyBet'   },
+                { id: 'pragmatic', name: 'Pragmatic'  },
+                { id: 'pgsoft',    name: 'PGSoft'     },
+                { id: 'netent',    name: 'NetEnt'     },
+                { id: 'evolution', name: 'Evolution'  },
+                { id: 'hacksaw',   name: 'Hacksaw'    },
+                { id: 'nolimit',   name: 'No Limit'   }
+            ],
+
+            /* ── VIP УРОВНИ ──────────────────────────────────────── */
+            vipTiers: [
+                { name: 'Bronze',   icon: '🥉', cashback: '0%',  perks: 'Basic access',       color: '#cd7f32' },
+                { name: 'Silver',   icon: '🥈', cashback: '3%',  perks: 'Weekly tournaments',  color: '#c0c0c0' },
+                { name: 'Gold',     icon: '🥇', cashback: '5%',  perks: 'Priority support',    color: '#ffd700' },
+                { name: 'Platinum', icon: '💎', cashback: '8%',  perks: 'Personal manager',    color: '#e5e4e2' },
+                { name: 'Diamond',  icon: '👑', cashback: '10%', perks: 'Exclusive events',    color: '#b9f2ff' }
+            ],
+
+            /* ── КОЛЕСО ФОРТУНЫ ──────────────────────────────────── */
+            wheel: {
+                prizes: [5, 10, 25, 50, 100, 250, 500],  // суммы призов в USDT
+                cooldownHours: 24
+            },
+
+            /* ── РЕФЕРАЛЬНАЯ ПРОГРАММА ───────────────────────────── */
+            referral: {
+                rewardUSDT: 10   // USDT за каждого активного приглашённого
+            },
+
+            /* ── БОНУСЫ ──────────────────────────────────────────── */
+            bonuses: {
+                deposit:   { percent: 100, maxUSDT: 500, wagerX: 3  },
+                freeSpins: { count: 50,   game: 'Ruby Slots'         },
+                cashback:  { percent: 10, vipMaxPercent: 20          },
+                crypto:    { bonusPercent: 7, wagerX: 3              }
+            }
+        };
+        /* ============================================================ */
+
         const BSYM = ['🍒', '🍋', '🍊', '🍇', '🍫', '🍭', '🍬', '💎'];
         const BONSYM = ['👑', '💎', '⭐', '❤️', '🍀', '🧲', '💰', '🌈'];
         let balance = null, freeSpins = 0, bet = 5, spinning = false, currentScreen = 'lobby';
@@ -7722,38 +7808,20 @@
         /* === DATA === */
 
         function getBanners() {
-            return [
-                {
-                    tagIcon: 'local_offer', tagText: 'SPECIAL', tagBg: 'rgba(230,46,61,.15)', tagColor: '#e62e3d',
-                    titleHtml: `100% MATCH<br><span>UP TO $500</span>`,
-                    subHtml: `Offer of the day · 100% Bonus`,
-                    btnText: 'CLAIM NOW', btnAction: "nav('bonuses')",
-                    bgStyle: 'linear-gradient(135deg,#1a0a0f 0%,#0f0f12 50%,#1a0505 100%)',
-                    btnStyle: 'background:linear-gradient(135deg,#e62e3d,#b91c1c)'
-                },
-                {
-                    tagIcon: 'local_fire_department', tagText: T.hot || 'HOT', tagBg: '', tagColor: '',
-                    titleHtml: `RUBY<br><span>JACKPOT</span>`,
-                    subHtml: T.heroSub || `5,000 TON<br><span style="font-size:9px;text-transform:uppercase;letter-spacing:1px">PRIZE POOL</span>`,
-                    btnText: T.playNow || 'PLAY NOW', btnAction: "nav('game')", bgStyle: '', btnStyle: ''
-                },
-                {
-                    tagIcon: 'rocket_launch', tagText: 'NEW', tagBg: 'rgba(228,33,39,.15)', tagColor: '#e42127',
-                    titleHtml: `GALACTIC<br><span>PLINKO</span>`,
-                    subHtml: `Drop Stars, Win Big!`,
-                    btnText: 'DROP NOW', btnAction: "nav('plinko')",
-                    bgStyle: 'linear-gradient(135deg,#1a0a0f 0%,#0a0a1a 50%,#1a0505 100%)',
-                    btnStyle: 'background:linear-gradient(135deg,#e42127,#b91c1c)'
-                },
-                {
-                    tagIcon: 'payments', tagText: 'BONUS', tagBg: 'rgba(34,197,94,.15)', tagColor: '#22c55e',
-                    titleHtml: `<span style="font-size:22px">+7%</span><br><span>CRYPTO BONUS</span>`,
-                    subHtml: `CryptoBot deposit · x3 wager`,
-                    btnText: T.deposit || 'DEPOSIT', btnAction: "nav('wallet')",
-                    bgStyle: 'linear-gradient(135deg,#0a1a0f 0%,#0a0a1a 50%,#051a0a 100%)',
-                    btnStyle: 'background:linear-gradient(135deg,#22c55e,#16a34a)'
-                }
-            ];
+            return CASINO_CONFIG.banners.map(function(b) {
+                return {
+                    tagIcon:   b.tag.icon,
+                    tagText:   b.tag.text,
+                    tagColor:  b.tag.color || '',
+                    tagBg:     b.tag.bg    || '',
+                    titleHtml: b.title,
+                    subHtml:   b.subtitle,
+                    btnText:   b.btn.text,
+                    btnAction: b.btn.action,
+                    bgStyle:   b.bg        || '',
+                    btnStyle:  b.btn.style || ''
+                };
+            });
         }
 
         // Duplicate renderBanners removed
@@ -8522,7 +8590,7 @@
                     document.getElementById('wheelBanner').classList.add('done');
                 } else {
                     /* API says not available — show demo win anyway for first spin */
-                    var demoAmounts2 = [5, 10, 25, 50, 100, 250];
+                    var demoAmounts2 = CASINO_CONFIG.wheel.prizes.slice(0, -1);
                     var demoAmt2 = demoAmounts2[Math.floor(Math.random() * demoAmounts2.length)];
                     document.getElementById('wheelWinAmount').textContent = demoAmt2;
                     document.getElementById('wheelWinUnit').textContent = T.coins.toUpperCase();
@@ -8542,7 +8610,7 @@
             } catch (e) {
                 await sleep(4200);
                 /* Demo fallback: show a fake win */
-                var demoAmounts = [5, 10, 25, 50, 100, 250, 500];
+                var demoAmounts = CASINO_CONFIG.wheel.prizes;
                 var demoAmt = demoAmounts[Math.floor(Math.random() * demoAmounts.length)];
                 document.getElementById('wheelWinAmount').textContent = demoAmt;
                 document.getElementById('wheelWinUnit').textContent = T.coins.toUpperCase();
@@ -8676,13 +8744,9 @@
 
                     if (d.vip) document.getElementById('profVipBadge').textContent = d.vip.name;
 
-                    var tiers = [
-                        { name: 'Bronze', icon: '🥉', cb: '0%', perks: 'Basic access' },
-                        { name: 'Silver', icon: '🥈', cb: '3%', perks: 'Weekly tournaments' },
-                        { name: 'Gold', icon: '🥇', cb: '5%', perks: 'Priority support' },
-                        { name: 'Platinum', icon: '💎', cb: '8%', perks: 'Personal manager' },
-                        { name: 'Diamond', icon: '👑', cb: '10%', perks: 'Exclusive events' }
-                    ];
+                    var tiers = CASINO_CONFIG.vipTiers.map(function(t) {
+                        return { name: t.name, icon: t.icon, cb: t.cashback, perks: t.perks };
+                    });
                     var currentIndex = tiers.findIndex(function (t) { return t.name === d.vip.name });
                     if (currentIndex === -1) currentIndex = 0;
 
@@ -8738,6 +8802,9 @@
         function loadReferral() {
             var refUrl = 'https://t.me/' + BOT + '?start=ref' + UID;
             document.getElementById('refUrl').textContent = refUrl;
+            var reward = CASINO_CONFIG.referral.rewardUSDT + ' USDT';
+            var h = document.getElementById('refRewardHero'); if (h) h.textContent = reward;
+            var s = document.getElementById('refStep3D'); if (s) s.textContent = 'Get ' + reward + ' for every active friend who joins!';
         }
         function copyRefLink() {
             var url = 'https://t.me/' + BOT + '?start=ref' + UID;
@@ -8961,16 +9028,7 @@
         }
 
         /* === GAME PROVIDERS === */
-        var PROVIDERS = [
-            { id: 'all', name: 'All' },
-            { id: 'rubybet', name: 'RubyBet' },
-            { id: 'pragmatic', name: 'Pragmatic' },
-            { id: 'pgsoft', name: 'PGSoft' },
-            { id: 'netent', name: 'NetEnt' },
-            { id: 'evolution', name: 'Evolution' },
-            { id: 'hacksaw', name: 'Hacksaw' },
-            { id: 'nolimit', name: 'No Limit' }
-        ];
+        var PROVIDERS = [{ id: 'all', name: 'All' }].concat(CASINO_CONFIG.providers);
         function buildProviders() {
             var el = document.getElementById('providersRow');
             if (!el) return;
