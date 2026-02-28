@@ -7328,6 +7328,7 @@
         _applyTgInsets();
         try { tg.onEvent('safeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.onEvent('contentSafeAreaChanged', _applyTgInsets); } catch (e) {}
+        try { tg.onEvent('fullscreenChanged', _applyTgInsets); } catch (e) {}
         try { tg.setHeaderColor('#121212'); tg.setBackgroundColor('#121212') } catch (e) { }
         const P = new URLSearchParams(location.search);
         const API = P.get('api') || "https://lucky-slots-production.up.railway.app";
@@ -10155,6 +10156,12 @@
             window.updateLiveDrops = function () {
                 if (typeof buildLiveDrops === 'function') buildLiveDrops();
             };
+
+            /* === STATIC UI — render immediately, no auth needed === */
+            if (typeof getGamesConfig === 'function') ALL_GAMES = getGamesConfig(T);
+            buildCategories();
+            buildProviders();
+            buildGameGrid();
 
             /* === INITIAL LOAD === */
             async function initApp() {
