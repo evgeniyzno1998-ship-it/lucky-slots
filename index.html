@@ -7319,15 +7319,15 @@
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
         try { tg.requestFullscreen(); } catch (e) {}
         function _applyTgInsets() {
-            // Try Telegram JS API (Bot API 8.0+)
-            var jsTop = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top)
-                     || (tg.safeAreaInset && tg.safeAreaInset.top)
-                     || 0;
-            if (jsTop > 0) {
-                document.documentElement.style.setProperty('--tg-safe-top', jsTop + 'px');
+            // Sum both: device notch + TG chrome overlay (close/minimize buttons)
+            var deviceTop = (tg.safeAreaInset && tg.safeAreaInset.top) || 0;
+            var chromeTop = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top) || 0;
+            var total = deviceTop + chromeTop;
+            console.log('[TG-INSETS] deviceTop=' + deviceTop + ' chromeTop=' + chromeTop + ' total=' + total + ' isFullscreen=' + tg.isFullscreen);
+            if (total > 0) {
+                document.documentElement.style.setProperty('--tg-safe-top', total + 'px');
             }
-            // Always sync --header-h to actual rendered header height
-            // (CSS env(safe-area-inset-top) handles device notch automatically)
+            // Sync --header-h to actual rendered header height after padding applied
             var hdr = document.getElementById('mainHeader');
             if (hdr && hdr.offsetHeight > 0) {
                 document.documentElement.style.setProperty('--header-h', hdr.offsetHeight + 'px');
