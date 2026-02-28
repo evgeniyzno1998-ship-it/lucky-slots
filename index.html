@@ -7322,13 +7322,25 @@
             var top = (tg.contentSafeAreaInset && tg.contentSafeAreaInset.top)
                    || (tg.safeAreaInset && tg.safeAreaInset.top)
                    || 0;
-            document.documentElement.style.setProperty('--tg-safe-top', top + 'px');
-            document.documentElement.style.setProperty('--header-h', (56 + top) + 'px');
+            if (top > 0) {
+                document.documentElement.style.setProperty('--tg-safe-top', top + 'px');
+                document.documentElement.style.setProperty('--header-h', (56 + top) + 'px');
+            }
         }
         _applyTgInsets();
         try { tg.onEvent('safeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.onEvent('contentSafeAreaChanged', _applyTgInsets); } catch (e) {}
         try { tg.onEvent('fullscreenChanged', _applyTgInsets); } catch (e) {}
+        // Fallback polling: requestFullscreen() is async, insets may not be ready immediately
+        (function() {
+            var attempts = 0;
+            var poll = setInterval(function() {
+                attempts++;
+                _applyTgInsets();
+                var cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tg-safe-top')) || 0;
+                if (cur > 0 || attempts >= 20) clearInterval(poll);
+            }, 150);
+        })();
         try { tg.setHeaderColor('#121212'); tg.setBackgroundColor('#121212') } catch (e) { }
         const P = new URLSearchParams(location.search);
         const API = P.get('api') || "https://lucky-slots-production.up.railway.app";
@@ -10162,6 +10174,18 @@
             buildCategories();
             buildProviders();
             buildGameGrid();
+            renderBanners();
+            buildLiveDrops();
+            // Top Winnings demo (no auth needed, real data loads in initApp after auth)
+            (function() {
+                var dn = ['Ton***99','Max***23','Luc***77','Pro***88','Vip***33','Ace***11','Win***42','Bet***55'];
+                var dg = ['Ruby Slots','Crash','Lucky Bonanza','Crash','Mines','Ruby Slots','Plinko','Crash'];
+                var dc = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
+                var demos = [];
+                for (var i = 0; i < 8; i++) demos.push({ username: dn[i%dn.length], game: dg[i%dg.length], win_amount: +(Math.random()*2500+10).toFixed(2), multiplier: +(Math.random()*150+1.5).toFixed(1), color: dc[i%dc.length] });
+                demos.sort(function(a,b){return b.win_amount-a.win_amount;});
+                if (typeof renderTopWinnings === 'function') renderTopWinnings(demos);
+            })();
 
             /* === INITIAL LOAD === */
             async function initApp() {
