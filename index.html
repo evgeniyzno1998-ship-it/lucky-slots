@@ -5808,21 +5808,8 @@
             </div>
         </div>
 
-        <!-- Referral Link Card -->
-        <div style="margin:0 16px 16px;padding:2px;border-radius:18px;background:linear-gradient(135deg,rgba(227,30,36,0.5),var(--red),rgba(227,30,36,0.3));box-shadow:0 0 28px rgba(227,30,36,0.18)">
-            <div style="background:#13151a;border-radius:16px;padding:18px">
-                <div style="text-align:center;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#555;margin-bottom:14px">
-                    🔗 TAP TO COPY & SHARE
-                </div>
-                <div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:5px 5px 5px 14px">
-                    <div id="refUrl" style="flex:1;font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace">https://t.me/bot?start=ref...</div>
-                    <button class="ref-copy" onclick="copyRefLink()" style="height:40px;padding:0 18px;border-radius:9px;border:none;background:var(--red);color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;letter-spacing:0.5px;transition:all .15s">
-                        <span class="material-symbols-outlined" style="font-size:16px">content_copy</span>
-                        <span id="refCopyText">Copy</span>
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- hidden refUrl for JS -->
+        <span id="refUrl" style="display:none">https://t.me/bot?start=ref...</span>
 
         <!-- Stats Row -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 16px 20px">
@@ -5898,7 +5885,7 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
                 <span id="refShareBtn">Invite via Telegram</span>
             </button>
-            <button onclick="copyRefLink()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);color:#ccc;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:all .15s">
+            <button id="refCopyBtn" onclick="copyRefLink()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,0.09);background:rgba(255,255,255,0.04);color:#ccc;font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:0.3px;transition:all .3s">
                 <span class="material-symbols-outlined" style="font-size:18px">link</span>
                 Copy Referral Link
             </button>
@@ -8754,11 +8741,27 @@
         }
         function copyRefLink() {
             var url = 'https://t.me/' + BOT + '?start=ref' + UID;
+            var btn = document.getElementById('refCopyBtn');
+            function onCopied() {
+                if (btn) {
+                    btn.style.background = 'rgba(34,197,94,0.15)';
+                    btn.style.borderColor = 'rgba(34,197,94,0.4)';
+                    btn.style.color = '#22c55e';
+                    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">check_circle</span> Link Copied!';
+                    setTimeout(function() {
+                        btn.style.background = 'rgba(255,255,255,0.04)';
+                        btn.style.borderColor = 'rgba(255,255,255,0.09)';
+                        btn.style.color = '#ccc';
+                        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">link</span> Copy Referral Link';
+                    }, 2500);
+                }
+            }
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(url).then(function () {
-                    var btn = document.querySelector('.ref-copy'); btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check</span> OK';
-                    setTimeout(function () { btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">content_copy</span>' + T.copy }, 2000);
-                })
+                navigator.clipboard.writeText(url).then(onCopied).catch(function() {
+                    try { var ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); onCopied(); } catch(e) {}
+                });
+            } else {
+                try { var ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); onCopied(); } catch(e) {}
             }
         }
         function shareRef() { tg.openTelegramLink('https://t.me/share/url?url=https://t.me/' + BOT + '?start=ref' + UID + '&text=🎰') }
